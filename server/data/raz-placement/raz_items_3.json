@@ -1,0 +1,296 @@
+[
+  { "grade": "P", "level": "aa", "seriesId": 591, "targetLexile": -25,
+    "passage": "Look, a frog! Look, a fish! Look, a duck! I see them all.",
+    "items": [
+      { "id": "aac-r1", "skill": "reading", "q": "What does the child see?", "choices": ["toys", "animals", "cars"], "answer": 1 },
+      { "id": "aac-r2", "skill": "reading", "q": "How many animals are named?", "choices": ["two", "three", "four"], "answer": 1 },
+      { "id": "aac-v1", "skill": "vocab", "q": "'frog' 의 뜻은?", "choices": ["개구리", "오리", "물고기"], "answer": 0 },
+      { "id": "aac-v2", "skill": "vocab", "q": "'see' 의 뜻은?", "choices": ["듣다", "먹다", "보다"], "answer": 2 }
+    ] },
+  { "grade": "P", "level": "A", "seriesId": 592, "targetLexile": -46,
+    "passage": "The ball is round. The ball is red. I can kick the ball. We play together.",
+    "items": [
+      { "id": "Ac-r1", "skill": "reading", "q": "What shape is the ball?", "choices": ["round", "square", "long"], "answer": 0 },
+      { "id": "Ac-r2", "skill": "reading", "q": "What can the child do with the ball?", "choices": ["eat it", "kick it", "read it"], "answer": 1 },
+      { "id": "Ac-v1", "skill": "vocab", "q": "'round' 의 뜻은?", "choices": ["네모난", "둥근", "긴"], "answer": 1 },
+      { "id": "Ac-v2", "skill": "vocab", "q": "'play' 의 뜻은?", "choices": ["놀다", "자다", "울다"], "answer": 0 }
+    ] },
+  { "grade": "P", "level": "B", "seriesId": 593, "targetLexile": 21,
+    "passage": "Today we go to the zoo. I see a lion and a bear. The monkeys are funny. It is a fun day.",
+    "items": [
+      { "id": "Bc-r1", "skill": "reading", "q": "Where do they go?", "choices": ["the park", "school", "the zoo"], "answer": 2 },
+      { "id": "Bc-r2", "skill": "reading", "q": "Which animals are funny?", "choices": ["the monkeys", "the lions", "the bears"], "answer": 0 },
+      { "id": "Bc-v1", "skill": "vocab", "q": "'funny' 의 뜻은?", "choices": ["무서운", "웃긴", "슬픈"], "answer": 1 },
+      { "id": "Bc-v2", "skill": "vocab", "q": "'day' 의 뜻은?", "choices": ["날(하루)", "밤", "달"], "answer": 0 }
+    ] },
+  { "grade": "K", "level": "C", "seriesId": 594, "targetLexile": 131,
+    "passage": "Birds live in a nest. The nest is high in a tree. Baby birds are hungry. Their mom brings food.",
+    "items": [
+      { "id": "Cc-r1", "skill": "reading", "q": "Where is the nest?", "choices": ["under the ground", "in the water", "high in a tree"], "answer": 2 },
+      { "id": "Cc-r2", "skill": "reading", "q": "Why does the mom bring food?", "choices": ["the baby birds are hungry", "the nest is old", "it is raining"], "answer": 0 },
+      { "id": "Cc-v1", "skill": "vocab", "q": "'nest' 의 뜻은?", "choices": ["둥지", "동굴", "강"], "answer": 0 },
+      { "id": "Cc-v2", "skill": "vocab", "q": "'hungry' 의 뜻은?", "choices": ["졸린", "배고픈", "목마른"], "answer": 1 }
+    ] },
+  { "grade": "K", "level": "D", "seriesId": 595, "targetLexile": 210,
+    "passage": "Lily loves rainy days. She wears yellow boots. She jumps in the puddles. Splash, splash, splash!",
+    "items": [
+      { "id": "Dc-r1", "skill": "reading", "q": "What does Lily wear?", "choices": ["yellow boots", "a red hat", "blue gloves"], "answer": 0 },
+      { "id": "Dc-r2", "skill": "reading", "q": "What does Lily do in the puddles?", "choices": ["sleeps", "reads", "jumps"], "answer": 2 },
+      { "id": "Dc-v1", "skill": "vocab", "q": "'rainy' 의 뜻은?", "choices": ["맑은", "비 오는", "눈 오는"], "answer": 1 },
+      { "id": "Dc-v2", "skill": "vocab", "q": "'puddle' 의 뜻은?", "choices": ["물웅덩이", "언덕", "나무"], "answer": 0 }
+    ] },
+  { "grade": "K", "level": "E", "seriesId": 596, "targetLexile": 267,
+    "passage": "In autumn the leaves change color. They turn red, orange, and yellow. Then they fall to the ground. The children run and play in the leaves.",
+    "items": [
+      { "id": "Ec-r1", "skill": "reading", "q": "What happens to the leaves in autumn?", "choices": ["they change color and fall", "they stay green", "they grow bigger"], "answer": 0 },
+      { "id": "Ec-r2", "skill": "reading", "q": "What do the children do?", "choices": ["plant new trees", "run and play in the leaves", "sleep"], "answer": 1 },
+      { "id": "Ec-v1", "skill": "vocab", "q": "'autumn' 의 뜻은?", "choices": ["봄", "여름", "가을"], "answer": 2 },
+      { "id": "Ec-v2", "skill": "vocab", "q": "'fall (동사)' 의 뜻은?", "choices": ["떨어지다", "오르다", "멈추다"], "answer": 0 }
+    ] },
+  { "grade": "1", "level": "F", "seriesId": 597, "targetLexile": 330,
+    "passage": "Turtles carry their homes on their backs. When they are scared, they hide inside their hard shells. Sea turtles are great swimmers. They can hold their breath for a long time underwater.",
+    "items": [
+      { "id": "Fc-r1", "skill": "reading", "q": "What do turtles do when they are scared?", "choices": ["hide inside their shells", "run away fast", "fly"], "answer": 0 },
+      { "id": "Fc-r2", "skill": "reading", "q": "What are sea turtles good at?", "choices": ["climbing", "swimming", "singing"], "answer": 1 },
+      { "id": "Fc-r3", "skill": "reading", "q": "What do turtles carry on their backs?", "choices": ["their homes (shells)", "their food", "their babies"], "answer": 0 },
+      { "id": "Fc-v1", "skill": "vocab", "q": "'shell' 의 뜻은?", "choices": ["(단단한) 껍질", "날개", "꼬리"], "answer": 0 },
+      { "id": "Fc-v2", "skill": "vocab", "q": "'hide' 의 뜻은?", "choices": ["달리다", "자다", "숨다"], "answer": 2 }
+    ] },
+  { "grade": "1", "level": "G", "seriesId": 598, "targetLexile": 400,
+    "passage": "Honey comes from busy bees. Bees fly to flowers and drink sweet nectar. Back at the hive, they turn it into honey. People have collected honey for thousands of years.",
+    "items": [
+      { "id": "Gc-r1", "skill": "reading", "q": "Where do bees get nectar?", "choices": ["from flowers", "from trees", "from the sea"], "answer": 0 },
+      { "id": "Gc-r2", "skill": "reading", "q": "Where do bees make honey?", "choices": ["in the ground", "at the hive", "on the road"], "answer": 1 },
+      { "id": "Gc-r3", "skill": "reading", "q": "For how long have people collected honey?", "choices": ["a few days", "one year", "thousands of years"], "answer": 2 },
+      { "id": "Gc-v1", "skill": "vocab", "q": "'sweet' 의 뜻은?", "choices": ["신", "짠", "달콤한"], "answer": 2 },
+      { "id": "Gc-v2", "skill": "vocab", "q": "'collect' 의 뜻은?", "choices": ["모으다", "버리다", "팔다"], "answer": 0 }
+    ] },
+  { "grade": "1", "level": "H", "seriesId": 599, "targetLexile": 433,
+    "passage": "The moon looks like it changes shape, but it does not. We see different parts of it lit by the sun. Sometimes it looks round and full. Other nights we see only a thin curve.",
+    "items": [
+      { "id": "Hc-r1", "skill": "reading", "q": "Does the moon really change shape?", "choices": ["No, it does not", "Yes, every night", "Yes, once a year"], "answer": 0 },
+      { "id": "Hc-r2", "skill": "reading", "q": "Why does the moon look different?", "choices": ["it is far away", "we see different lit parts", "clouds cover it"], "answer": 1 },
+      { "id": "Hc-r3", "skill": "reading", "q": "What lights up the parts of the moon we see?", "choices": ["a lamp", "the sun", "the stars"], "answer": 1 },
+      { "id": "Hc-v1", "skill": "vocab", "q": "'full (moon)' 의 뜻은?", "choices": ["가득 찬(보름의)", "텅 빈", "반쪽의"], "answer": 0 },
+      { "id": "Hc-v2", "skill": "vocab", "q": "'thin' 의 뜻은?", "choices": ["두꺼운", "둥근", "가느다란"], "answer": 2 }
+    ] },
+  { "grade": "2", "level": "I", "seriesId": 600, "targetLexile": 457,
+    "passage": "Emma was afraid of the dark. Every night she asked for the light to stay on. One evening she found a glowing star lamp. With its soft light, she finally fell asleep on her own.",
+    "items": [
+      { "id": "Ic-r1", "skill": "reading", "q": "What was Emma afraid of?", "choices": ["the dark", "dogs", "water"], "answer": 0 },
+      { "id": "Ic-r2", "skill": "reading", "q": "What helped Emma sleep on her own?", "choices": ["a loud radio", "a glowing star lamp", "a big blanket"], "answer": 1 },
+      { "id": "Ic-r3", "skill": "reading", "q": "What did Emma ask for every night at first?", "choices": ["for the light to stay on", "for a new bed", "for a story"], "answer": 0 },
+      { "id": "Ic-v1", "skill": "vocab", "q": "'afraid' 의 뜻은?", "choices": ["기쁜", "배고픈", "두려워하는"], "answer": 2 },
+      { "id": "Ic-v2", "skill": "vocab", "q": "'glow' 의 뜻은?", "choices": ["빛나다", "사라지다", "떨어지다"], "answer": 0 }
+    ] },
+  { "grade": "2", "level": "J", "seriesId": 601, "targetLexile": 498,
+    "passage": "Trees do much more than look pretty. They give us shade on hot days and clean the air we breathe. Birds and squirrels make their homes in the branches. In autumn, some trees give us fruit and nuts.",
+    "items": [
+      { "id": "Jc-r1", "skill": "reading", "q": "How do trees help us on hot days?", "choices": ["they give shade", "they give rain", "they make wind"], "answer": 0 },
+      { "id": "Jc-r2", "skill": "reading", "q": "Who makes homes in the branches?", "choices": ["fish", "birds and squirrels", "bees only"], "answer": 1 },
+      { "id": "Jc-r3", "skill": "reading", "q": "What do trees do for the air?", "choices": ["they warm it", "they color it", "they clean it"], "answer": 2 },
+      { "id": "Jc-v1", "skill": "vocab", "q": "'shade' 의 뜻은?", "choices": ["그늘", "햇빛", "바람"], "answer": 0 },
+      { "id": "Jc-v2", "skill": "vocab", "q": "'branch' 의 뜻은?", "choices": ["뿌리", "잎", "나뭇가지"], "answer": 2 }
+    ] },
+  { "grade": "2", "level": "K", "seriesId": 602, "targetLexile": 510,
+    "passage": "Not all deserts are hot. Antarctica is actually the largest desert on Earth. It is called a desert because almost no rain or snow falls there. Very few plants can survive in its freezing, dry land.",
+    "items": [
+      { "id": "Kc-r1", "skill": "reading", "q": "Why is Antarctica called a desert?", "choices": ["almost no rain or snow falls", "it is full of sand", "it is very hot"], "answer": 0 },
+      { "id": "Kc-r2", "skill": "reading", "q": "What is true about Antarctica?", "choices": ["it has many plants", "it is the largest desert", "it rains often"], "answer": 1 },
+      { "id": "Kc-r3", "skill": "reading", "q": "What is the largest desert on Earth?", "choices": ["the Sahara", "Antarctica", "the ocean"], "answer": 1 },
+      { "id": "Kc-v1", "skill": "vocab", "q": "'freezing' 의 뜻은?", "choices": ["따뜻한", "젖은", "몹시 추운"], "answer": 2 },
+      { "id": "Kc-v2", "skill": "vocab", "q": "'survive' 의 뜻은?", "choices": ["살아남다", "사라지다", "자라다"], "answer": 0 }
+    ] },
+  { "grade": "3", "level": "L", "seriesId": 603, "targetLexile": 550,
+    "passage": "Chameleons are famous for changing color. Many people think they do it only to hide, but that is just part of the story. They also change color to show their mood or to warn other lizards. Their eyes can even look in two directions at once.",
+    "items": [
+      { "id": "Lc-r1", "skill": "reading", "q": "Besides hiding, why do chameleons change color?", "choices": ["to show mood or warn others", "to stay warm", "to sleep"], "answer": 0 },
+      { "id": "Lc-r2", "skill": "reading", "q": "What is special about their eyes?", "choices": ["they glow at night", "they can look two ways at once", "they never blink"], "answer": 1 },
+      { "id": "Lc-r3", "skill": "reading", "q": "What are chameleons famous for?", "choices": ["changing color", "running fast", "singing"], "answer": 0 },
+      { "id": "Lc-r4", "skill": "reading", "q": "What do many people wrongly think is the only reason they change color?", "choices": ["to eat", "to hide", "to sleep"], "answer": 1 },
+      { "id": "Lc-v1", "skill": "vocab", "q": "'mood' 의 뜻은?", "choices": ["기분", "색깔", "크기"], "answer": 0 },
+      { "id": "Lc-v2", "skill": "vocab", "q": "'warn' 의 뜻은?", "choices": ["초대하다", "숨기다", "경고하다"], "answer": 2 }
+    ] },
+  { "grade": "3", "level": "M", "seriesId": 604, "targetLexile": 550,
+    "passage": "Rivers shape the land over long periods of time. As water flows, it slowly carves paths through rock and soil. The Grand Canyon was formed this way by a river over millions of years. What looks solid and permanent is always being reshaped by moving water.",
+    "items": [
+      { "id": "Mc-r1", "skill": "reading", "q": "How was the Grand Canyon formed?", "choices": ["by a river over millions of years", "by a single storm", "by people digging"], "answer": 0 },
+      { "id": "Mc-r2", "skill": "reading", "q": "What does the passage say about solid land?", "choices": ["it never changes", "it is always being reshaped", "it is not real"], "answer": 1 },
+      { "id": "Mc-r3", "skill": "reading", "q": "What carves paths through rock and soil?", "choices": ["flowing water", "strong wind", "falling snow"], "answer": 0 },
+      { "id": "Mc-r4", "skill": "reading", "q": "How long did it take a river to form the Grand Canyon?", "choices": ["a single year", "one week", "millions of years"], "answer": 2 },
+      { "id": "Mc-v1", "skill": "vocab", "q": "'carve' 의 뜻은?", "choices": ["깎아 내다", "쌓다", "녹이다"], "answer": 0 },
+      { "id": "Mc-v2", "skill": "vocab", "q": "'permanent' 의 뜻은?", "choices": ["일시적인", "위험한", "영구적인(변치 않는)"], "answer": 2 }
+    ] },
+  { "grade": "3", "level": "N", "seriesId": 605, "targetLexile": 594,
+    "passage": "In the past, sailors could be at sea for months with no fresh food. Many became sick from a disease called scurvy. Eventually, people discovered that eating fruits like lemons prevented it. Ships began carrying citrus, and countless sailors' lives were saved.",
+    "items": [
+      { "id": "Nc-r1", "skill": "reading", "q": "What made sailors sick?", "choices": ["a disease called scurvy", "cold water", "loud storms"], "answer": 0 },
+      { "id": "Nc-r2", "skill": "reading", "q": "What prevented the disease?", "choices": ["sleeping more", "eating fruits like lemons", "drinking sea water"], "answer": 1 },
+      { "id": "Nc-r3", "skill": "reading", "q": "Why did sailors lack fresh food?", "choices": ["they forgot to pack", "they were at sea for months", "they gave it away"], "answer": 1 },
+      { "id": "Nc-r4", "skill": "reading", "q": "What did ships begin carrying to prevent the disease?", "choices": ["citrus fruits", "extra water", "more sailors"], "answer": 0 },
+      { "id": "Nc-v1", "skill": "vocab", "q": "'disease' 의 뜻은?", "choices": ["병(질병)", "배", "지도"], "answer": 0 },
+      { "id": "Nc-v2", "skill": "vocab", "q": "'prevent' 의 뜻은?", "choices": ["일으키다", "잊다", "막다(예방하다)"], "answer": 2 }
+    ] },
+  { "grade": "4", "level": "O", "seriesId": 606, "targetLexile": 601,
+    "passage": "Mountains are not as unchanging as they appear. They rise slowly as sections of the Earth's crust push together. At the same time, wind, ice, and rain wear them down. Over millions of years, even the tallest peaks can be worn into gentle hills.",
+    "items": [
+      { "id": "Oc-r1", "skill": "reading", "q": "How do mountains rise?", "choices": ["as crust sections push together", "as rivers flow", "as trees grow"], "answer": 0 },
+      { "id": "Oc-r2", "skill": "reading", "q": "What wears mountains down?", "choices": ["sunlight only", "wind, ice, and rain", "animals"], "answer": 1 },
+      { "id": "Oc-r3", "skill": "reading", "q": "What can happen to even the tallest peaks over time?", "choices": ["they grow forever", "they turn to sand instantly", "they can be worn into gentle hills"], "answer": 2 },
+      { "id": "Oc-r4", "skill": "reading", "q": "Are mountains unchanging?", "choices": ["no, they are always changing", "yes, completely", "only at night"], "answer": 0 },
+      { "id": "Oc-v1", "skill": "vocab", "q": "'wear down' 의 뜻은?", "choices": ["닳게 하다", "쌓다", "얼리다"], "answer": 0 },
+      { "id": "Oc-v2", "skill": "vocab", "q": "'peak' 의 뜻은?", "choices": ["골짜기", "강", "산꼭대기"], "answer": 2 }
+    ] },
+  { "grade": "4", "level": "P", "seriesId": 607, "targetLexile": 642,
+    "passage": "The octopus is a master of escape. With no bones in its body, it can squeeze through openings barely larger than its eye. If a predator grabs one of its arms, the octopus can drop the arm and grow a new one later. It can also shoot a cloud of ink to confuse an attacker.",
+    "items": [
+      { "id": "Pc-r1", "skill": "reading", "q": "How can an octopus fit through tiny openings?", "choices": ["it has no bones", "it is very small", "it turns to liquid"], "answer": 0 },
+      { "id": "Pc-r2", "skill": "reading", "q": "What does an octopus do to confuse attackers?", "choices": ["makes a loud sound", "shoots a cloud of ink", "changes into a fish"], "answer": 1 },
+      { "id": "Pc-r3", "skill": "reading", "q": "What can an octopus do if a predator grabs its arm?", "choices": ["freeze completely", "drop the arm and grow a new one later", "turn into a fish"], "answer": 1 },
+      { "id": "Pc-r4", "skill": "reading", "q": "How large an opening can an octopus squeeze through?", "choices": ["one barely larger than its eye", "only a big door", "none at all"], "answer": 0 },
+      { "id": "Pc-v1", "skill": "vocab", "q": "'squeeze' 의 뜻은?", "choices": ["비집고 들어가다(짜다)", "뛰어오르다", "잠자다"], "answer": 0 },
+      { "id": "Pc-v2", "skill": "vocab", "q": "'confuse' 의 뜻은?", "choices": ["도와주다", "무시하다", "혼란시키다"], "answer": 2 }
+    ] },
+  { "grade": "4", "level": "Q", "seriesId": 608, "targetLexile": 701,
+    "passage": "Jane Goodall changed how the world understands chimpanzees. Living among them in the forest, she patiently observed their daily lives. She discovered that they use tools, something scientists once believed only humans could do. Her work showed that animals are far more intelligent than people had assumed.",
+    "items": [
+      { "id": "Qc-r1", "skill": "reading", "q": "What did Jane Goodall discover about chimpanzees?", "choices": ["they use tools", "they can speak", "they build houses"], "answer": 0 },
+      { "id": "Qc-r2", "skill": "reading", "q": "What did her work show about animals?", "choices": ["they cannot learn", "they are more intelligent than assumed", "they are all the same"], "answer": 1 },
+      { "id": "Qc-r3", "skill": "reading", "q": "Where did Jane Goodall live to study chimpanzees?", "choices": ["in a laboratory", "in a city zoo", "among them in the forest"], "answer": 2 },
+      { "id": "Qc-r4", "skill": "reading", "q": "What did scientists once believe about tool use?", "choices": ["that only humans could do it", "that no animal could learn", "that it was impossible"], "answer": 0 },
+      { "id": "Qc-v1", "skill": "vocab", "q": "'observe' 의 뜻은?", "choices": ["관찰하다", "무시하다", "파괴하다"], "answer": 0 },
+      { "id": "Qc-v2", "skill": "vocab", "q": "'intelligent' 의 뜻은?", "choices": ["게으른", "위험한", "똑똑한"], "answer": 2 }
+    ] },
+  { "grade": "5", "level": "R", "seriesId": 609, "targetLexile": 751,
+    "passage": "Glass may look solid, but making it is a delicate art. Sand is heated until it melts into a glowing liquid. Skilled workers then shape it by blowing air through a long tube. As it cools, the glass hardens into bottles, windows, or works of art.",
+    "items": [
+      { "id": "Rc-r1", "skill": "reading", "q": "What is glass made from?", "choices": ["heated sand", "melted ice", "soft clay"], "answer": 0 },
+      { "id": "Rc-r2", "skill": "reading", "q": "How do workers shape hot glass?", "choices": ["by cutting it with knives", "by blowing air through a tube", "by freezing it"], "answer": 1 },
+      { "id": "Rc-r3", "skill": "reading", "q": "What is heated to make glass?", "choices": ["sand", "water", "clay"], "answer": 0 },
+      { "id": "Rc-r4", "skill": "reading", "q": "What happens to glass as it cools?", "choices": ["it melts", "it hardens", "it disappears"], "answer": 1 },
+      { "id": "Rc-r5", "skill": "reading", "q": "What can glass be shaped into?", "choices": ["only mirrors", "only marbles", "bottles, windows, or art"], "answer": 2 },
+      { "id": "Rc-v3", "skill": "vocab", "q": "'harden' 의 뜻은?", "choices": ["굳다(단단해지다)", "녹다", "깨지다"], "answer": 0 },
+      { "id": "Rc-v1", "skill": "vocab", "q": "'melt' 의 뜻은?", "choices": ["녹다", "얼다", "굳다"], "answer": 0 },
+      { "id": "Rc-v2", "skill": "vocab", "q": "'delicate' 의 뜻은?", "choices": ["거친", "무거운", "섬세한(다루기 까다로운)"], "answer": 2 }
+    ] },
+  { "grade": "5", "level": "S", "seriesId": 610, "targetLexile": 746,
+    "passage": "Wildfires are frightening, yet some forests actually need them. Certain trees have cones that only open and release seeds in intense heat. Fire also clears away dead brush, making room for new growth. Problems arise mainly when fires burn too often or too close to towns.",
+    "items": [
+      { "id": "Sc-r1", "skill": "reading", "q": "Why do some forests need fire?", "choices": ["some cones open only in heat", "fire makes rain", "trees like smoke"], "answer": 0 },
+      { "id": "Sc-r2", "skill": "reading", "q": "When do wildfires become a problem?", "choices": ["when they are small", "when they burn too often or near towns", "when it is winter"], "answer": 1 },
+      { "id": "Sc-r3", "skill": "reading", "q": "What do certain cones do in intense heat?", "choices": ["they burn completely", "they open and release seeds", "they stay closed"], "answer": 1 },
+      { "id": "Sc-r4", "skill": "reading", "q": "How does fire make room for new growth?", "choices": ["it clears away dead brush", "it plants new seeds by hand", "it cools the soil"], "answer": 0 },
+      { "id": "Sc-r5", "skill": "reading", "q": "Are all wildfires harmful, according to the passage?", "choices": ["yes, always", "only in winter", "no, some forests need them"], "answer": 2 },
+      { "id": "Sc-v3", "skill": "vocab", "q": "'brush (덤불)' 의 뜻은?", "choices": ["덤불(잡목)", "강물", "바위"], "answer": 0 },
+      { "id": "Sc-v1", "skill": "vocab", "q": "'intense' 의 뜻은?", "choices": ["강렬한", "약한", "시원한"], "answer": 0 },
+      { "id": "Sc-v2", "skill": "vocab", "q": "'clear away' 의 뜻은?", "choices": ["심다", "숨기다", "없애다(치우다)"], "answer": 2 }
+    ] },
+  { "grade": "5", "level": "T", "seriesId": 611, "targetLexile": 736,
+    "passage": "Dolphins are known for their intelligence and playfulness. They communicate using clicks and whistles, and each dolphin has its own signature sound, like a name. They work together to herd fish and even help injured members of their group. Some have been seen playing games just for fun.",
+    "items": [
+      { "id": "Tc-r1", "skill": "reading", "q": "How do dolphins communicate?", "choices": ["using clicks and whistles", "by changing color", "with written signs"], "answer": 0 },
+      { "id": "Tc-r2", "skill": "reading", "q": "What is each dolphin's signature sound like?", "choices": ["a song", "a name", "a warning bell"], "answer": 1 },
+      { "id": "Tc-r3", "skill": "reading", "q": "How do dolphins work together?", "choices": ["they hunt alone", "they herd fish and help injured members", "they avoid each other"], "answer": 1 },
+      { "id": "Tc-r4", "skill": "reading", "q": "What are dolphins known for?", "choices": ["intelligence and playfulness", "being slow", "being silent"], "answer": 0 },
+      { "id": "Tc-r5", "skill": "reading", "q": "Why do some dolphins play games?", "choices": ["to find food", "to escape danger", "just for fun"], "answer": 2 },
+      { "id": "Tc-v3", "skill": "vocab", "q": "'playfulness' 의 뜻은?", "choices": ["장난기(놀기 좋아함)", "게으름", "두려움"], "answer": 0 },
+      { "id": "Tc-v1", "skill": "vocab", "q": "'signature (sound)' 의 뜻은?", "choices": ["고유의(특유의)", "시끄러운", "조용한"], "answer": 0 },
+      { "id": "Tc-v2", "skill": "vocab", "q": "'injured' 의 뜻은?", "choices": ["건강한", "배고픈", "다친"], "answer": 2 }
+    ] },
+  { "grade": "6", "level": "U", "seriesId": 612, "targetLexile": 811,
+    "passage": "The pyramids of Egypt have amazed people for thousands of years. Built as tombs for pharaohs, they required enormous planning and labor. Workers moved massive stone blocks without modern machines, using ramps and sledges. How exactly they accomplished this remains a subject of debate.",
+    "items": [
+      { "id": "Uc-r1", "skill": "reading", "q": "Why were the pyramids built?", "choices": ["as tombs for pharaohs", "as markets", "as schools"], "answer": 0 },
+      { "id": "Uc-r2", "skill": "reading", "q": "How did workers move the stone blocks?", "choices": ["using trucks", "using ramps and sledges", "using cranes"], "answer": 1 },
+      { "id": "Uc-r3", "skill": "reading", "q": "What did building the pyramids require?", "choices": ["only a few workers", "enormous planning and labor", "modern machines"], "answer": 1 },
+      { "id": "Uc-r4", "skill": "reading", "q": "Did workers have modern machines?", "choices": ["no", "yes", "only cranes"], "answer": 0 },
+      { "id": "Uc-r5", "skill": "reading", "q": "What remains a subject of debate?", "choices": ["who lived in Egypt", "where the Nile flows", "how exactly the pyramids were built"], "answer": 2 },
+      { "id": "Uc-v3", "skill": "vocab", "q": "'pharaoh' 의 뜻은?", "choices": ["(고대 이집트) 왕", "신하", "상인"], "answer": 0 },
+      { "id": "Uc-v1", "skill": "vocab", "q": "'tomb' 의 뜻은?", "choices": ["무덤", "시장", "다리"], "answer": 0 },
+      { "id": "Uc-v2", "skill": "vocab", "q": "'massive' 의 뜻은?", "choices": ["가벼운", "작은", "거대한"], "answer": 2 }
+    ] },
+  { "grade": "6", "level": "V", "seriesId": 613, "targetLexile": 777,
+    "passage": "Some plants defend themselves with more than thorns. When certain trees are attacked by insects, they release chemicals into the air. Nearby trees detect these signals and begin producing their own defenses. In this way, a forest can warn itself of danger before the pests arrive.",
+    "items": [
+      { "id": "Vc-r1", "skill": "reading", "q": "What do attacked trees release into the air?", "choices": ["chemicals", "water", "seeds"], "answer": 0 },
+      { "id": "Vc-r2", "skill": "reading", "q": "What do nearby trees do after detecting the signal?", "choices": ["fall down", "produce their own defenses", "grow taller"], "answer": 1 },
+      { "id": "Vc-r3", "skill": "reading", "q": "How do some plants defend themselves besides using thorns?", "choices": ["by growing taller", "by releasing chemicals into the air", "by making noise"], "answer": 1 },
+      { "id": "Vc-r4", "skill": "reading", "q": "When do these trees release the chemicals?", "choices": ["when attacked by insects", "every morning", "only at night"], "answer": 0 },
+      { "id": "Vc-r5", "skill": "reading", "q": "What can a forest do before the pests arrive?", "choices": ["move away", "fall asleep", "warn itself of danger"], "answer": 2 },
+      { "id": "Vc-v3", "skill": "vocab", "q": "'signal (신호)' 의 뜻은?", "choices": ["신호", "독", "뿌리"], "answer": 0 },
+      { "id": "Vc-v1", "skill": "vocab", "q": "'detect' 의 뜻은?", "choices": ["감지하다(알아채다)", "무시하다", "숨기다"], "answer": 0 },
+      { "id": "Vc-v2", "skill": "vocab", "q": "'defense' 의 뜻은?", "choices": ["공격", "선물", "방어(수단)"], "answer": 2 }
+    ] },
+  { "grade": "6", "level": "W", "seriesId": 614, "targetLexile": 837,
+    "passage": "The compass was one of the most important inventions in history. Before it, sailors relied on the stars and could easily lose their way in cloudy weather. A magnetized needle, always pointing north, allowed ships to navigate confidently across open seas. This simple tool helped open the age of global exploration.",
+    "items": [
+      { "id": "Wc-r1", "skill": "reading", "q": "Why was the compass so important?", "choices": ["it let ships navigate even in clouds", "it made ships faster", "it caught fish"], "answer": 0 },
+      { "id": "Wc-r2", "skill": "reading", "q": "What does a compass needle always point to?", "choices": ["the sun", "north", "the nearest land"], "answer": 1 },
+      { "id": "Wc-r3", "skill": "reading", "q": "What did sailors rely on before the compass?", "choices": ["radios", "the stars", "maps"], "answer": 1 },
+      { "id": "Wc-r4", "skill": "reading", "q": "Without a compass, what could easily happen in cloudy weather?", "choices": ["sailors could lose their way", "ships would sink", "the sea would freeze"], "answer": 0 },
+      { "id": "Wc-r5", "skill": "reading", "q": "What age did the compass help open?", "choices": ["the age of farming", "the age of writing", "the age of global exploration"], "answer": 2 },
+      { "id": "Wc-v3", "skill": "vocab", "q": "'magnetized' 의 뜻은?", "choices": ["자성을 띤", "녹은", "깨진"], "answer": 0 },
+      { "id": "Wc-v1", "skill": "vocab", "q": "'rely on' 의 뜻은?", "choices": ["의존하다", "무시하다", "부수다"], "answer": 0 },
+      { "id": "Wc-v2", "skill": "vocab", "q": "'exploration' 의 뜻은?", "choices": ["휴식", "전쟁", "탐험"], "answer": 2 }
+    ] },
+  { "grade": "7", "level": "X", "seriesId": 615, "targetLexile": 800,
+    "passage": "Trees communicate through a hidden network beneath the soil. Their roots are connected by threads of fungus that carry water, nutrients, and even warning signals. Older trees can share food with younger ones struggling in the shade. Scientists sometimes call this underground web the 'wood wide web.'",
+    "items": [
+      { "id": "Xc-r1", "skill": "reading", "q": "How do trees communicate underground?", "choices": ["through threads of fungus on their roots", "by dropping leaves", "through the wind"], "answer": 0 },
+      { "id": "Xc-r2", "skill": "reading", "q": "What can older trees do for younger ones?", "choices": ["block their sunlight", "share food", "pull up their roots"], "answer": 1 },
+      { "id": "Xc-r3", "skill": "reading", "q": "What carries water and signals between tree roots?", "choices": ["metal wires", "threads of fungus", "flowing rivers"], "answer": 1 },
+      { "id": "Xc-r4", "skill": "reading", "q": "Whom can older trees help?", "choices": ["younger ones struggling in the shade", "only themselves", "passing animals"], "answer": 0 },
+      { "id": "Xc-r5", "skill": "reading", "q": "What do scientists sometimes call this network?", "choices": ["the internet", "the food chain", "the 'wood wide web'"], "answer": 2 },
+      { "id": "Xc-v3", "skill": "vocab", "q": "'beneath' 의 뜻은?", "choices": ["~ 아래에", "~ 위에", "~ 옆에"], "answer": 0 },
+      { "id": "Xc-v1", "skill": "vocab", "q": "'nutrient' 의 뜻은?", "choices": ["영양분", "독", "돌"], "answer": 0 },
+      { "id": "Xc-v2", "skill": "vocab", "q": "'struggle' 의 뜻은?", "choices": ["쉬다", "자라다", "힘겨워하다"], "answer": 2 }
+    ] },
+  { "grade": "7", "level": "Y", "seriesId": 616, "targetLexile": 965,
+    "passage": "Vaccines work by teaching the body to fight disease before it strikes. A tiny, harmless piece of a germ is introduced, prompting the immune system to prepare defenses. If the real germ ever appears, the body recognizes it and responds quickly. This clever strategy has wiped out illnesses that once killed millions.",
+    "items": [
+      { "id": "Yc-r1", "skill": "reading", "q": "How do vaccines protect the body?", "choices": ["they teach it to fight disease in advance", "they cure every illness instantly", "they make germs stronger"], "answer": 0 },
+      { "id": "Yc-r2", "skill": "reading", "q": "What happens if the real germ appears later?", "choices": ["the body ignores it", "the body recognizes and responds quickly", "nothing changes"], "answer": 1 },
+      { "id": "Yc-r3", "skill": "reading", "q": "What is introduced to prompt the immune system?", "choices": ["a strong live germ", "a tiny, harmless piece of a germ", "a new medicine"], "answer": 1 },
+      { "id": "Yc-r4", "skill": "reading", "q": "What have vaccines done to some illnesses?", "choices": ["wiped them out", "made them worse", "spread them"], "answer": 0 },
+      { "id": "Yc-r5", "skill": "reading", "q": "What does the immune system do after a vaccine?", "choices": ["goes to sleep", "forgets the germ", "prepares defenses"], "answer": 2 },
+      { "id": "Yc-v3", "skill": "vocab", "q": "'immune system' 의 뜻은?", "choices": ["면역 체계", "소화 기관", "근육"], "answer": 0 },
+      { "id": "Yc-v1", "skill": "vocab", "q": "'harmless' 의 뜻은?", "choices": ["해롭지 않은", "위험한", "무거운"], "answer": 0 },
+      { "id": "Yc-v2", "skill": "vocab", "q": "'recognize' 의 뜻은?", "choices": ["잊다", "숨기다", "알아보다"], "answer": 2 }
+    ] },
+  { "grade": "7", "level": "Z", "seriesId": 617, "targetLexile": 943,
+    "passage": "The idea that the Earth revolves around the sun was once considered dangerous. For centuries, people believed our planet sat motionless at the center of everything. When astronomers presented evidence to the contrary, many refused to accept it. It took generations for this revolutionary truth to be widely embraced.",
+    "items": [
+      { "id": "Zc-r1", "skill": "reading", "q": "What did people once believe about the Earth?", "choices": ["it sat motionless at the center", "it moved around the sun", "it was flat and small"], "answer": 0 },
+      { "id": "Zc-r2", "skill": "reading", "q": "How did people react to the new evidence?", "choices": ["everyone believed at once", "many refused to accept it", "they ignored the sun"], "answer": 1 },
+      { "id": "Zc-r3", "skill": "reading", "q": "What did astronomers present to challenge the old belief?", "choices": ["stories", "evidence", "paintings"], "answer": 1 },
+      { "id": "Zc-r4", "skill": "reading", "q": "How long did it take for the truth to be widely embraced?", "choices": ["generations", "a single day", "a week"], "answer": 0 },
+      { "id": "Zc-r5", "skill": "reading", "q": "How was the idea of the Earth moving once considered?", "choices": ["boring", "obvious", "dangerous"], "answer": 2 },
+      { "id": "Zc-v3", "skill": "vocab", "q": "'motionless' 의 뜻은?", "choices": ["움직이지 않는", "빠른", "뜨거운"], "answer": 0 },
+      { "id": "Zc-v1", "skill": "vocab", "q": "'revolve' 의 뜻은?", "choices": ["돌다(공전하다)", "멈추다", "떨어지다"], "answer": 0 },
+      { "id": "Zc-v2", "skill": "vocab", "q": "'evidence' 의 뜻은?", "choices": ["질문", "소문", "증거"], "answer": 2 }
+    ] },
+  { "grade": "7", "level": "Z1", "seriesId": 618, "targetLexile": 829,
+    "passage": "Social media has transformed how people share information, for better and for worse. News now spreads across the globe in seconds, connecting distant communities. Yet the same speed allows rumors and falsehoods to travel just as quickly. Learning to judge what is trustworthy has become an essential modern skill.",
+    "items": [
+      { "id": "Z1c-r1", "skill": "reading", "q": "What is one benefit of social media mentioned?", "choices": ["news connects distant communities quickly", "it stops all rumors", "it slows down news"], "answer": 0 },
+      { "id": "Z1c-r2", "skill": "reading", "q": "What has become an essential modern skill?", "choices": ["typing quickly", "judging what is trustworthy", "memorizing news"], "answer": 1 },
+      { "id": "Z1c-r3", "skill": "reading", "q": "How fast does news now spread?", "choices": ["over many months", "across the globe in seconds", "never"], "answer": 1 },
+      { "id": "Z1c-r4", "skill": "reading", "q": "What can travel just as quickly as news?", "choices": ["rumors and falsehoods", "only good news", "printed books"], "answer": 0 },
+      { "id": "Z1c-r5", "skill": "reading", "q": "The passage says social media is good and bad. What does this mean?", "choices": ["it is only harmful", "it is only helpful", "it has both benefits and dangers"], "answer": 2 },
+      { "id": "Z1c-v3", "skill": "vocab", "q": "'rumor' 의 뜻은?", "choices": ["소문", "사실", "질문"], "answer": 0 },
+      { "id": "Z1c-v1", "skill": "vocab", "q": "'transform' 의 뜻은?", "choices": ["완전히 바꾸다", "숨기다", "반복하다"], "answer": 0 },
+      { "id": "Z1c-v2", "skill": "vocab", "q": "'trustworthy' 의 뜻은?", "choices": ["위험한", "비싼", "믿을 만한"], "answer": 2 }
+    ] },
+  { "grade": "7", "level": "Z2", "seriesId": 619, "targetLexile": 992,
+    "passage": "Free will has puzzled philosophers for centuries. We feel certain that we choose our own actions, yet every decision is shaped by our biology and experiences. If our choices are the product of causes beyond our control, are they truly free? The question remains one of the deepest mysteries of human existence.",
+    "items": [
+      { "id": "Z2c-r1", "skill": "reading", "q": "What is the main question the passage raises?", "choices": ["whether our choices are truly free", "how the brain grows", "why people forget"], "answer": 0 },
+      { "id": "Z2c-r2", "skill": "reading", "q": "What shapes our decisions, according to the passage?", "choices": ["only luck", "our biology and experiences", "nothing at all"], "answer": 1 },
+      { "id": "Z2c-r3", "skill": "reading", "q": "How do we feel about our own actions?", "choices": ["unsure they exist", "certain that we choose them", "that others choose them"], "answer": 1 },
+      { "id": "Z2c-r4", "skill": "reading", "q": "For how long has free will puzzled philosophers?", "choices": ["for centuries", "for a week", "only recently"], "answer": 0 },
+      { "id": "Z2c-r5", "skill": "reading", "q": "What is the question of free will described as?", "choices": ["an easy problem", "a silly joke", "one of the deepest mysteries of human existence"], "answer": 2 },
+      { "id": "Z2c-v3", "skill": "vocab", "q": "'philosopher' 의 뜻은?", "choices": ["철학자", "과학자", "화가"], "answer": 0 },
+      { "id": "Z2c-v1", "skill": "vocab", "q": "'puzzle (동사)' 의 뜻은?", "choices": ["곤혹스럽게 하다", "즐겁게 하다", "잠재우다"], "answer": 0 },
+      { "id": "Z2c-v2", "skill": "vocab", "q": "'mystery' 의 뜻은?", "choices": ["사실", "규칙", "수수께끼"], "answer": 2 }
+    ] }
+]

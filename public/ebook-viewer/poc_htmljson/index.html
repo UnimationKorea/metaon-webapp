@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>RHK Read-Along</title>
+<style>
+  :root { --bg:#1f2330; --panel:#2a2f40; --txt:#eef1f7; --accent:#5b8cff; --gold:#ffd54a; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--txt);
+    font-family:-apple-system,"Segoe UI",Roboto,"Malgun Gothic",sans-serif; overflow:hidden; }
+  #app { position:relative; width:100%; height:100%; overflow:hidden; }
+  header, footer { position:absolute; left:0; right:0; z-index:30; opacity:0; pointer-events:none;
+    transition:opacity .22s ease, transform .22s ease; backdrop-filter:blur(12px); }
+  header { top:0; display:flex; align-items:center; gap:10px; padding:10px 16px; background:rgba(42,47,64,.9);
+    box-shadow:0 2px 8px rgba(0,0,0,.3); flex-wrap:wrap; transform:translateY(-100%); }
+  footer { bottom:0; display:flex; align-items:center; gap:14px; padding:10px 16px; background:rgba(42,47,64,.9);
+    box-shadow:0 -2px 8px rgba(0,0,0,.3); transform:translateY(100%); }
+  #app.chrome-visible header,
+  #app.chrome-visible footer,
+  header:focus-within,
+  footer:focus-within { opacity:1; pointer-events:auto; transform:translateY(0); }
+  header h1 { font-size:14px; margin:0; font-weight:600; }
+  header .meta { font-size:12px; opacity:.6; }
+  header .spacer { flex:1; }
+  select, button { background:#3b4258; color:var(--txt); border:none; border-radius:10px;
+    padding:9px 12px; font-size:14px; cursor:pointer; font-weight:600; }
+  button:active { transform:scale(.96); }
+  button.primary { background:var(--accent); }
+  button.gold { background:var(--gold); color:#3a2c00; }
+  button.on { background:var(--accent); }
+  .seg { display:inline-flex; background:#222736; border-radius:10px; padding:2px; gap:2px; }
+  .seg button { padding:7px 12px; font-size:13px; border-radius:8px; background:transparent; }
+  .seg button.on { background:var(--accent); }
+  label.toggle { font-size:12px; display:flex; align-items:center; gap:6px; opacity:.8; }
+  .lbl { font-size:11px; opacity:.55; margin-right:-4px; }
+  #stage { position:absolute; inset:0; display:grid; place-items:center; overflow:hidden; touch-action:manipulation; }
+  #spread { display:flex; align-items:center; justify-content:center; gap:12px; width:100%; height:100%; max-width:100%; max-height:100%; }
+  #facing { box-shadow:0 10px 40px rgba(0,0,0,.5); background:#fff; border-radius:4px; line-height:0; overflow:hidden; flex:0 0 auto; display:none; }
+  #facing img { display:block; border-radius:4px; }
+  #pageWrap { position:relative; box-shadow:0 10px 40px rgba(0,0,0,.5); background:#fff; border-radius:4px; line-height:0; overflow:hidden; flex:0 0 auto; }
+  #pageInner { position:relative; display:inline-block; line-height:0; will-change:transform; }
+  #pageImg { display:block; border-radius:4px; }
+  #overlay { position:absolute; inset:0; mix-blend-mode:multiply; }
+  /* 콘텐츠 연동 모션 (음원 재생 중에만): 페이지마다 줌/팬/흔들기를 다르게 */
+  #pageInner.mo { transform-origin: var(--fx,50%) var(--fy,42%);
+    animation-duration:5.5s; animation-timing-function:ease-out; animation-iteration-count:infinite;
+    animation-direction:alternate; animation-play-state:paused; }
+  #pageInner.mo.run { animation-play-state:running; }
+  #pageInner.mo.kb { animation-name: motion; }
+  #pageInner.mo.sway { animation-name: sway; animation-timing-function:ease-in-out; animation-duration:3.2s; }
+  @keyframes motion { from { transform: scale(1) translate(0,0); }
+    to { transform: scale(var(--ms,1.08)) translate(var(--mx,0%), var(--my,0%)); } }
+  @keyframes sway { from { transform: scale(1.025) rotate(-0.7deg); }
+    to { transform: scale(1.045) rotate(0.7deg); } }
+  .word { position:absolute; cursor:pointer; border-radius:3px; background:transparent; transition:background .12s ease; }
+  .word.active { background:#ffd54a; }
+  .word.done { background:transparent; }   /* 이미 지나간 단어는 표시하지 않음 */
+  #overlay.debugMode { mix-blend-mode:normal; }
+  #overlay.debugMode .word { outline:1px solid rgba(91,140,255,.5); }
+  #play { width:58px; height:58px; margin-left:auto; margin-right:72px; padding:0; border-radius:50%; background:transparent; }
+  #play img { width:100%; height:100%; display:block; object-fit:contain; }
+  #play.is-playing img { filter:saturate(.72) brightness(.9); transform:scale(.94); }
+  #prev, #next { position:absolute; top:50%; z-index:35; width:64px; height:64px; padding:0; border-radius:50%; background:transparent; transform:translateY(-50%); }
+  #prev { left:16px; }
+  #next { right:16px; }
+  #prev img, #next img { width:100%; height:100%; display:block; object-fit:contain; }
+  #seek { flex:0 1 42vw; max-width:min(420px,42vw); accent-color:var(--accent); }
+  .footer-status { min-width:124px; display:inline-flex; justify-content:flex-start; }
+  .footer-options { min-width:104px; display:inline-flex; align-items:center; }
+  #status { position:absolute; top:10px; left:50%; transform:translateX(-50%);
+    background:rgba(0,0,0,.6); padding:5px 12px; border-radius:20px; font-size:12px; z-index:6; }
+  .pageno { font-size:13px; min-width:90px; text-align:center; opacity:.8; }
+  .badge { font-size:10px; background:#4caf50; color:#04210b; padding:2px 7px; border-radius:10px; font-weight:700; }
+
+  #transDrawer { position:absolute; top:0; right:0; height:100%; width:min(420px,80%); background:#262b3b;
+    box-shadow:-6px 0 24px rgba(0,0,0,.4); transform:translateX(100%); transition:transform .25s ease; z-index:20;
+    display:flex; flex-direction:column; }
+  #transDrawer.open { transform:translateX(0); }
+  #transDrawer .dh { padding:14px 18px; font-weight:700; border-bottom:1px solid #3a4159; display:flex; align-items:center; }
+  #transDrawer .dh .x { margin-left:auto; }
+  #transBody { overflow:auto; padding:8px 18px 30px; }
+  .tpair { padding:12px 0; border-bottom:1px solid #333a4d; }
+  .tpair .en { font-size:14px; color:#cfd6e6; line-height:1.5; }
+  .tpair .ko { font-size:15px; color:#fff; margin-top:5px; line-height:1.6; }
+
+  #wordPop { position:fixed; z-index:40; width:300px; max-width:88vw; background:#2b3142; color:var(--txt);
+    border-radius:14px; box-shadow:0 12px 40px rgba(0,0,0,.55); border:1px solid #3d4566; display:none; overflow:hidden; }
+  #wordPop.show { display:block; }
+  #wordPop .wp-head { padding:14px 16px 10px; background:#323a4f; }
+  #wordPop .wp-word { font-size:22px; font-weight:800; }
+  #wordPop .wp-pos { font-size:12px; opacity:.7; margin-left:8px; }
+  #wordPop .wp-ko { padding:12px 16px; font-size:16px; line-height:1.5; }
+  #wordPop .wp-ex { padding:10px 16px 12px; font-size:12.5px; color:#aeb6cc; line-height:1.5; border-top:1px solid #3a4159; }
+  #wordPop .wp-ex .exko { color:#cdd5e8; display:block; margin-top:3px; }
+  #wordPop .wp-act { display:flex; gap:8px; padding:0 14px 14px; }
+  #wordPop .wp-act button { flex:1; padding:10px; font-size:13px; }
+
+  .modal { position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; z-index:60; align-items:center; justify-content:center; }
+  .modal.show { display:flex; }
+  .sheet { width:min(640px,92vw); max-height:86vh; background:#262b3b; border-radius:16px; overflow:hidden; display:flex; flex-direction:column; }
+  .sheet .mh { padding:16px 20px; display:flex; align-items:center; gap:10px; border-bottom:1px solid #3a4159; }
+  .sheet .mh h2 { margin:0; font-size:17px; }
+  .sheet .mh .count { font-size:12px; opacity:.6; }
+  .sheet .mh .x { margin-left:auto; }
+  .mb { overflow:auto; padding:8px 14px 18px; }
+  .empty { text-align:center; opacity:.55; padding:48px 20px; font-size:14px; line-height:1.6; }
+  .wrow { display:flex; align-items:center; gap:12px; padding:12px 10px; border-bottom:1px solid #333a4d; }
+  .wrow .ww { font-weight:700; font-size:16px; min-width:96px; }
+  .wrow .wpos { font-size:11px; opacity:.6; }
+  .wrow .wko { flex:1; font-size:14px; color:#dfe5f3; }
+  .wrow .del { background:#5a3340; color:#ffb9c5; padding:7px 11px; font-size:12px; }
+  .toast { position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:#1b8a4b; color:#fff;
+    padding:10px 18px; border-radius:22px; font-size:13px; font-weight:600; z-index:80; opacity:0; transition:opacity .2s; pointer-events:none; }
+  .toast.show { opacity:1; }
+  .setrow { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:15px 2px; border-bottom:1px solid #333a4d; }
+  .setrow:last-child { border-bottom:none; }
+  .setlbl { font-size:14px; font-weight:600; display:flex; flex-direction:column; }
+  .setlbl small { font-weight:400; opacity:.55; font-size:11px; margin-top:3px; }
+  #setModal .seg button { padding:8px 13px; font-size:13px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <select id="bookSel" title="책 선택"></select>
+    <span class="badge" id="timingBadge">타이밍</span>
+    <span class="lbl">하이라이트</span>
+    <span class="seg"><button id="modeWord" class="on">단어</button><button id="modeSent">문장</button></span>
+    <span class="lbl">보기</span>
+    <span class="seg"><button id="viewSingle" class="on">낱장</button><button id="viewSpread">펼침</button></span>
+    <div class="spacer"></div>
+    <button id="transBtn">해석</button>
+    <button id="myDictBtn">📒 내 사전 <span id="myCount" style="opacity:.7"></span></button>
+    <button id="settingsBtn" title="설정">⚙</button>
+    <button id="play" class="primary" aria-label="재생"><img src="/metaon-assets/activity/common-controls/listening.png" alt="" /></button>
+  </header>
+
+  <div id="stage">
+    <div id="status">로딩 중…</div>
+    <button id="prev" aria-label="이전 페이지"><img src="/metaon-assets/activity/common-controls/btn-page-prev.png" alt="" /></button>
+    <button id="next" aria-label="다음 페이지"><img src="/metaon-assets/activity/common-controls/btn-page-next.png" alt="" /></button>
+    <div id="spread">
+      <div id="pageWrap">
+        <div id="pageInner">
+          <img id="pageImg" alt="page" />
+          <div id="overlay"></div>
+        </div>
+      </div>
+      <div id="facing"><img id="facingImg" alt="facing page" /></div>
+    </div>
+    <aside id="transDrawer">
+      <div class="dh">📖 이 페이지 해석 <button class="x" id="transClose">✕</button></div>
+      <div id="transBody"></div>
+    </aside>
+  </div>
+
+  <footer>
+    <span class="pageno" id="pageno">– / –</span>
+    <input type="range" id="seek" min="0" max="1000" value="0" />
+    <span class="footer-status meta" id="time">0:00</span>
+    <label class="footer-options toggle"><input type="checkbox" id="autoadv" checked> 자동 넘김</label>
+  </footer>
+</div>
+
+<div id="wordPop">
+  <div class="wp-head"><span class="wp-word" id="wpWord"></span><span class="wp-pos" id="wpPos"></span></div>
+  <div class="wp-ko" id="wpKo"></div>
+  <div class="wp-ex" id="wpEx" style="display:none"></div>
+  <div class="wp-act">
+    <button class="primary" id="wpPlay">▶ 여기부터</button>
+    <button class="gold" id="wpAdd">★ 내 사전에 추가</button>
+  </div>
+</div>
+
+<div class="modal" id="myModal">
+  <div class="sheet">
+    <div class="mh"><h2>📒 내 사전</h2><span class="count" id="myModalCount"></span>
+      <button class="x" id="myClose">✕</button></div>
+    <div class="mb" id="myBody"></div>
+  </div>
+</div>
+
+<div class="modal" id="setModal">
+  <div class="sheet" style="width:min(460px,92vw)">
+    <div class="mh"><h2>⚙ 설정</h2><button class="x" id="setClose">✕</button></div>
+    <div class="mb" style="padding:6px 22px 20px">
+      <div class="setrow">
+        <span class="setlbl">읽기 시작 지연<small>페이지가 넘어간 뒤 읽기 시작까지</small></span>
+        <span class="seg" id="setDelay"><button data-v="0">0초</button><button data-v="1">1초</button><button data-v="2">2초</button></span>
+      </div>
+      <div class="setrow">
+        <span class="setlbl">페이지 전환 효과</span>
+        <span class="seg" id="setTrans"><button data-v="none">없음</button><button data-v="slide">슬라이드</button><button data-v="fade">페이드</button></span>
+      </div>
+      <div class="setrow">
+        <span class="setlbl">넘김 효과음<small>종이 넘기는 소리</small></span>
+        <span class="seg" id="setSound"><button data-v="on">켜기</button><button data-v="off">끄기</button></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<audio id="audio" preload="auto"></audio>
+
+<script>
+const $ = s => document.querySelector(s);
+const encPath = p => String(p).split('/').map(encodeURIComponent).join('/');  // 공백/대괄호 폴더명 URL 인코딩
+const app=$('#app'), stage=$('#stage'), pageImg=$('#pageImg'), overlay=$('#overlay'), audio=$('#audio'), status=$('#status');
+
+let manifest=[], book, dict={}, trans={}, bookDir='', bookId='', cur=0;
+let bodyEls=[], wordSegs=[], sentSegs=[], raf=0, curW=0, curH=0;
+let highlightMode='word';   // 'word' | 'sentence'
+let chromeTimer=0;
+const CHROME_AUTO_HIDE_MS = 1000;
+const MYKEY = () => 'rhk_mydict_' + bookId;
+const pageWrap = $('#pageWrap'), pageInner = $('#pageInner'), spreadEl = $('#spread'), facingEl = $('#facing'), facingImg = $('#facingImg');
+function send(type, payload){
+  if(window.parent && window.parent !== window) window.parent.postMessage({ type, payload }, '*');
+}
+function isExternalPath(path){
+  return /^(https?:|blob:|data:)/i.test(String(path || ''));
+}
+function assetUrl(path){
+  if(!path) return '';
+  if(isExternalPath(path) || !bookDir) return String(path);
+  return `${encPath(bookDir)}/${encPath(path)}`;
+}
+function optionText(nextBook){
+  const level = nextBook && nextBook.level ? `[${nextBook.level}] ` : '';
+  return `${level}${(nextBook && nextBook.title) || 'Listening E-book'}`;
+}
+function chromeHasFocus(){
+  const active=document.activeElement;
+  return Boolean(active && (document.querySelector('header').contains(active) || document.querySelector('footer').contains(active)));
+}
+function isChromeVisible(){
+  return app.classList.contains('chrome-visible');
+}
+function isChromeInteractiveTarget(target){
+  return Boolean(target && target.closest && target.closest('header, footer, #transDrawer, #wordPop, .modal'));
+}
+function showChrome(duration=CHROME_AUTO_HIDE_MS){
+  app.classList.add('chrome-visible');
+  clearTimeout(chromeTimer);
+  if(duration>0) chromeTimer=setTimeout(hideChrome, duration);
+}
+function hideChrome(force=false){
+  if(!force && chromeHasFocus()){
+    showChrome(CHROME_AUTO_HIDE_MS);
+    return;
+  }
+  clearTimeout(chromeTimer);
+  app.classList.remove('chrome-visible');
+}
+function installChromeAutoHide(){
+  const wake=()=>showChrome(CHROME_AUTO_HIDE_MS);
+  stage.addEventListener('pointerdown', event=>{
+    if(isChromeInteractiveTarget(event.target)) return;
+    if(isChromeVisible()) hideChrome(true);
+    else wake();
+  });
+  document.querySelector('header').addEventListener('pointerdown', wake);
+  document.querySelector('footer').addEventListener('pointerdown', wake);
+  document.addEventListener('keydown', e=>{
+    if(e.key==='Tab') wake();
+    if(e.key==='Escape') hideChrome(true);
+  });
+}
+// per-page content-matched motion: bookPage -> [style, originX%, originY%, panX%, panY%]
+// style: 'push'(인물 줌인) | 'pan'(좌→우 팬) | 'rise'(위로 드리프트) | 'sway'(좌우 흔들기)
+const MOTION = {
+  3:['push', 54,48, -1.5, 0.4],   // 엄마+아이 (우중앙)으로 줌인
+  4:['rise', 50,42,  0.6, -2.2],  // 아빠+아이, 오른쪽 새 쪽으로 살짝 위로
+  5:['push', 56,44, -1.6, 0.4],   // 할머니+아이 (램프 옆)으로 줌인
+  6:['pan',  40,42,  4.2, 0.0],   // 할아버지(좌)→아이(우) 팬
+  7:['push', 48,46,  0.0, 0.7],   // 이모+아이, 야외 잔잔한 줌인
+  8:['sway', 50,46,  0.0, 0.0],   // 누워 읽기, 좌우로 살짝 흔들기
+  9:['push', 55,42, -2.2, 0.8],   // 형+동생, 가운데 책으로 줌인
+  10:['pan', 44,42,  4.2, 0.4],   // 아이(좌)→강아지(우) 팬
+};
+const SETKEY = 'rhk_settings';
+let settings = { startDelay: 1, transition: 'slide', flipSound: true, view: 'single' };  // +view: single|spread
+let audioCtx = null;
+
+const syl = w => { const m=w.toLowerCase().replace(/[^a-z]/g,'').match(/[aeiouy]+/g); let n=m?m.length:1; if(/e$/.test(w.toLowerCase())&&n>1)n--; return Math.max(1,n); };
+
+async function load(){
+  loadSettings();
+  installChromeAutoHide();
+  window.addEventListener('resize', layout);
+  window.addEventListener('message', onHostMessage);
+  send('metaon.listenViewer.ready', { version: 5, viewer: 'poc_htmljson' });
+
+  if(window.parent && window.parent !== window){
+    status.style.display='block';
+    status.textContent='MetaOn 책 데이터를 기다리는 중…';
+    return;
+  }
+
+  manifest = await fetch('./books.json').then(r=>r.json());
+  const sel=$('#bookSel'); sel.innerHTML=manifest.map((b,i)=>`<option value="${i}">[${b.level}] ${b.title}</option>`).join('');
+  sel.onchange = ()=> loadBook(+sel.value);
+  const want = new URLSearchParams(location.search).get('book');
+  let startIdx = manifest.findIndex(b=>b.id===want);
+  if(startIdx < 0) startIdx = 0;
+  sel.value = startIdx;
+  await loadBook(startIdx);
+}
+
+function onHostMessage(event){
+  const data = event.data || {};
+  if(data.type !== 'metaon.listenViewer.load') return;
+  loadHostBook(data.payload && data.payload.book).catch(e=>{
+    status.style.display='block';
+    status.textContent='오류: '+e.message;
+    console.error(e);
+  });
+}
+
+async function loadHostBook(hostBook){
+  if(!hostBook || !Array.isArray(hostBook.pages)) throw new Error('Invalid MetaOn Listen book payload');
+  bookDir='';
+  bookId=hostBook.id || 'metaon-listen';
+  dict={};
+  trans={};
+  book={
+    ...hostBook,
+    id: bookId,
+    title: hostBook.title || 'Listening E-book',
+    level: hostBook.level || '',
+    anim: Boolean(hostBook.anim),
+    pages: hostBook.pages.map(normalizeHostPage)
+  };
+  const sel=$('#bookSel');
+  sel.innerHTML='';
+  const option=document.createElement('option');
+  option.textContent=optionText(book);
+  sel.appendChild(option);
+  renderMyCount();
+  await showPage(0);
+  showChrome(CHROME_AUTO_HIDE_MS);
+  send('metaon.listenViewer.event', { event:'book.loaded', pageCount:book.pages.length });
+}
+
+function normalizeHostPage(page, index){
+  const audios = Array.isArray(page.audios) ? page.audios : [];
+  const firstAudio = audios.find(item=>item && item.src) || null;
+  const cues = audios.flatMap(item=>Array.isArray(item.cues) ? item.cues : []);
+  const words = Array.isArray(page.words) && page.words.length ? page.words : wordsFromCues(cues);
+  return {
+    ...page,
+    bookPage: page.bookPage ?? page.pageIndex ?? index + 1,
+    img: page.img || page.src || '',
+    imgW: Number(page.imgW || 0),
+    imgH: Number(page.imgH || 0),
+    audio: page.audio || (firstAudio && firstAudio.src) || '',
+    words: words.map(word=>({
+      ...word,
+      w: String(word.w || word.text || ''),
+      x: Number(word.x || 0),
+      y: Number(word.y || 0),
+      bw: Number(word.bw || 0),
+      bh: Number(word.bh || 0),
+      t0: word.t0 == null ? null : Number(word.t0),
+      t1: word.t1 == null ? null : Number(word.t1),
+      body: word.body !== false && word.read !== false
+    }))
+  };
+}
+
+function wordsFromCues(cues){
+  return cues.flatMap(cue=>String(cue.text || '').split(/\s+/).filter(Boolean).map(word=>({
+    w: word,
+    x: 0,
+    y: 0,
+    bw: 0,
+    bh: 0,
+    t0: null,
+    t1: null,
+    body: true
+  })));
+}
+
+async function loadBook(i){
+  const m=manifest[i]; bookDir=m.dir; bookId=m.id;
+  [book, dict, trans] = await Promise.all([
+    fetch(`${encPath(bookDir)}/book.json`).then(r=>r.json()),
+    fetch(`${encPath(bookDir)}/dict.json`).then(r=>r.json()).catch(()=>({})),
+    fetch(`${encPath(bookDir)}/translation.json`).then(r=>r.json()).catch(()=>({})),
+  ]);
+  renderMyCount();
+  await showPage(0);
+  showChrome(CHROME_AUTO_HIDE_MS);
+}
+
+// 펼침 모드에서 마주보는 페이지 계산: 짝수 인덱스=왼쪽, 홀수=오른쪽
+function spreadInfo(){
+  const leftIdx = cur - (cur % 2);
+  const rightIdx = leftIdx + 1;
+  const curIsLeft = (cur === leftIdx);
+  const facingIdx = curIsLeft ? rightIdx : leftIdx;
+  const facingExists = facingIdx >= 0 && facingIdx < book.pages.length;
+  return { leftIdx, rightIdx, facingIdx, facingExists, curIsLeft };
+}
+function fitSize(){
+  const st=stage.getBoundingClientRect(), pg=book.pages[cur], m=8, gap=12;
+  const twoUp = settings.view==='spread' && spreadInfo().facingExists;
+  const availW = twoUp ? (st.width - m*2 - gap)/2 : (st.width - m*2);
+  const imgW = Number(pg.imgW || pageImg.naturalWidth || 720);
+  const imgH = Number(pg.imgH || pageImg.naturalHeight || 960);
+  const s=Math.min(availW/imgW,(st.height-m*2)/imgH);
+  return { w:Math.max(50,imgW*s), h:Math.max(50,imgH*s) };
+}
+function layoutSpread(){
+  const {w,h}=fitSize();
+  if(settings.view!=='spread'){ facingEl.style.display='none'; if(pageWrap.parentNode!==spreadEl) spreadEl.appendChild(pageWrap); return; }
+  const info=spreadInfo();
+  if(info.facingExists){
+    facingImg.src=assetUrl(book.pages[info.facingIdx].img);
+    facingImg.style.width=w+'px'; facingImg.style.height=h+'px';
+    facingEl.style.display='block';
+  } else facingEl.style.display='none';
+  // arrange left/right order (moving existing elements preserves their content)
+  [pageWrap, facingEl].forEach(el=>{ if(el.parentNode===spreadEl) spreadEl.removeChild(el); });
+  if(info.curIsLeft){ spreadEl.appendChild(pageWrap); if(info.facingExists) spreadEl.appendChild(facingEl); }
+  else { if(info.facingExists) spreadEl.appendChild(facingEl); spreadEl.appendChild(pageWrap); }
+}
+function layout(){
+  if(!book) return;
+  const {w,h}=fitSize(); pageImg.style.width=w+'px'; pageImg.style.height=h+'px'; curW=w; curH=h;
+  const pg=book.pages[cur];
+  [...overlay.children].forEach((el,i)=>{ const word=pg.words[i];
+    el.style.left=(word.x*w)+'px'; el.style.top=(word.y*h)+'px'; el.style.width=(word.bw*w)+'px'; el.style.height=(word.bh*h)+'px'; });
+  layoutSpread();
+  updateHighlight();
+}
+
+async function showPage(i, animate=false){
+  cancelAnimationFrame(raf); audio.pause(); hideWordPop();
+  const target=Math.max(0,Math.min(book.pages.length-1,i));
+  const dir = target>cur?1 : target<cur?-1 : 0;
+  const anim = animate && settings.transition!=='none';
+  if(anim){ playFlip(); pageWrap.style.transition='none'; pageWrap.style.opacity='0'; }  // hide current page while new one loads
+  cur=target;
+  const pg=book.pages[cur];
+  status.style.display='block'; status.textContent='페이지 로딩…';
+  await new Promise(res=>{ pageImg.onload=res; pageImg.onerror=res; pageImg.src=assetUrl(pg.img); });
+  if(!pg.imgW) pg.imgW=pageImg.naturalWidth || 720;
+  if(!pg.imgH) pg.imgH=pageImg.naturalHeight || 960;
+  const {w,h}=fitSize(); pageImg.style.width=w+'px'; pageImg.style.height=h+'px'; curW=w; curH=h;
+
+  overlay.innerHTML=''; bodyEls=[];
+  const dbg=Boolean($('#dbg') && $('#dbg').checked); overlay.classList.toggle('debugMode',dbg);
+  for(const word of (pg.words || [])){
+    const el=document.createElement('div'); el.className='word';
+    el.style.left=(word.x*w)+'px'; el.style.top=(word.y*h)+'px'; el.style.width=(word.bw*w)+'px'; el.style.height=(word.bh*h)+'px';
+    overlay.appendChild(el);
+    if(word.body){ bodyEls.push({el,w:word.w,x:word.x,y:word.y,bw:word.bw,bh:word.bh,bwx:word.bw,syl:syl(word.w),t0:word.t0,t1:word.t1}); el.addEventListener('click',e=>onWordTap(e,word,el)); }
+  }
+  buildTiming(0);
+  if(pg.audio){ audio.src=assetUrl(pg.audio); audio.load(); await new Promise(res=>{audio.onloadedmetadata=res;audio.onerror=res;}); buildTiming(audio.duration||0); }
+  $('#pageno').textContent=`${pg.label||('p.'+pg.bookPage)}  (${cur+1}/${book.pages.length})`;
+  $('#prev').disabled=cur===0; $('#next').disabled=cur===book.pages.length-1;
+  if($('#transDrawer').classList.contains('open')) renderTrans();
+  setupMotion(pg);
+  layoutSpread();
+  status.style.display='none'; updateHighlight();
+  if(anim){
+    pageWrap.style.transition='none';
+    pageWrap.style.transform = settings.transition==='slide' ? `translateX(${dir*26}px)` : 'none';
+    pageWrap.style.opacity='0';
+    requestAnimationFrame(()=>{ requestAnimationFrame(()=>{
+      pageWrap.style.transition='opacity .3s ease, transform .3s ease';
+      pageWrap.style.transform='translateX(0)'; pageWrap.style.opacity='1';
+    }); });
+  } else { pageWrap.style.transition='none'; pageWrap.style.transform='none'; pageWrap.style.opacity='1'; }
+  send('metaon.listenViewer.event', { event:'page.ready', pageIndex:cur });
+  send('metaon.listenViewer.event', { event:'page.view', pageIndex:cur });
+}
+
+// connect body words within a sentence on the same line: fill inter-word gaps + mark run ends for rounding
+function computeSentenceGeom(){
+  for(const b of bodyEls){ b.bwx=b.bw; b.connNext=false; b.runStart=true; }
+  for(const s of sentSegs){
+    const bs=s.bs;
+    for(let i=0;i<bs.length-1;i++){
+      const a=bs[i], b=bs[i+1];
+      if(Math.abs(b.y-a.y) < a.bh*0.6 && b.x>a.x){ a.bwx=b.x-a.x; a.connNext=true; b.runStart=false; }
+    }
+  }
+}
+function setBaseWidths(){ for(const b of bodyEls){ b.el.style.width=(b.bw*curW)+'px'; b.el.style.borderRadius=''; } }
+
+function buildTiming(dur){
+  const badge=$('#timingBadge');
+  const hasReal=bodyEls.length && bodyEls.every(w=>w.t0!=null&&w.t1!=null);
+  if(hasReal){
+    wordSegs=bodyEls.map(b=>({b, el:b.el, t0:b.t0, t1:b.t1}));
+    badge.textContent='정렬 타이밍'; badge.style.background='#4caf50';
+  } else {
+    badge.textContent='임시 타이밍'; badge.style.background='#7a4';
+    const lead=Math.min(.6,dur*.04),tail=Math.min(.5,dur*.03),span=Math.max(.1,dur-lead-tail);
+    const tot=bodyEls.reduce((s,w)=>s+w.syl,0)||1; let t=lead;
+    wordSegs=bodyEls.map(b=>{ const d=span*(b.syl/tot); const seg={b, el:b.el, t0:t, t1:t+d}; t+=d; return seg; });
+  }
+  // gapless word timing
+  for(let i=0;i<wordSegs.length-1;i++) wordSegs[i].t1=Math.max(wordSegs[i].t1,wordSegs[i+1].t0);
+  // sentence segmentation (group body words by sentence-ending punctuation)
+  sentSegs=[]; let cur2=[];
+  for(let i=0;i<bodyEls.length;i++){
+    cur2.push(wordSegs[i]);
+    if(/[.!?]['”’"]?$/.test(bodyEls[i].w)){ sentSegs.push(cur2); cur2=[]; }
+  }
+  if(cur2.length) sentSegs.push(cur2);
+  sentSegs=sentSegs.map(arr=>({bs:arr.map(x=>x.b), t0:arr[0].t0, t1:arr[arr.length-1].t1}));
+  for(let i=0;i<sentSegs.length-1;i++) sentSegs[i].t1=Math.max(sentSegs[i].t1,sentSegs[i+1].t0);
+  computeSentenceGeom();
+}
+
+function clearMarks(){ for(const e of bodyEls) e.el.classList.remove('active','done'); }
+function updateHighlight(){
+  const tc=audio.currentTime;
+  clearMarks();
+  if(highlightMode==='sentence'){
+    setBaseWidths();   // reset, then extend the highlighted sentence's words to connect gaps
+    for(const s of sentSegs){
+      const cls = tc>=s.t1 ? 'done' : (tc>=s.t0 ? 'active' : null);
+      if(cls) s.bs.forEach(b=>{
+        b.el.classList.add(cls);
+        b.el.style.width=(b.bwx*curW)+'px';
+        const L=b.runStart?'5px':'0', R=(!b.connNext)?'5px':'0';   // round only line-run ends
+        b.el.style.borderRadius=`${L} ${R} ${R} ${L}`;
+      });
+    }
+  } else {
+    for(const seg of wordSegs){
+      if(tc>=seg.t1) seg.el.classList.add('done');
+      else if(tc>=seg.t0) seg.el.classList.add('active');
+    }
+  }
+  const d=audio.duration||0; $('#seek').value=d?Math.round(tc/d*1000):0; $('#time').textContent=fmt(tc)+' / '+fmt(d);
+}
+function loop(){ updateHighlight(); if(!audio.paused) raf=requestAnimationFrame(loop); }
+const fmt=s=>{ s=Math.max(0,s|0); return (s/60|0)+':'+String(s%60).padStart(2,'0'); };
+
+function setMode(m){ highlightMode=m; $('#modeWord').classList.toggle('on',m==='word'); $('#modeSent').classList.toggle('on',m==='sentence'); if(m==='word'&&bodyEls.length) setBaseWidths(); updateHighlight(); }
+$('#modeWord').onclick=()=>setMode('word');
+$('#modeSent').onclick=()=>setMode('sentence');
+function setView(v){ settings.view=v; saveSettings(); $('#viewSingle').classList.toggle('on',v==='single'); $('#viewSpread').classList.toggle('on',v==='spread'); if(book){ layout(); } }
+$('#viewSingle').onclick=()=>setView('single');
+$('#viewSpread').onclick=()=>setView('spread');
+
+/* 단어 사전 */
+function normWord(raw){ return raw.toLowerCase().replace(/^[^a-z0-9’']+|[^a-z0-9’']+$/g,''); }
+function lookup(raw){ let k=normWord(raw); if(dict[k]) return {key:k,...dict[k]}; const b=k.replace(/[’']s$/,''); if(dict[b]) return {key:b,...dict[b]}; return null; }
+function exampleFor(word){
+  const k=normWord(word), pairs=trans[String(book.pages[cur].bookPage)]||[];
+  const re=new RegExp('\\b'+k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','i');
+  return pairs.find(p=>re.test(p.en))||null;
+}
+let popWord=null;
+function onWordTap(e, word, el){
+  const info=lookup(word.w);
+  popWord={raw:word.w, el, info};
+  $('#wpWord').textContent=(info?info.key:normWord(word.w));
+  $('#wpPos').textContent=info?info.pos:'';
+  $('#wpKo').textContent=info?info.ko:'(사전에 없는 단어)';
+  const ex=exampleFor(word.w), exEl=$('#wpEx');
+  if(ex){ exEl.style.display='block'; exEl.innerHTML=`<b>예문</b> ${ex.en}<span class="exko">${ex.ko}</span>`; } else exEl.style.display='none';
+  $('#wpAdd').disabled=!info; $('#wpAdd').textContent = info && inMyDict(info.key) ? '✓ 추가됨' : '★ 내 사전에 추가';
+  const pop=$('#wordPop'); pop.classList.add('show');
+  const r=el.getBoundingClientRect(), pw=300, ph=pop.offsetHeight||190;
+  let left=r.left+r.width/2-pw/2, top=r.bottom+8;
+  left=Math.max(8,Math.min(left,innerWidth-pw-8));
+  if(top+ph>innerHeight-8) top=r.top-ph-8;
+  pop.style.left=left+'px'; pop.style.top=Math.max(8,top)+'px';
+  e.stopPropagation();
+}
+function hideWordPop(){ $('#wordPop').classList.remove('show'); popWord=null; }
+$('#wpPlay').onclick=()=>{ if(!popWord) return; const seg=wordSegs.find(s=>s.el===popWord.el); if(seg){ audio.currentTime=seg.t0+.001; updateHighlight(); audio.play(); } hideWordPop(); };
+$('#wpAdd').onclick=()=>{ if(!popWord||!popWord.info) return; addMyWord(popWord.info); $('#wpAdd').textContent='✓ 추가됨'; showToast('내 사전에 추가했어요'); };
+document.addEventListener('click',e=>{ const p=$('#wordPop'); if(p.classList.contains('show') && !p.contains(e.target) && !e.target.classList.contains('word')) hideWordPop(); });
+
+/* 내 사전 */
+function getMy(){ try{ return JSON.parse(localStorage.getItem(MYKEY())||'[]'); }catch{ return []; } }
+function setMy(a){ localStorage.setItem(MYKEY(),JSON.stringify(a)); renderMyCount(); }
+function inMyDict(key){ return getMy().some(x=>x.key===key); }
+function addMyWord(info){ const a=getMy(); if(!a.some(x=>x.key===info.key)){ a.push({key:info.key,pos:info.pos,ko:info.ko,addedAt:getMy().length}); setMy(a); } }
+function delMyWord(key){ setMy(getMy().filter(x=>x.key!==key)); renderMyList(); }
+function renderMyCount(){ const n=getMy().length; $('#myCount').textContent=n?`(${n})`:''; }
+function renderMyList(){
+  const a=getMy().slice().reverse(), body=$('#myBody');
+  $('#myModalCount').textContent=`${a.length}개 · ${book.title}`;
+  if(!a.length){ body.innerHTML='<div class="empty">아직 저장한 단어가 없어요.<br>본문에서 단어를 탭한 뒤 <b>★ 내 사전에 추가</b>를 눌러 보세요.</div>'; return; }
+  body.innerHTML='';
+  for(const w of a){
+    const row=document.createElement('div'); row.className='wrow';
+    row.innerHTML=`<span class="ww">${w.key} <span class="wpos">${w.pos}</span></span><span class="wko">${w.ko}</span>`;
+    const del=document.createElement('button'); del.className='del'; del.textContent='삭제'; del.onclick=()=>delMyWord(w.key);
+    row.appendChild(del); body.appendChild(row);
+  }
+}
+$('#myDictBtn').onclick=()=>{ renderMyList(); $('#myModal').classList.add('show'); };
+$('#myClose').onclick=()=>$('#myModal').classList.remove('show');
+$('#myModal').addEventListener('click',e=>{ if(e.target.id==='myModal') $('#myModal').classList.remove('show'); });
+
+/* 해석 drawer */
+function renderTrans(){
+  const pairs=trans[String(book.pages[cur].bookPage)]||[];
+  $('#transBody').innerHTML = pairs.length
+    ? pairs.map(p=>`<div class="tpair"><div class="en">${p.en}</div><div class="ko">${p.ko}</div></div>`).join('')
+    : '<div class="empty">이 페이지 해석이 없습니다.</div>';
+}
+$('#transBtn').onclick=()=>{ const d=$('#transDrawer'); const open=d.classList.toggle('open'); $('#transBtn').classList.toggle('on',open); if(open) renderTrans(); };
+$('#transClose').onclick=()=>{ $('#transDrawer').classList.remove('open'); $('#transBtn').classList.remove('on'); };
+
+/* toast */
+let toastT=0;
+function showToast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),1600); }
+
+/* 설정 */
+function loadSettings(){ try{ Object.assign(settings, JSON.parse(localStorage.getItem(SETKEY)||'{}')); }catch{} applySettingsUI(); }
+function saveSettings(){ localStorage.setItem(SETKEY, JSON.stringify(settings)); }
+function segSet(sel,val){ document.querySelectorAll(sel+' button').forEach(b=>b.classList.toggle('on', b.dataset.v===String(val))); }
+function applySettingsUI(){ segSet('#setDelay', settings.startDelay); segSet('#setTrans', settings.transition); segSet('#setSound', settings.flipSound?'on':'off');
+  $('#viewSingle').classList.toggle('on',settings.view!=='spread'); $('#viewSpread').classList.toggle('on',settings.view==='spread'); }
+$('#setDelay').onclick=e=>{ if(e.target.dataset.v!=null){ settings.startDelay=+e.target.dataset.v; saveSettings(); applySettingsUI(); } };
+$('#setTrans').onclick=e=>{ if(e.target.dataset.v){ settings.transition=e.target.dataset.v; saveSettings(); applySettingsUI(); } };
+$('#setSound').onclick=e=>{ if(e.target.dataset.v){ settings.flipSound=(e.target.dataset.v==='on'); saveSettings(); applySettingsUI(); if(settings.flipSound) playFlip(); } };
+$('#settingsBtn').onclick=()=>$('#setModal').classList.add('show');
+$('#setClose').onclick=()=>$('#setModal').classList.remove('show');
+$('#setModal').addEventListener('click',e=>{ if(e.target.id==='setModal') $('#setModal').classList.remove('show'); });
+
+// synthesized paper page-turn "swish" (no asset, works offline)
+function playFlip(){
+  if(!settings.flipSound) return;
+  try{
+    audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==='suspended') audioCtx.resume();
+    const ctx=audioCtx, dur=0.3, t0=ctx.currentTime;
+    const buf=ctx.createBuffer(1, Math.floor(ctx.sampleRate*dur), ctx.sampleRate), d=buf.getChannelData(0);
+    for(let i=0;i<d.length;i++){ const t=i/d.length; d[i]=(Math.random()*2-1)*Math.pow(1-t,1.6); }
+    const src=ctx.createBufferSource(); src.buffer=buf;
+    const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.Q.value=0.8;
+    bp.frequency.setValueAtTime(800,t0); bp.frequency.exponentialRampToValueAtTime(4200,t0+dur);
+    const g=ctx.createGain(); g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(0.28,t0+0.03); g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+    src.connect(bp); bp.connect(g); g.connect(ctx.destination); src.start(t0); src.stop(t0+dur);
+  }catch(e){}
+}
+
+/* 콘텐츠 연동 이미지 모션 (anim 책에서만) */
+function setupMotion(pg){
+  pageInner.classList.remove('mo','kb','sway','run');
+  pageInner.style.transform='';
+  if(!(book && book.anim)) return;
+  void pageInner.offsetWidth;  // reflow → 애니메이션을 처음부터 다시 시작
+  const m = MOTION[pg.bookPage] || ['push',50,42,0,0.5];
+  const [style,fx,fy,mx,my] = m;
+  pageInner.style.setProperty('--fx', fx+'%'); pageInner.style.setProperty('--fy', fy+'%');
+  pageInner.style.setProperty('--mx', mx+'%'); pageInner.style.setProperty('--my', my+'%');
+  pageInner.style.setProperty('--ms', style==='pan'?1.05 : style==='rise'?1.07 : 1.085);
+  pageInner.classList.add('mo', style==='sway'?'sway':'kb');
+  if(!audio.paused) pageInner.classList.add('run');
+}
+
+/* transport */
+function syncPlayButton(playing){
+  $('#play').classList.toggle('is-playing', playing);
+  $('#play').setAttribute('aria-label', playing ? '일시정지' : '재생');
+}
+$('#play').onclick=()=>{ if(audio.paused) audio.play(); else audio.pause(); };
+audio.onplay=()=>{
+  syncPlayButton(true);
+  raf=requestAnimationFrame(loop);
+  if(book&&book.anim) pageInner.classList.add('run');
+  send('metaon.listenViewer.event', { event:'audio.play', pageIndex:cur, audioIndex:0 });
+};
+audio.onpause=()=>{
+  syncPlayButton(false);
+  if(book&&book.anim) pageInner.classList.remove('run');
+  send('metaon.listenViewer.event', { event:'audio.pause', pageIndex:cur, audioIndex:0 });
+};
+function autoNext(){
+  if(!$('#autoadv').checked || cur>=book.pages.length-1){
+    if(book && cur>=book.pages.length-1) send('metaon.listenViewer.event', { event:'book.complete', pageIndex:cur });
+    return;
+  }
+  showPage(cur+1, true).then(()=>{
+    const pg=book.pages[cur];
+    if(pg.audio) setTimeout(()=>{ if($('#autoadv').checked) audio.play(); }, settings.startDelay*1000);
+    else setTimeout(()=>{ if($('#autoadv').checked) autoNext(); }, 3000);   // 음원 없는 정적 페이지: 3초 후 다음
+  });
+}
+audio.onended=()=>{ syncPlayButton(false); send('metaon.listenViewer.event', { event:'audio.complete', pageIndex:cur, audioIndex:0 }); autoNext(); };
+$('#prev').onclick=()=>{ send('metaon.listenViewer.event', { event:'page.prev', pageIndex:cur }); showPage(cur-1, true); };
+$('#next').onclick=()=>{ send('metaon.listenViewer.event', { event:'page.next', pageIndex:cur }); showPage(cur+1, true); };
+$('#seek').oninput=e=>{ if(audio.duration){ audio.currentTime=e.target.value/1000*audio.duration; updateHighlight(); } };
+if($('#dbg')) $('#dbg').onchange=()=>{ overlay.classList.toggle('debugMode',$('#dbg').checked); };
+
+load().catch(e=>{ status.textContent='오류: '+e.message; console.error(e); });
+</script>
+</body>
+</html>

@@ -1,0 +1,1196 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RHK Read-Along</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --bg: #1d2230;
+        --chrome: #2a3041;
+        --chrome-2: #353d52;
+        --button: #414a64;
+        --blue: #5b86ff;
+        --green: #45c969;
+        --yellow: #ffbf2f;
+        --page: #fbfbfb;
+        --text: #f8fbff;
+        --muted: #aeb7ce;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: var(--bg);
+      }
+
+      button,
+      select,
+      input {
+        font: inherit;
+      }
+
+      button {
+        border: 0;
+      }
+
+      .viewer {
+        width: 100%;
+        height: 100%;
+        min-width: 0;
+        min-height: 0;
+        display: grid;
+        grid-template-rows: 58px minmax(0, 1fr) 58px;
+        color: var(--text);
+        background: var(--bg);
+      }
+
+      .viewer.rotated-viewer {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        width: 100vh;
+        height: 100vw;
+        transform: translate(-50%, -50%) rotate(-90deg);
+        transform-origin: center center;
+        grid-template-rows: 52px minmax(0, 1fr) 54px;
+      }
+
+      .topbar,
+      .bottombar {
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 16px;
+        background: var(--chrome);
+        box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
+      }
+
+      .topbar {
+        justify-content: space-between;
+      }
+
+      .top-left,
+      .top-right,
+      .bottom-left,
+      .bottom-right {
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .book-select {
+        max-width: 310px;
+        height: 36px;
+        padding: 0 34px 0 14px;
+        color: #ffffff;
+        border: 0;
+        border-radius: 8px;
+        background: var(--chrome-2);
+        font-weight: 900;
+        outline: none;
+      }
+
+      .badge {
+        height: 24px;
+        display: inline-flex;
+        align-items: center;
+        padding: 0 10px;
+        border-radius: 999px;
+        color: #062014;
+        background: var(--green);
+        font-size: 12px;
+        font-weight: 950;
+        white-space: nowrap;
+      }
+
+      .muted-label {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .seg {
+        display: inline-flex;
+        align-items: center;
+        overflow: hidden;
+        border-radius: 8px;
+        background: #1f2534;
+      }
+
+      .seg button,
+      .tool-btn,
+      .nav-btn {
+        height: 38px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        color: #ffffff;
+        background: var(--button);
+        cursor: pointer;
+        font-weight: 950;
+        white-space: nowrap;
+      }
+
+      .seg button {
+        min-width: 52px;
+        padding: 0 12px;
+        background: transparent;
+      }
+
+      .seg button.on {
+        background: var(--blue);
+      }
+
+      .tool-btn {
+        min-width: 48px;
+        padding: 0 14px;
+        border-radius: 8px;
+      }
+
+      .tool-btn.primary {
+        background: var(--blue);
+      }
+
+      .tool-btn.icon {
+        width: 38px;
+        min-width: 38px;
+        padding: 0;
+      }
+
+      .tool-btn:hover,
+      .nav-btn:hover,
+      .seg button:hover {
+        filter: brightness(1.08);
+      }
+
+      .box-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: #ffffff;
+        font-size: 13px;
+        font-weight: 900;
+        white-space: nowrap;
+      }
+
+      .box-toggle input,
+      .auto-toggle input {
+        width: 14px;
+        height: 14px;
+        accent-color: var(--blue);
+      }
+
+      .stage {
+        position: relative;
+        min-width: 0;
+        min-height: 0;
+        display: grid;
+        place-items: center;
+        padding: 24px 88px;
+        overflow: hidden;
+      }
+
+      .page-spread {
+        position: absolute;
+        inset: 24px 88px;
+        min-width: 0;
+        min-height: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 24px;
+      }
+
+      .page-spread.two-page {
+        gap: 28px;
+      }
+
+      .page-spread.single-page {
+        gap: 0;
+      }
+
+      .page-spread.rotated-single {
+        inset: 8px 48px;
+      }
+
+      .page-slot {
+        position: relative;
+        min-width: 0;
+        min-height: 0;
+        height: 100%;
+        display: grid;
+        place-items: center;
+        padding: 0;
+        background: transparent;
+        cursor: pointer;
+      }
+
+      .page-spread.two-page .page-slot {
+        width: min(48%, 430px);
+      }
+
+      .page-spread.single-page .page-slot {
+        width: 100%;
+      }
+
+      .page-spread.rotated-single .page-slot {
+        width: 100%;
+        height: 100%;
+        max-width: 100%;
+        max-height: 100%;
+      }
+
+      .page-slot.active::after {
+        position: absolute;
+        inset: -6px;
+        content: "";
+        border: 3px solid rgba(91, 134, 255, 0.86);
+        border-radius: 8px;
+        pointer-events: none;
+      }
+
+      .page-slot:focus-visible {
+        outline: 3px solid var(--blue);
+        outline-offset: -3px;
+      }
+
+      .page-img {
+        width: auto;
+        height: auto;
+        max-width: 100%;
+        max-height: 100%;
+        min-width: 0;
+        min-height: 0;
+        display: block;
+        object-fit: contain;
+        border-radius: 4px;
+        background: var(--page);
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+        user-select: none;
+        -webkit-user-drag: none;
+      }
+
+      .overlay {
+        position: absolute;
+        pointer-events: none;
+      }
+
+      .word {
+        position: absolute;
+        border-radius: 4px;
+        background: transparent;
+        transition: background 120ms ease;
+      }
+
+      .word.done {
+        background: rgba(255, 191, 47, 0.26);
+      }
+
+      .word.active {
+        background: rgba(255, 191, 47, 0.78);
+      }
+
+      .caption-pill {
+        position: absolute;
+        left: 50%;
+        bottom: 16px;
+        z-index: 6;
+        max-width: min(880px, calc(100% - 120px));
+        display: none;
+        padding: 5px 12px;
+        border-radius: 7px;
+        color: #0b2634;
+        background: var(--yellow);
+        font-size: clamp(18px, 2.2vw, 30px);
+        font-weight: 950;
+        line-height: 1.14;
+        text-align: center;
+        transform: translateX(-50%);
+        overflow-wrap: anywhere;
+      }
+
+      .caption-pill.show {
+        display: inline-block;
+      }
+
+      .empty {
+        padding: 24px 28px;
+        border-radius: 8px;
+        color: #ffffff;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        font-size: 18px;
+        font-weight: 900;
+      }
+
+      .nav-btn {
+        min-width: 68px;
+        padding: 0 12px;
+        border-radius: 8px;
+      }
+
+      .nav-btn:disabled {
+        cursor: default;
+        opacity: 0.42;
+      }
+
+      .page-no {
+        min-width: 92px;
+        color: #ffffff;
+        font-size: 14px;
+        font-weight: 850;
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      .seek {
+        flex: 1;
+        min-width: 160px;
+        accent-color: var(--blue);
+      }
+
+      .time {
+        min-width: 82px;
+        font-weight: 900;
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      .auto-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: #ffffff;
+        font-size: 13px;
+        font-weight: 850;
+        white-space: nowrap;
+      }
+
+      .drawer,
+      .modal {
+        position: fixed;
+        z-index: 20;
+        color: #1d2433;
+        background: #ffffff;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.32);
+      }
+
+      .drawer {
+        top: 58px;
+        right: 0;
+        bottom: 58px;
+        width: min(420px, 92vw);
+        display: none;
+        grid-template-rows: auto minmax(0, 1fr);
+        border-left: 1px solid #d6dbe8;
+      }
+
+      .drawer.open {
+        display: grid;
+      }
+
+      .drawer-head,
+      .modal-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 16px 18px;
+        border-bottom: 1px solid #e3e7f0;
+        font-weight: 950;
+      }
+
+      .drawer-body,
+      .modal-body {
+        min-height: 0;
+        overflow: auto;
+        padding: 16px 18px;
+      }
+
+      .close-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: #eef2f8;
+        color: #263247;
+        cursor: pointer;
+        font-weight: 950;
+      }
+
+      .modal-scrim {
+        position: fixed;
+        inset: 0;
+        z-index: 19;
+        display: none;
+        place-items: center;
+        background: rgba(0, 0, 0, 0.38);
+      }
+
+      .modal-scrim.open {
+        display: grid;
+      }
+
+      .modal {
+        position: static;
+        width: min(480px, 92vw);
+        max-height: min(620px, 82vh);
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+
+      .empty-copy {
+        color: #596276;
+        font-size: 14px;
+        font-weight: 750;
+        line-height: 1.5;
+      }
+
+      .setting-row {
+        display: grid;
+        gap: 8px;
+        padding: 12px 0;
+        border-bottom: 1px solid #edf0f6;
+      }
+
+      .setting-row strong {
+        font-size: 14px;
+      }
+
+      .setting-row .seg {
+        width: fit-content;
+        background: #edf1f8;
+      }
+
+      .setting-row .seg button {
+        color: #263247;
+      }
+
+      .setting-row .seg button.on {
+        color: #ffffff;
+      }
+
+      .viewer.rotated-viewer .topbar,
+      .viewer.rotated-viewer .bottombar {
+        padding: 8px 10px;
+        gap: 6px;
+      }
+
+      .viewer.rotated-viewer .topbar {
+        overflow: hidden;
+      }
+
+      .viewer.rotated-viewer .top-left,
+      .viewer.rotated-viewer .top-right,
+      .viewer.rotated-viewer .bottom-left,
+      .viewer.rotated-viewer .bottom-right {
+        gap: 6px;
+      }
+
+      .viewer.rotated-viewer .book-select {
+        max-width: 188px;
+        height: 34px;
+        font-size: 12px;
+      }
+
+      .viewer.rotated-viewer .badge,
+      .viewer.rotated-viewer .muted-label,
+      .viewer.rotated-viewer #modeWord,
+      .viewer.rotated-viewer #modeSent,
+      .viewer.rotated-viewer #transBtn,
+      .viewer.rotated-viewer #myDictBtn,
+      .viewer.rotated-viewer #settingsBtn,
+      .viewer.rotated-viewer .box-toggle,
+      .viewer.rotated-viewer .auto-toggle {
+        display: none;
+      }
+
+      .viewer.rotated-viewer .seg button,
+      .viewer.rotated-viewer .tool-btn,
+      .viewer.rotated-viewer .nav-btn {
+        height: 34px;
+        font-size: 12px;
+      }
+
+      .viewer.rotated-viewer .stage {
+        padding: 8px 10px;
+      }
+
+      .viewer.rotated-viewer .page-spread {
+        inset: 8px 10px;
+      }
+
+      .viewer.rotated-viewer .page-no {
+        min-width: 64px;
+        font-size: 12px;
+      }
+
+      .viewer.rotated-viewer .time {
+        min-width: 58px;
+        font-size: 12px;
+      }
+
+      .viewer.rotated-viewer .seek {
+        min-width: 70px;
+      }
+
+      @media (max-width: 760px) {
+        .viewer {
+          grid-template-rows: 52px minmax(0, 1fr) 54px;
+        }
+
+        .topbar,
+        .bottombar {
+          padding: 8px 10px;
+          gap: 6px;
+        }
+
+        .book-select {
+          max-width: 170px;
+          height: 34px;
+          font-size: 12px;
+        }
+
+        .badge,
+        .muted-label,
+        .box-toggle,
+        .auto-toggle {
+          display: none;
+        }
+
+        .seg button,
+        .tool-btn,
+        .nav-btn {
+          height: 34px;
+          font-size: 12px;
+        }
+
+        .stage {
+          padding: 16px 10px;
+        }
+
+        .page-no {
+          min-width: 64px;
+          font-size: 12px;
+        }
+
+        .page-spread {
+          inset: 16px 10px;
+          gap: 12px;
+        }
+
+        .page-spread.two-page {
+          gap: 10px;
+        }
+
+        .page-spread.two-page .page-slot {
+          width: min(50%, 320px);
+        }
+
+        .page-spread.rotated-single {
+          inset: 4px 8px;
+        }
+
+        .page-spread.rotated-single .page-slot {
+          width: 100%;
+          height: 100%;
+          max-width: 100%;
+          max-height: 100%;
+        }
+
+        .time {
+          min-width: 58px;
+          font-size: 12px;
+        }
+
+        .seek {
+          min-width: 70px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="viewer">
+      <header class="topbar">
+        <div class="top-left">
+          <select class="book-select" id="bookSel" aria-label="Book">
+            <option>Listening E-book</option>
+          </select>
+          <span class="badge" id="timingBadge">정렬 타이밍</span>
+          <span class="muted-label">하이라이트</span>
+          <span class="seg" aria-label="Highlight mode">
+            <button type="button" class="on" id="modeWord">단어</button>
+            <button type="button" id="modeSent">문장</button>
+          </span>
+          <span class="muted-label">보기</span>
+          <span class="seg" aria-label="Page view">
+            <button type="button" class="on" id="viewSpread">2쪽</button>
+            <button type="button" id="viewSingle">1쪽</button>
+          </span>
+        </div>
+        <div class="top-right">
+          <button type="button" class="tool-btn" id="transBtn">해석</button>
+          <button type="button" class="tool-btn" id="myDictBtn"><span aria-hidden="true">📒</span> 내 사전</button>
+          <button type="button" class="tool-btn icon" id="settingsBtn" aria-label="Settings">⚙</button>
+          <label class="box-toggle"><input type="checkbox" id="boxToggle" /> 박스</label>
+          <button type="button" class="tool-btn primary" id="playBtn">▶ 재생</button>
+        </div>
+      </header>
+
+      <section class="stage" id="stage">
+        <div class="page-spread single-page" id="pageSpread" aria-label="Listen pages"></div>
+        <div class="overlay" id="overlay"></div>
+        <div class="caption-pill" id="caption"></div>
+        <div class="empty" id="empty">Waiting for Listen activity data...</div>
+      </section>
+
+      <footer class="bottombar">
+        <div class="bottom-left">
+          <button class="nav-btn" id="prev" type="button">◀ 이전</button>
+          <span class="page-no" id="pageno">– / –</span>
+          <button class="nav-btn" id="next" type="button">다음 ▶</button>
+        </div>
+        <input class="seek" id="seek" type="range" min="0" max="1000" value="0" aria-label="Audio progress" />
+        <div class="bottom-right">
+          <span class="time" id="time">0:00 / 0:00</span>
+          <label class="auto-toggle"><input type="checkbox" id="autoNext" checked /> 자동 넘김</label>
+        </div>
+      </footer>
+    </main>
+
+    <aside class="drawer" id="transDrawer" aria-label="Translation drawer">
+      <div class="drawer-head">
+        <span>이 페이지 해석</span>
+        <button type="button" class="close-btn" id="transClose">✕</button>
+      </div>
+      <div class="drawer-body" id="transBody">
+        <div class="empty-copy">이 페이지 해석이 없습니다.</div>
+      </div>
+    </aside>
+
+    <div class="modal-scrim" id="myModal">
+      <section class="modal" aria-label="My dictionary">
+        <div class="modal-head">
+          <span>내 사전</span>
+          <button type="button" class="close-btn" id="myClose">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="empty-copy">아직 저장한 단어가 없습니다.</div>
+        </div>
+      </section>
+    </div>
+
+    <div class="modal-scrim" id="setModal">
+      <section class="modal" aria-label="Settings">
+        <div class="modal-head">
+          <span>⚙ 설정</span>
+          <button type="button" class="close-btn" id="setClose">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="setting-row">
+            <strong>읽기 시작 지연</strong>
+            <div class="seg" id="setDelay">
+              <button type="button" data-v="0">0초</button>
+              <button type="button" class="on" data-v="1">1초</button>
+              <button type="button" data-v="2">2초</button>
+            </div>
+          </div>
+          <div class="setting-row">
+            <strong>페이지 전환 효과</strong>
+            <div class="seg" id="setTrans">
+              <button type="button" data-v="none">없음</button>
+              <button type="button" class="on" data-v="slide">슬라이드</button>
+              <button type="button" data-v="fade">페이드</button>
+            </div>
+          </div>
+          <div class="setting-row">
+            <strong>넘김 효과음</strong>
+            <div class="seg" id="setSound">
+              <button type="button" class="on" data-v="on">켜기</button>
+              <button type="button" data-v="off">끄기</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <audio id="audio" preload="metadata"></audio>
+
+    <script>
+      const viewer = document.querySelector(".viewer");
+      const pageSpread = document.getElementById("pageSpread");
+      const overlay = document.getElementById("overlay");
+      const caption = document.getElementById("caption");
+      const empty = document.getElementById("empty");
+      const audio = document.getElementById("audio");
+      const playBtn = document.getElementById("playBtn");
+      const prev = document.getElementById("prev");
+      const next = document.getElementById("next");
+      const pageno = document.getElementById("pageno");
+      const seek = document.getElementById("seek");
+      const time = document.getElementById("time");
+      const autoNext = document.getElementById("autoNext");
+      const boxToggle = document.getElementById("boxToggle");
+      const bookSel = document.getElementById("bookSel");
+      const timingBadge = document.getElementById("timingBadge");
+      const viewSpread = document.getElementById("viewSpread");
+      const viewSingle = document.getElementById("viewSingle");
+
+      let book = null;
+      let pageIndex = 0;
+      let audioIndex = 0;
+      let raf = 0;
+      let activeCues = [];
+      let wordEls = [];
+      let highlightMode = "word";
+      let viewMode = "spread";
+      let autoplay = false;
+      let activePageImg = null;
+      const imageMeta = new Map();
+
+      function send(type, payload) {
+        window.parent.postMessage({ type, payload }, "*");
+      }
+
+      function currentPage() {
+        if (!book || !book.pages || book.pages.length === 0) return null;
+        return book.pages[Math.max(0, Math.min(pageIndex, book.pages.length - 1))];
+      }
+
+      function pageKey(page) {
+        return page && page.img ? page.img : "";
+      }
+
+      function getPageSize(page) {
+        const w = Number(page && (page.imgW || page.imageWidth || page.width || 0));
+        const h = Number(page && (page.imgH || page.imageHeight || page.height || 0));
+        if (w > 0 && h > 0) return { w, h };
+        const meta = imageMeta.get(pageKey(page));
+        return meta || null;
+      }
+
+      function rememberPageSize(page, img) {
+        if (!page || !img || !img.naturalWidth || !img.naturalHeight) return;
+        imageMeta.set(pageKey(page), { w: img.naturalWidth, h: img.naturalHeight });
+      }
+
+      function isPortraitPage(page) {
+        const size = getPageSize(page);
+        if (!size) return null;
+        return size.h >= size.w;
+      }
+
+      function isPortraitBook() {
+        if (!book || !book.pages || book.pages.length === 0) return false;
+        const firstKnown = book.pages.map(isPortraitPage).find((value) => value !== null);
+        return firstKnown === null || firstKnown === undefined ? true : firstKnown;
+      }
+
+      function useSpreadView() {
+        return viewMode === "spread" && isPortraitBook() && Boolean(book && book.pages && book.pages.length > 1);
+      }
+
+      function shouldRotateViewer() {
+        return viewMode === "single" && isPortraitBook() && window.innerWidth > window.innerHeight;
+      }
+
+      function syncViewerLayout() {
+        const rotate = shouldRotateViewer();
+        viewer.classList.toggle("rotated-viewer", rotate);
+        document.body.classList.toggle("viewer-rotated", rotate);
+      }
+
+      function spreadStartIndex() {
+        return useSpreadView() ? Math.floor(pageIndex / 2) * 2 : pageIndex;
+      }
+
+      function visiblePageEntries() {
+        if (!book || !book.pages || book.pages.length === 0) return [];
+        const start = spreadStartIndex();
+        if (!useSpreadView()) return [{ page: book.pages[pageIndex], index: pageIndex }];
+        return [0, 1]
+          .map((offset) => ({ page: book.pages[start + offset], index: start + offset }))
+          .filter((entry) => entry.page);
+      }
+
+      function currentAudioTrack() {
+        const page = currentPage();
+        if (!page || !page.audios || page.audios.length === 0) return null;
+        return page.audios[Math.max(0, Math.min(audioIndex, page.audios.length - 1))];
+      }
+
+      function fmt(seconds) {
+        const safe = Math.max(0, Math.floor(seconds || 0));
+        return `${Math.floor(safe / 60)}:${String(safe % 60).padStart(2, "0")}`;
+      }
+
+      function normalizeCues(cues, durationMs) {
+        const clean = (cues || []).filter((cue) => cue && cue.text).map((cue) => ({ ...cue }));
+        if (clean.length === 0) return [];
+        if (durationMs <= 0) return clean;
+
+        if (clean.length === 1) {
+          clean[0].startMs = 0;
+          clean[0].endMs = durationMs + 1;
+          return clean;
+        }
+
+        const maxEnd = Math.max(...clean.map((cue) => Number(cue.endMs || 0)));
+        const generatedWideWindow = clean.every((cue) => Number(cue.endMs || 0) - Number(cue.startMs || 0) >= 59000) && maxEnd > durationMs * 2;
+        if (!generatedWideWindow) return clean;
+
+        return clean.map((cue, index) => ({
+          ...cue,
+          startMs: Math.floor((durationMs * index) / clean.length),
+          endMs: index === clean.length - 1 ? durationMs + 1 : Math.floor((durationMs * (index + 1)) / clean.length)
+        }));
+      }
+
+      function showPage(nextPageIndex, options = {}) {
+        cancelAnimationFrame(raf);
+        audio.pause();
+        const pageCount = book && book.pages ? book.pages.length : 0;
+        pageIndex = Math.max(0, Math.min(nextPageIndex, Math.max(pageCount - 1, 0)));
+        audioIndex = 0;
+        renderPage();
+        loadAudio();
+        if (options.play) autoplay = true;
+      }
+
+      function renderPage() {
+        const page = currentPage();
+        const pageCount = book && book.pages ? book.pages.length : 0;
+        empty.style.display = page ? "none" : "block";
+        pageSpread.style.display = page ? "flex" : "none";
+        pageSpread.innerHTML = "";
+        overlay.innerHTML = "";
+        overlay.style.display = "block";
+        activePageImg = null;
+        wordEls = [];
+
+        if (!page) {
+          caption.textContent = "";
+          caption.classList.remove("show");
+          pageno.textContent = "– / –";
+          prev.disabled = true;
+          next.disabled = true;
+          updateProgress();
+          return;
+        }
+
+        const spread = useSpreadView();
+        const rotatedSingle = viewMode === "single" && isPortraitBook();
+        syncViewerLayout();
+        pageSpread.className = `page-spread ${spread ? "two-page" : "single-page"} ${rotatedSingle ? "rotated-single" : ""}`;
+        overlay.style.display = rotatedSingle ? "none" : "block";
+
+        visiblePageEntries().forEach((entry) => {
+          const slot = document.createElement("button");
+          const isActive = entry.index === pageIndex;
+          slot.type = "button";
+          slot.className = `page-slot ${isActive ? "active" : ""}`;
+          slot.setAttribute("aria-label", isActive ? "Play or pause Listen audio" : `Open page ${entry.index + 1}`);
+
+          const img = document.createElement("img");
+          img.className = "page-img";
+          img.alt = `${book.title || "Listen"} page ${entry.index + 1}`;
+          img.onload = () => {
+            const wasSpread = spread;
+            rememberPageSize(entry.page, img);
+            if (wasSpread !== useSpreadView()) {
+              renderPage();
+              return;
+            }
+            if (isActive) {
+              activePageImg = img;
+              layoutOverlay();
+              send("metaon.listenViewer.event", { event: "page.ready", pageIndex });
+            }
+          };
+          img.onerror = () => send("metaon.listenViewer.event", { event: "page.imageError", pageIndex: entry.index });
+          img.src = entry.page.img;
+
+          if (isActive) activePageImg = img;
+          slot.appendChild(img);
+          slot.addEventListener("click", () => {
+            if (entry.index === pageIndex) togglePlay();
+            else showPage(entry.index);
+          });
+          pageSpread.appendChild(slot);
+        });
+
+        updatePageNumber();
+        prev.disabled = pageIndex <= 0;
+        next.disabled = pageIndex >= pageCount - 1;
+        renderWords(page);
+        updateCaption();
+      }
+
+      function updatePageNumber() {
+        const pageCount = book && book.pages ? book.pages.length : 0;
+        if (!pageCount) {
+          pageno.textContent = "– / –";
+          return;
+        }
+        const entries = visiblePageEntries();
+        if (entries.length > 1) {
+          const first = entries[0];
+          const last = entries[entries.length - 1];
+          const firstLabel = first.page.bookPage || first.index + 1;
+          const lastLabel = last.page.bookPage || last.index + 1;
+          pageno.textContent = `p.${firstLabel}-${lastLabel} (${first.index + 1}-${last.index + 1}/${pageCount})`;
+          return;
+        }
+        const page = currentPage();
+        pageno.textContent = `p.${page.bookPage || pageIndex + 1} (${pageIndex + 1}/${pageCount})`;
+      }
+
+      function renderWords(page) {
+        const words = (page.words || []).filter((word) => Number(word.bw) > 0 && Number(word.bh) > 0);
+        timingBadge.textContent = words.some((word) => word.t0 != null && word.t1 != null) ? "정렬 타이밍" : "임시 타이밍";
+        overlay.innerHTML = "";
+        wordEls = words.map((word) => {
+          const el = document.createElement("span");
+          el.className = "word";
+          overlay.appendChild(el);
+          return { el, word };
+        });
+        layoutOverlay();
+      }
+
+      function layoutOverlay() {
+        const image = activePageImg;
+        if (!image || overlay.style.display === "none") return;
+        const rect = image.getBoundingClientRect();
+        const rootRect = document.body.getBoundingClientRect();
+        overlay.style.left = `${rect.left - rootRect.left}px`;
+        overlay.style.top = `${rect.top - rootRect.top}px`;
+        overlay.style.width = `${rect.width}px`;
+        overlay.style.height = `${rect.height}px`;
+        wordEls.forEach(({ el, word }) => {
+          el.style.left = `${Number(word.x || 0) * rect.width}px`;
+          el.style.top = `${Number(word.y || 0) * rect.height}px`;
+          el.style.width = `${Number(word.bw || 0) * rect.width}px`;
+          el.style.height = `${Number(word.bh || 0) * rect.height}px`;
+        });
+      }
+
+      function loadAudio() {
+        const track = currentAudioTrack();
+        activeCues = [];
+        audio.removeAttribute("src");
+        audio.load();
+        if (!track || !track.src) {
+          updateCaption();
+          updateProgress();
+          return;
+        }
+        audio.src = track.src;
+        audio.load();
+      }
+
+      function play() {
+        if (!currentAudioTrack()) return;
+        audio.play().then(() => {
+          playBtn.textContent = "⏸ 일시정지";
+          loop();
+          send("metaon.listenViewer.event", { event: "audio.play", pageIndex, audioIndex });
+        }).catch(() => undefined);
+      }
+
+      function pause() {
+        audio.pause();
+        playBtn.textContent = "▶ 재생";
+        cancelAnimationFrame(raf);
+        send("metaon.listenViewer.event", { event: "audio.pause", pageIndex, audioIndex });
+      }
+
+      function togglePlay() {
+        if (audio.paused) play();
+        else pause();
+      }
+
+      function updateCaption() {
+        const durationSeconds = Number.isFinite(audio.duration) ? audio.duration : 0;
+        const durationMs = Math.round(durationSeconds * 1000);
+        const track = currentAudioTrack();
+        activeCues = normalizeCues(track ? track.cues : [], durationMs);
+        const currentMs = Math.round((audio.currentTime || 0) * 1000);
+        const cue = activeCues.find((item) => currentMs >= Number(item.startMs || 0) && currentMs < Number(item.endMs || 0)) || activeCues[0];
+        caption.textContent = cue ? cue.text : "";
+        caption.classList.toggle("show", Boolean(cue && !hasVisibleTimedWords()));
+        updateWordMarks(currentMs);
+        updateProgress();
+      }
+
+      function hasVisibleTimedWords() {
+        return wordEls.some(({ word }) => Number.isFinite(Number(word.t0)) && Number.isFinite(Number(word.t1)));
+      }
+
+      function updateWordMarks(currentMs) {
+        const visible = boxToggle.checked || highlightMode === "word" || highlightMode === "sentence";
+        wordEls.forEach(({ el, word }) => {
+          const start = Number(word.t0 == null ? NaN : word.t0) * 1000;
+          const end = Number(word.t1 == null ? NaN : word.t1) * 1000;
+          el.classList.remove("active", "done");
+          el.style.display = visible ? "block" : "none";
+          if (!Number.isFinite(start) || !Number.isFinite(end)) return;
+          if (currentMs >= end) el.classList.add("done");
+          else if (currentMs >= start) el.classList.add("active");
+        });
+      }
+
+      function updateProgress() {
+        const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
+        const current = Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
+        seek.value = duration > 0 ? String(Math.round((current / duration) * 1000)) : "0";
+        time.textContent = `${fmt(current)} / ${fmt(duration)}`;
+      }
+
+      function loop() {
+        updateCaption();
+        if (!audio.paused) raf = requestAnimationFrame(loop);
+      }
+
+      function nextStep(playNext) {
+        const page = currentPage();
+        if (page && audioIndex < (page.audios || []).length - 1) {
+          audioIndex += 1;
+          loadAudio();
+          if (playNext) autoplay = true;
+          return;
+        }
+        if (book && pageIndex < book.pages.length - 1 && (playNext ? autoNext.checked : true)) {
+          showPage(pageIndex + 1, { play: playNext });
+          return;
+        }
+        playBtn.textContent = "▶ 재생";
+        send("metaon.listenViewer.event", { event: "complete" });
+      }
+
+      function manualNextPage() {
+        if (!book || !book.pages || book.pages.length === 0) return;
+        if (useSpreadView()) {
+          showPage(Math.min(spreadStartIndex() + 2, book.pages.length - 1));
+          return;
+        }
+        showPage(pageIndex + 1);
+      }
+
+      function prevStep(manual = false) {
+        if (manual) {
+          if (useSpreadView()) {
+            showPage(Math.max(spreadStartIndex() - 2, 0));
+            return;
+          }
+          showPage(pageIndex - 1);
+          return;
+        }
+        if (audioIndex > 0) {
+          audioIndex -= 1;
+          loadAudio();
+          return;
+        }
+        showPage(pageIndex - 1);
+      }
+
+      audio.addEventListener("loadedmetadata", () => {
+        updateCaption();
+        if (autoplay) {
+          autoplay = false;
+          const delay = 250;
+          setTimeout(play, delay);
+        }
+      });
+      audio.addEventListener("timeupdate", updateCaption);
+      audio.addEventListener("ended", () => nextStep(true));
+      audio.addEventListener("play", () => {
+        playBtn.textContent = "⏸ 일시정지";
+        loop();
+      });
+      audio.addEventListener("pause", () => {
+        playBtn.textContent = "▶ 재생";
+        cancelAnimationFrame(raf);
+      });
+
+      playBtn.addEventListener("click", togglePlay);
+      prev.addEventListener("click", () => prevStep(true));
+      next.addEventListener("click", manualNextPage);
+      seek.addEventListener("input", () => {
+        if (!audio.duration) return;
+        audio.currentTime = (Number(seek.value) / 1000) * audio.duration;
+        updateCaption();
+      });
+      boxToggle.addEventListener("change", () => updateWordMarks(Math.round((audio.currentTime || 0) * 1000)));
+      window.addEventListener("resize", () => {
+        syncViewerLayout();
+        layoutOverlay();
+      });
+
+      document.getElementById("modeWord").addEventListener("click", () => setHighlightMode("word"));
+      document.getElementById("modeSent").addEventListener("click", () => setHighlightMode("sentence"));
+      viewSpread.addEventListener("click", () => setViewMode("spread"));
+      viewSingle.addEventListener("click", () => setViewMode("single"));
+      function setHighlightMode(mode) {
+        highlightMode = mode;
+        document.getElementById("modeWord").classList.toggle("on", mode === "word");
+        document.getElementById("modeSent").classList.toggle("on", mode === "sentence");
+        updateCaption();
+      }
+
+      function setViewMode(mode) {
+        viewMode = mode;
+        viewSpread.classList.toggle("on", mode === "spread");
+        viewSingle.classList.toggle("on", mode === "single");
+        renderPage();
+      }
+
+      const transDrawer = document.getElementById("transDrawer");
+      document.getElementById("transBtn").addEventListener("click", () => transDrawer.classList.toggle("open"));
+      document.getElementById("transClose").addEventListener("click", () => transDrawer.classList.remove("open"));
+      const myModal = document.getElementById("myModal");
+      document.getElementById("myDictBtn").addEventListener("click", () => myModal.classList.add("open"));
+      document.getElementById("myClose").addEventListener("click", () => myModal.classList.remove("open"));
+      myModal.addEventListener("click", (event) => {
+        if (event.target === myModal) myModal.classList.remove("open");
+      });
+      const setModal = document.getElementById("setModal");
+      document.getElementById("settingsBtn").addEventListener("click", () => setModal.classList.add("open"));
+      document.getElementById("setClose").addEventListener("click", () => setModal.classList.remove("open"));
+      setModal.addEventListener("click", (event) => {
+        if (event.target === setModal) setModal.classList.remove("open");
+      });
+
+      window.addEventListener("message", (event) => {
+        const data = event.data || {};
+        if (data.type !== "metaon.listenViewer.load") return;
+        book = data.payload && data.payload.book ? data.payload.book : null;
+        pageIndex = 0;
+        audioIndex = 0;
+        const title = book && book.title ? book.title : "Listening E-book";
+        bookSel.innerHTML = `<option>${title}</option>`;
+        renderPage();
+        loadAudio();
+        send("metaon.listenViewer.event", { event: "book.loaded", pageCount: book && book.pages ? book.pages.length : 0 });
+      });
+
+      renderPage();
+      send("metaon.listenViewer.ready", { version: 4 });
+    </script>
+  </body>
+</html>

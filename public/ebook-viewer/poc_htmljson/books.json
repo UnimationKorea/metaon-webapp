@@ -1,0 +1,37 @@
+[
+ {
+  "id": "anansi",
+  "title": "Anansi and the Talking Watermelon",
+  "level": "O",
+  "dir": "books/anansi",
+  "anim": false
+ },
+ {
+  "id": "iread",
+  "title": "I Read a Book",
+  "level": "B",
+  "dir": "books/iread",
+  "anim": false
+ },
+ {
+  "id": "iread_anim",
+  "title": "I Read a Book (Animation)",
+  "level": "B",
+  "dir": "books/iread_anim",
+  "anim": true
+ },
+ {
+  "id": "abadmovie",
+  "title": "A Bad Movie",
+  "level": "O",
+  "dir": "books/abadmovie",
+  "anim": false
+ },
+ {
+  "id": "adogstale",
+  "title": "A Dog's Tale",
+  "level": "O",
+  "dir": "books/adogstale",
+  "anim": false
+ }
+]

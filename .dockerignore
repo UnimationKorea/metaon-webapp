@@ -1,0 +1,11 @@
+node_modules
+dist
+.dev-logs
+.vite
+coverage
+qa-screenshots
+*.log
+*.tsbuildinfo
+.env
+.env.local
+Dockerfile

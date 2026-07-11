@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>JSON 구조 뷰어</title>
+<style>
+  :root { --bg:#1e2230; --panel:#272c3c; --txt:#e7eaf2; --key:#7cc4ff; --str:#9ae6a0;
+          --num:#ffcf6b; --bool:#ff9e9e; --null:#9aa0b4; --line:#3a4159; --muted:#8a92a8; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt); font-family:-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { position:sticky; top:0; background:var(--panel); padding:12px 18px; display:flex; gap:12px; align-items:center;
+           flex-wrap:wrap; box-shadow:0 2px 10px rgba(0,0,0,.35); z-index:10; }
+  header h1 { font-size:15px; margin:0; font-weight:700; }
+  button, label.btn, select { background:#39405a; color:var(--txt); border:none; border-radius:9px; padding:8px 13px;
+           font-size:13px; cursor:pointer; font-weight:600; }
+  button.primary { background:#5b8cff; }
+  input[type=text]{ background:#1a1e2b; color:var(--txt); border:1px solid #3a4159; border-radius:9px; padding:8px 12px; font-size:13px; min-width:230px; }
+  .spacer{ flex:1; }
+  #drop { margin:14px 18px; border:2px dashed #3a4159; border-radius:12px; padding:10px 16px; color:var(--muted); font-size:12px; }
+  #drop.drag { border-color:#5b8cff; color:var(--txt); background:rgba(91,140,255,.08); }
+  #stats { margin:0 18px 8px; font-size:12px; color:var(--muted); }
+  #stats b{ color:var(--txt); }
+  main { padding:6px 18px 60px; font-family:"SF Mono","Consolas",ui-monospace,monospace; font-size:13px; line-height:1.55; }
+  details { margin-left:14px; border-left:1px solid #313850; }
+  details > summary { cursor:pointer; list-style:none; margin-left:-14px; padding-left:14px; user-select:none; }
+  details > summary::-webkit-details-marker { display:none; }
+  .tw { display:inline-block; width:12px; color:var(--muted); }
+  details[open] > summary .tw::before { content:"▾"; }
+  details:not([open]) > summary .tw::before { content:"▸"; }
+  .leaf { margin-left:14px; padding-left:0; }
+  .k { color:var(--key); }
+  .s { color:var(--str); } .n { color:var(--num); } .b { color:var(--bool); } .nl { color:var(--null); font-style:italic; }
+  .meta { color:var(--muted); font-size:11px; margin-left:6px; }
+  .path { color:var(--muted); }
+  .hint { color:var(--muted); font-size:12px; margin:0 18px; }
+  mark{ background:#5b8cff; color:#06210e; border-radius:3px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🔍 JSON 구조 뷰어</h1>
+  <input type="text" id="url" value="./book.json" placeholder="JSON 경로/URL" />
+  <button class="primary" id="loadUrl">불러오기</button>
+  <label class="btn">파일 선택<input type="file" id="file" accept=".json,application/json" hidden></label>
+  <div class="spacer"></div>
+  <button id="expand">모두 펼치기</button>
+  <button id="collapse">모두 접기</button>
+  <select id="depth" title="기본 펼침 깊이">
+    <option value="1">깊이 1</option>
+    <option value="2" selected>깊이 2</option>
+    <option value="3">깊이 3</option>
+    <option value="99">전체</option>
+  </select>
+</header>
+
+<div id="drop">여기로 .json 파일을 드래그&드롭 하거나, 위에서 경로를 입력해 불러오세요.</div>
+<div id="stats"></div>
+<p class="hint" id="err" style="color:#ff9e9e"></p>
+<main id="tree"></main>
+
+<script>
+const $ = s => document.querySelector(s);
+let DATA = null;
+
+function typeOf(v){
+  if (v === null) return 'null';
+  if (Array.isArray(v)) return 'array';
+  return typeof v; // object, string, number, boolean
+}
+function esc(s){ return String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+function leafHtml(v){
+  const t = typeOf(v);
+  if (t==='string'){ let s=v; const long=s.length>120; if(long) s=s.slice(0,120)+'…'; return `<span class="s">"${esc(s)}"</span>${long?`<span class="meta">(${v.length}자)</span>`:''}`; }
+  if (t==='number') return `<span class="n">${v}</span>`;
+  if (t==='boolean') return `<span class="b">${v}</span>`;
+  if (t==='null') return `<span class="nl">null</span>`;
+  return esc(String(v));
+}
+
+// build a collapsible node
+function build(key, val, depth, openDepth, path){
+  const t = typeOf(val);
+  if (t==='object' || t==='array'){
+    const entries = t==='array' ? val.map((v,i)=>[i,v]) : Object.entries(val);
+    const count = entries.length;
+    const det = document.createElement('details');
+    det.dataset.path = path;
+    if (depth < openDepth) det.open = true;
+    const sum = document.createElement('summary');
+    const label = key!==null ? `<span class="k">${esc(key)}</span>: ` : '';
+    const brace = t==='array' ? `[…]` : `{…}`;
+    sum.innerHTML = `<span class="tw"></span>${label}<span class="meta">${t} ${brace} · ${count}${t==='array'?'개':' keys'}</span>`;
+    det.appendChild(sum);
+    // for big arrays of objects, show only first N expanded, rest summarized
+    const LIMIT = 200;
+    entries.forEach(([k,v],i)=>{
+      if (i>=LIMIT){ return; }
+      det.appendChild(build(k, v, depth+1, openDepth, path+ (t==='array'?`[${k}]`:`.${k}`)));
+    });
+    if (count>LIMIT){
+      const more=document.createElement('div'); more.className='leaf meta'; more.textContent=`… 외 ${count-LIMIT}개 생략`; det.appendChild(more);
+    }
+    return det;
+  } else {
+    const div = document.createElement('div');
+    div.className='leaf';
+    const label = key!==null ? `<span class="k">${esc(key)}</span>: ` : '';
+    div.innerHTML = `${label}${leafHtml(val)}`;
+    return div;
+  }
+}
+
+function summarize(data){
+  // generic + book.json-aware stats
+  let lines = [];
+  const t = typeOf(data);
+  lines.push(`최상위: <b>${t}</b>`);
+  if (t==='object'){ lines.push(`키: <b>${Object.keys(data).join(', ')}</b>`); }
+  if (data && data.pages && Array.isArray(data.pages)){
+    const pages = data.pages;
+    let totalWords=0, withTiming=0, bodyWords=0;
+    for (const p of pages){ if(p.words){ totalWords+=p.words.length; for(const w of p.words){ if(w.t0!=null) withTiming++; if(w.read && w.y>0.05 && w.y<0.90) bodyWords++; } } }
+    lines.push(`pages: <b>${pages.length}</b> · 총 단어 <b>${totalWords}</b> · 본문 <b>${bodyWords}</b> · 타임스탬프 있는 단어 <b>${withTiming}</b>`);
+    const k = pages[0]?.words?.[0] ? Object.keys(pages[0].words[0]).join(', ') : '';
+    if (k) lines.push(`단어 객체 필드: <b>${esc(k)}</b>`);
+  }
+  $('#stats').innerHTML = lines.join(' &nbsp;|&nbsp; ');
+}
+
+function render(data){
+  DATA = data;
+  $('#err').textContent='';
+  summarize(data);
+  const openDepth = parseInt($('#depth').value,10);
+  const tree = $('#tree'); tree.innerHTML='';
+  tree.appendChild(build(null, data, 0, openDepth, '$'));
+}
+
+async function loadUrl(u){
+  try{
+    $('#err').textContent='로딩…';
+    const r = await fetch(u, {cache:'no-store'});
+    if(!r.ok) throw new Error(r.status+' '+r.statusText);
+    render(await r.json());
+  }catch(e){ $('#err').textContent='불러오기 실패: '+e.message; }
+}
+
+$('#loadUrl').onclick = ()=> loadUrl($('#url').value.trim());
+$('#file').onchange = e=>{ const f=e.target.files[0]; if(!f) return; const fr=new FileReader(); fr.onload=()=>{ try{ render(JSON.parse(fr.result)); $('#url').value=f.name; }catch(err){ $('#err').textContent='파싱 실패: '+err.message; } }; fr.readAsText(f); };
+$('#expand').onclick = ()=> document.querySelectorAll('#tree details').forEach(d=>d.open=true);
+$('#collapse').onclick = ()=> document.querySelectorAll('#tree details').forEach((d,i)=>{ if(i>0) d.open=false; });
+$('#depth').onchange = ()=> DATA && render(DATA);
+
+const drop=$('#drop');
+['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('drag');}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag');}));
+drop.addEventListener('drop',e=>{ const f=e.dataTransfer.files[0]; if(f){ const fr=new FileReader(); fr.onload=()=>{ try{render(JSON.parse(fr.result)); $('#url').value=f.name;}catch(err){$('#err').textContent='파싱 실패: '+err.message;} }; fr.readAsText(f);} });
+
+// auto-load book.json on open
+loadUrl('./book.json');
+</script>
+</body>
+</html>

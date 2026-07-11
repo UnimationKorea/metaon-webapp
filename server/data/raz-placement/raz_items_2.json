@@ -1,0 +1,296 @@
+[
+  { "grade": "P", "level": "aa", "seriesId": 591, "targetLexile": -25,
+    "passage": "I see a red hat. I see a blue hat. I see a big hat. I like hats.",
+    "items": [
+      { "id": "aab-r1", "skill": "reading", "q": "What does the child see?", "choices": ["dogs", "hats", "cars"], "answer": 1 },
+      { "id": "aab-r2", "skill": "reading", "q": "Does the child like hats?", "choices": ["Yes", "No", "We can't tell"], "answer": 0 },
+      { "id": "aab-v1", "skill": "vocab", "q": "'hat' 의 뜻은?", "choices": ["신발", "모자", "가방"], "answer": 1 },
+      { "id": "aab-v2", "skill": "vocab", "q": "'big' 의 뜻은?", "choices": ["작은", "큰", "느린"], "answer": 1 }
+    ] },
+  { "grade": "P", "level": "A", "seriesId": 592, "targetLexile": -46,
+    "passage": "The cat is little. The cat is black. The cat can jump. I love the cat.",
+    "items": [
+      { "id": "Ab-r1", "skill": "reading", "q": "What color is the cat?", "choices": ["white", "black", "brown"], "answer": 1 },
+      { "id": "Ab-r2", "skill": "reading", "q": "What can the cat do?", "choices": ["swim", "fly", "jump"], "answer": 2 },
+      { "id": "Ab-v1", "skill": "vocab", "q": "'little' 의 뜻은?", "choices": ["작은", "큰", "빠른"], "answer": 0 },
+      { "id": "Ab-v2", "skill": "vocab", "q": "'love' 의 뜻은?", "choices": ["좋아하다(사랑하다)", "싫어하다", "무서워하다"], "answer": 0 }
+    ] },
+  { "grade": "P", "level": "B", "seriesId": 593, "targetLexile": 21,
+    "passage": "It is snowy today. Mia makes a snowman. She puts on a hat. She is cold but happy.",
+    "items": [
+      { "id": "Bb-r1", "skill": "reading", "q": "What does Mia make?", "choices": ["a cake", "a snowman", "a house"], "answer": 1 },
+      { "id": "Bb-r2", "skill": "reading", "q": "How does Mia feel?", "choices": ["cold but happy", "hot and tired", "sad"], "answer": 0 },
+      { "id": "Bb-v1", "skill": "vocab", "q": "'snowy' 의 뜻은?", "choices": ["맑은", "비 오는", "눈 오는"], "answer": 2 },
+      { "id": "Bb-v2", "skill": "vocab", "q": "'cold' 의 뜻은?", "choices": ["추운", "더운", "젖은"], "answer": 0 }
+    ] },
+  { "grade": "K", "level": "C", "seriesId": 594, "targetLexile": 131,
+    "passage": "My dog is brown. He has a long tail. He likes to eat bones. He runs fast in the park.",
+    "items": [
+      { "id": "Cb-r1", "skill": "reading", "q": "What does the dog like to eat?", "choices": ["fish", "grass", "bones"], "answer": 2 },
+      { "id": "Cb-r2", "skill": "reading", "q": "Where does the dog run?", "choices": ["in the park", "in the house", "at school"], "answer": 0 },
+      { "id": "Cb-v1", "skill": "vocab", "q": "'long' 의 뜻은?", "choices": ["짧은", "긴", "둥근"], "answer": 1 },
+      { "id": "Cb-v2", "skill": "vocab", "q": "'fast' 의 뜻은?", "choices": ["빠르게", "느리게", "조용히"], "answer": 0 }
+    ] },
+  { "grade": "K", "level": "D", "seriesId": 595, "targetLexile": 210,
+    "passage": "Sam has a new bike. It is green and shiny. He rides it to school. The wind feels cool.",
+    "items": [
+      { "id": "Db-r1", "skill": "reading", "q": "What color is the bike?", "choices": ["red", "green", "blue"], "answer": 1 },
+      { "id": "Db-r2", "skill": "reading", "q": "Where does Sam ride his bike?", "choices": ["to the store", "to the beach", "to school"], "answer": 2 },
+      { "id": "Db-v1", "skill": "vocab", "q": "'shiny' 의 뜻은?", "choices": ["반짝이는", "더러운", "무거운"], "answer": 0 },
+      { "id": "Db-v2", "skill": "vocab", "q": "'cool' 의 뜻은?", "choices": ["뜨거운", "시원한", "달콤한"], "answer": 1 }
+    ] },
+  { "grade": "K", "level": "E", "seriesId": 596, "targetLexile": 267,
+    "passage": "Grandpa plants seeds in spring. He waters them every morning. Soon little green plants grow. In summer he picks red tomatoes.",
+    "items": [
+      { "id": "Eb-r1", "skill": "reading", "q": "When does Grandpa plant seeds?", "choices": ["in spring", "in winter", "in fall"], "answer": 0 },
+      { "id": "Eb-r2", "skill": "reading", "q": "What does he pick in summer?", "choices": ["yellow corn", "green beans", "red tomatoes"], "answer": 2 },
+      { "id": "Eb-v1", "skill": "vocab", "q": "'plant (동사)' 의 뜻은?", "choices": ["자르다", "심다", "팔다"], "answer": 1 },
+      { "id": "Eb-v2", "skill": "vocab", "q": "'grow' 의 뜻은?", "choices": ["자라다", "마르다", "멈추다"], "answer": 0 }
+    ] },
+  { "grade": "1", "level": "F", "seriesId": 597, "targetLexile": 330,
+    "passage": "Bats are not birds. They are the only mammals that can really fly. Bats sleep during the day, hanging upside down. At night they come out to catch insects.",
+    "items": [
+      { "id": "Fb-r1", "skill": "reading", "q": "Why are bats special among mammals?", "choices": ["they can really fly", "they can breathe underwater", "they have no eyes"], "answer": 0 },
+      { "id": "Fb-r2", "skill": "reading", "q": "When do bats catch insects?", "choices": ["at noon", "at night", "in the morning"], "answer": 1 },
+      { "id": "Fb-r3", "skill": "reading", "q": "How do bats sleep during the day?", "choices": ["floating in water", "hanging upside down", "standing up"], "answer": 1 },
+      { "id": "Fb-v1", "skill": "vocab", "q": "'mammal' 의 뜻은?", "choices": ["곤충", "물고기", "포유류"], "answer": 2 },
+      { "id": "Fb-v2", "skill": "vocab", "q": "'catch' 의 뜻은?", "choices": ["잡다", "놓치다", "숨다"], "answer": 0 }
+    ] },
+  { "grade": "1", "level": "G", "seriesId": 598, "targetLexile": 400,
+    "passage": "Rainbows appear when sunlight passes through raindrops. The light bends and splits into many colors. A rainbow always shows its colors in the same order. You can only see one when the sun is behind you.",
+    "items": [
+      { "id": "Gb-r1", "skill": "reading", "q": "What causes a rainbow?", "choices": ["the moon at night", "sunlight passing through raindrops", "strong wind"], "answer": 1 },
+      { "id": "Gb-r2", "skill": "reading", "q": "When can you see a rainbow?", "choices": ["only at night", "during a snowstorm", "when the sun is behind you"], "answer": 2 },
+      { "id": "Gb-r3", "skill": "reading", "q": "What does light do inside a raindrop?", "choices": ["it disappears", "it bends and splits into colors", "it turns to water"], "answer": 1 },
+      { "id": "Gb-v1", "skill": "vocab", "q": "'bend' 의 뜻은?", "choices": ["휘다(굽다)", "멈추다", "사라지다"], "answer": 0 },
+      { "id": "Gb-v2", "skill": "vocab", "q": "'split' 의 뜻은?", "choices": ["모이다", "나뉘다(갈라지다)", "얼다"], "answer": 1 }
+    ] },
+  { "grade": "1", "level": "H", "seriesId": 599, "targetLexile": 433,
+    "passage": "Camels are built for the desert. They can go many days without water. Their wide feet keep them from sinking in the sand. The humps on their backs store fat, not water, for energy.",
+    "items": [
+      { "id": "Hb-r1", "skill": "reading", "q": "What do a camel's humps store?", "choices": ["water", "fat for energy", "sand"], "answer": 1 },
+      { "id": "Hb-r2", "skill": "reading", "q": "How do a camel's wide feet help?", "choices": ["they keep it from sinking in sand", "they help it swim", "they keep it warm"], "answer": 0 },
+      { "id": "Hb-r3", "skill": "reading", "q": "How long can camels go without water?", "choices": ["one hour", "one week only", "many days"], "answer": 2 },
+      { "id": "Hb-v1", "skill": "vocab", "q": "'store (동사)' 의 뜻은?", "choices": ["버리다", "마시다", "저장하다"], "answer": 2 },
+      { "id": "Hb-v2", "skill": "vocab", "q": "'wide' 의 뜻은?", "choices": ["넓은", "좁은", "깊은"], "answer": 0 }
+    ] },
+  { "grade": "2", "level": "I", "seriesId": 600, "targetLexile": 457,
+    "passage": "Jake joined the swim team last month. At first he could barely finish one lap. He practiced hard every day after school. By the end of the season, he won a silver medal.",
+    "items": [
+      { "id": "Ib-r1", "skill": "reading", "q": "How did Jake improve?", "choices": ["he practiced hard every day", "he gave up", "he changed teams"], "answer": 0 },
+      { "id": "Ib-r2", "skill": "reading", "q": "What did Jake win?", "choices": ["a gold trophy", "a silver medal", "nothing"], "answer": 1 },
+      { "id": "Ib-r3", "skill": "reading", "q": "How was Jake at first?", "choices": ["he could barely finish one lap", "he was the best", "he could not swim at all"], "answer": 0 },
+      { "id": "Ib-v1", "skill": "vocab", "q": "'barely' 의 뜻은?", "choices": ["쉽게", "자주", "간신히(겨우)"], "answer": 2 },
+      { "id": "Ib-v2", "skill": "vocab", "q": "'practice' 의 뜻은?", "choices": ["연습하다", "포기하다", "쉬다"], "answer": 0 }
+    ] },
+  { "grade": "2", "level": "J", "seriesId": 601, "targetLexile": 498,
+    "passage": "Ants are tiny but incredibly strong. A single ant can lift objects many times its own weight. They live in large colonies where every ant has a job. Together they build tunnels, gather food, and protect their queen.",
+    "items": [
+      { "id": "Jb-r1", "skill": "reading", "q": "What is surprising about a single ant?", "choices": ["it can fly", "it can lift many times its own weight", "it lives alone"], "answer": 1 },
+      { "id": "Jb-r2", "skill": "reading", "q": "How do ants live?", "choices": ["in large colonies with jobs", "completely alone", "in the ocean"], "answer": 0 },
+      { "id": "Jb-r3", "skill": "reading", "q": "What do ants do together?", "choices": ["live alone", "fly south for winter", "build tunnels and protect their queen"], "answer": 2 },
+      { "id": "Jb-v1", "skill": "vocab", "q": "'colony' 의 뜻은?", "choices": ["사막", "도구", "집단(군체)"], "answer": 2 },
+      { "id": "Jb-v2", "skill": "vocab", "q": "'gather' 의 뜻은?", "choices": ["모으다", "버리다", "부수다"], "answer": 0 }
+    ] },
+  { "grade": "2", "level": "K", "seriesId": 602, "targetLexile": 510,
+    "passage": "Some animals travel huge distances every year. This journey is called migration. Arctic terns, for example, fly from the top of the world to the bottom and back. They follow the seasons to find food and warmer weather.",
+    "items": [
+      { "id": "Kb-r1", "skill": "reading", "q": "What is migration?", "choices": ["building a nest", "changing color", "traveling long distances each year"], "answer": 2 },
+      { "id": "Kb-r2", "skill": "reading", "q": "Why do these animals migrate?", "choices": ["to find food and warmth", "to sleep", "to hide"], "answer": 0 },
+      { "id": "Kb-r3", "skill": "reading", "q": "Which animal is given as an example?", "choices": ["the camel", "the Arctic tern", "the ant"], "answer": 1 },
+      { "id": "Kb-v1", "skill": "vocab", "q": "'journey' 의 뜻은?", "choices": ["여행(여정)", "둥지", "먹이"], "answer": 0 },
+      { "id": "Kb-v2", "skill": "vocab", "q": "'distance' 의 뜻은?", "choices": ["시간", "거리", "무게"], "answer": 1 }
+    ] },
+  { "grade": "3", "level": "L", "seriesId": 603, "targetLexile": 550,
+    "passage": "Most plants make their own food using sunlight, but a few are hunters. The Venus flytrap has leaves that snap shut when an insect lands on them. Tiny hairs sense the movement and trigger the trap. The plant slowly digests the bug to get nutrients the soil cannot provide.",
+    "items": [
+      { "id": "Lb-r1", "skill": "reading", "q": "How does the Venus flytrap catch insects?", "choices": ["its leaves snap shut", "it chases them", "it uses a web"], "answer": 0 },
+      { "id": "Lb-r2", "skill": "reading", "q": "Why does it eat insects?", "choices": ["because it cannot make food", "to get nutrients the soil lacks", "for water only"], "answer": 1 },
+      { "id": "Lb-r3", "skill": "reading", "q": "What senses the insect's movement?", "choices": ["the roots", "tiny hairs on the leaves", "the flowers"], "answer": 1 },
+      { "id": "Lb-r4", "skill": "reading", "q": "How do most plants make their food?", "choices": ["using sunlight", "by catching insects", "from the wind"], "answer": 0 },
+      { "id": "Lb-v1", "skill": "vocab", "q": "'trigger (동사)' 의 뜻은?", "choices": ["작동시키다(일으키다)", "멈추다", "숨기다"], "answer": 0 },
+      { "id": "Lb-v2", "skill": "vocab", "q": "'digest' 의 뜻은?", "choices": ["뱉다", "소화하다", "얼리다"], "answer": 1 }
+    ] },
+  { "grade": "3", "level": "M", "seriesId": 604, "targetLexile": 550,
+    "passage": "Earthquakes happen when giant pieces of the Earth's crust suddenly slip past each other. The ground shakes as energy spreads out in waves. Most earthquakes are too small to feel, but strong ones can topple buildings. Scientists use instruments called seismographs to measure them.",
+    "items": [
+      { "id": "Mb-r1", "skill": "reading", "q": "What causes an earthquake?", "choices": ["heavy rain", "pieces of crust slipping past each other", "strong wind"], "answer": 1 },
+      { "id": "Mb-r2", "skill": "reading", "q": "What do scientists use to measure earthquakes?", "choices": ["seismographs", "telescopes", "thermometers"], "answer": 0 },
+      { "id": "Mb-r3", "skill": "reading", "q": "What spreads out during an earthquake?", "choices": ["water", "energy in waves", "smoke"], "answer": 1 },
+      { "id": "Mb-r4", "skill": "reading", "q": "What is true of most earthquakes?", "choices": ["they are too small to feel", "they topple every building", "they last for hours"], "answer": 0 },
+      { "id": "Mb-v1", "skill": "vocab", "q": "'suddenly' 의 뜻은?", "choices": ["천천히", "갑자기", "조용히"], "answer": 1 },
+      { "id": "Mb-v2", "skill": "vocab", "q": "'topple' 의 뜻은?", "choices": ["무너뜨리다", "세우다", "고치다"], "answer": 0 }
+    ] },
+  { "grade": "3", "level": "N", "seriesId": 605, "targetLexile": 594,
+    "passage": "Before electric lights, city streets were lit by gas lamps. Every evening, a lamplighter walked from post to post with a long pole, lighting each flame by hand. At dawn he returned to put them out. It was a slow job, but it kept the streets safe after dark.",
+    "items": [
+      { "id": "Nb-r1", "skill": "reading", "q": "How were streets lit before electric lights?", "choices": ["by the moon", "by gas lamps lit by hand", "by candles in windows"], "answer": 1 },
+      { "id": "Nb-r2", "skill": "reading", "q": "What did the lamplighter do at dawn?", "choices": ["put the lamps out", "light new lamps", "sweep the streets"], "answer": 0 },
+      { "id": "Nb-r3", "skill": "reading", "q": "What tool did the lamplighter carry?", "choices": ["a bucket of water", "a long pole", "a ladder"], "answer": 1 },
+      { "id": "Nb-r4", "skill": "reading", "q": "Why was the lamplighter's job important?", "choices": ["it kept the streets safe after dark", "it made money for the city", "it cleaned the lamps"], "answer": 0 },
+      { "id": "Nb-v1", "skill": "vocab", "q": "'lit (light의 과거)' 의 뜻은?", "choices": ["불을 껐다", "길을 닦았다", "불을 켰다"], "answer": 2 },
+      { "id": "Nb-v2", "skill": "vocab", "q": "'dawn' 의 뜻은?", "choices": ["새벽", "한밤중", "정오"], "answer": 0 }
+    ] },
+  { "grade": "4", "level": "O", "seriesId": 606, "targetLexile": 601,
+    "passage": "The rainforest is home to more kinds of plants and animals than anywhere else on land. Its tall trees form a thick roof called the canopy, where much of the wildlife lives. Very little sunlight reaches the shadowy forest floor. Sadly, large areas are cut down each year, putting many species at risk.",
+    "items": [
+      { "id": "Ob-r1", "skill": "reading", "q": "What is the canopy?", "choices": ["the forest floor", "the thick roof of treetops", "a type of animal"], "answer": 1 },
+      { "id": "Ob-r2", "skill": "reading", "q": "Why are many species at risk?", "choices": ["large areas are cut down", "it rains too much", "the trees are too tall"], "answer": 0 },
+      { "id": "Ob-r3", "skill": "reading", "q": "How much sunlight reaches the forest floor?", "choices": ["a great deal", "very little", "none at all"], "answer": 1 },
+      { "id": "Ob-r4", "skill": "reading", "q": "What does the rainforest have more of than anywhere on land?", "choices": ["kinds of plants and animals", "rivers", "mountains"], "answer": 0 },
+      { "id": "Ob-v1", "skill": "vocab", "q": "'canopy' 의 뜻은?", "choices": ["(숲의) 우거진 윗부분", "뿌리", "강"], "answer": 0 },
+      { "id": "Ob-v2", "skill": "vocab", "q": "'at risk' 의 뜻은?", "choices": ["안전한", "위험에 처한", "건강한"], "answer": 1 }
+    ] },
+  { "grade": "4", "level": "P", "seriesId": 607, "targetLexile": 642,
+    "passage": "Many birds build nests, but few are as clever as the weaver bird. Using its beak, it ties and knots blades of grass into a hanging home. The entrance faces downward to keep out snakes and other predators. A male often builds several nests to impress a mate.",
+    "items": [
+      { "id": "Pb-r1", "skill": "reading", "q": "How does the weaver bird build its nest?", "choices": ["by piling stones", "by digging a hole", "by knotting grass with its beak"], "answer": 2 },
+      { "id": "Pb-r2", "skill": "reading", "q": "Why does the entrance face downward?", "choices": ["to keep out predators", "to catch rain", "to let in light"], "answer": 0 },
+      { "id": "Pb-r3", "skill": "reading", "q": "What does the weaver bird use to build its nest?", "choices": ["its feet", "its beak", "its wings"], "answer": 1 },
+      { "id": "Pb-r4", "skill": "reading", "q": "Why does a male weaver bird build several nests?", "choices": ["to impress a mate", "to store food", "to trap snakes"], "answer": 0 },
+      { "id": "Pb-v1", "skill": "vocab", "q": "'knot (동사)' 의 뜻은?", "choices": ["묶다(매듭짓다)", "풀다", "자르다"], "answer": 0 },
+      { "id": "Pb-v2", "skill": "vocab", "q": "'impress' 의 뜻은?", "choices": ["실망시키다", "감동시키다", "무시하다"], "answer": 1 }
+    ] },
+  { "grade": "4", "level": "Q", "seriesId": 608, "targetLexile": 701,
+    "passage": "Thomas Edison is remembered for the light bulb, but his real genius was persistence. He failed thousands of times before finding a material that would glow without burning up. When asked about his failures, he said he had simply found many ways that did not work. His laboratory produced hundreds of other inventions as well.",
+    "items": [
+      { "id": "Qb-r1", "skill": "reading", "q": "What was Edison's real genius?", "choices": ["his persistence", "his good luck", "his wealth"], "answer": 0 },
+      { "id": "Qb-r2", "skill": "reading", "q": "How did Edison view his failures?", "choices": ["as a waste of time", "as ways that did not work", "as impossible"], "answer": 1 },
+      { "id": "Qb-r3", "skill": "reading", "q": "What did Edison need to find for the light bulb?", "choices": ["a bigger battery", "a material that glows without burning up", "a new kind of glass"], "answer": 1 },
+      { "id": "Qb-r4", "skill": "reading", "q": "What else did his laboratory produce?", "choices": ["hundreds of other inventions", "only light bulbs", "nothing else"], "answer": 0 },
+      { "id": "Qb-v1", "skill": "vocab", "q": "'persistence' 의 뜻은?", "choices": ["게으름", "두려움", "끈기"], "answer": 2 },
+      { "id": "Qb-v2", "skill": "vocab", "q": "'invention' 의 뜻은?", "choices": ["발명(품)", "실수", "습관"], "answer": 0 }
+    ] },
+  { "grade": "5", "level": "R", "seriesId": 609, "targetLexile": 751,
+    "passage": "Long before satellites, mapmakers faced a difficult challenge: how to draw a round Earth on flat paper. Every method they tried stretched or shrank some part of the world. A map that showed the correct shapes distorted the sizes, and one that kept sizes accurate bent the shapes. Even today, no flat map is perfect.",
+    "items": [
+      { "id": "Rb-r1", "skill": "reading", "q": "What challenge did mapmakers face?", "choices": ["drawing a round Earth on flat paper", "finding new lands", "counting stars"], "answer": 0 },
+      { "id": "Rb-r2", "skill": "reading", "q": "What happens on a flat map?", "choices": ["everything is perfect", "some part is always distorted", "the colors fade"], "answer": 1 },
+      { "id": "Rb-r3", "skill": "reading", "q": "What happens to a map that shows the correct shapes?", "choices": ["it distorts the sizes", "it becomes blank", "it shows correct sizes too"], "answer": 0 },
+      { "id": "Rb-r4", "skill": "reading", "q": "Is any flat map perfect, according to the passage?", "choices": ["yes", "no", "only ancient ones"], "answer": 1 },
+      { "id": "Rb-r5", "skill": "reading", "q": "What did mapmakers lack long ago?", "choices": ["paper", "ink", "satellites"], "answer": 2 },
+      { "id": "Rb-v3", "skill": "vocab", "q": "'stretch' 의 뜻은?", "choices": ["늘이다", "줄이다", "자르다"], "answer": 0 },
+      { "id": "Rb-v1", "skill": "vocab", "q": "'distort' 의 뜻은?", "choices": ["왜곡하다(일그러뜨리다)", "완성하다", "지우다"], "answer": 0 },
+      { "id": "Rb-v2", "skill": "vocab", "q": "'accurate' 의 뜻은?", "choices": ["틀린", "정확한", "흐릿한"], "answer": 1 }
+    ] },
+  { "grade": "5", "level": "S", "seriesId": 610, "targetLexile": 746,
+    "passage": "When people arrive on remote islands, they sometimes bring plants and animals that do not belong there. These newcomers can crowd out native species that have no natural defenses. Once established, they are extremely hard to remove. Protecting such islands means carefully controlling what comes ashore.",
+    "items": [
+      { "id": "Sb-r1", "skill": "reading", "q": "What problem can newcomers cause?", "choices": ["crowding out native species", "building nests", "cleaning the water"], "answer": 0 },
+      { "id": "Sb-r2", "skill": "reading", "q": "How can such islands be protected?", "choices": ["adding more tourists", "controlling what comes ashore", "cutting down the trees"], "answer": 1 },
+      { "id": "Sb-r3", "skill": "reading", "q": "Why are native species vulnerable to newcomers?", "choices": ["they are too large", "they have no natural defenses", "they eat the newcomers"], "answer": 1 },
+      { "id": "Sb-r4", "skill": "reading", "q": "Once established, how are the newcomers described?", "choices": ["extremely hard to remove", "easy to remove", "completely harmless"], "answer": 0 },
+      { "id": "Sb-r5", "skill": "reading", "q": "Who brings the newcomers to the islands?", "choices": ["native birds", "the wind only", "people arriving on the islands"], "answer": 2 },
+      { "id": "Sb-v3", "skill": "vocab", "q": "'establish (자리잡다)' 의 뜻은?", "choices": ["자리 잡다", "사라지다", "숨다"], "answer": 0 },
+      { "id": "Sb-v1", "skill": "vocab", "q": "'native (species)' 의 뜻은?", "choices": ["외래의", "위험한", "토종의(원래 살던)"], "answer": 2 },
+      { "id": "Sb-v2", "skill": "vocab", "q": "'crowd out' 의 뜻은?", "choices": ["밀어내다", "초대하다", "보호하다"], "answer": 0 }
+    ] },
+  { "grade": "5", "level": "T", "seriesId": 611, "targetLexile": 736,
+    "passage": "Crows are among the smartest of all birds. They can use sticks as tools to pull insects from narrow holes. Some have learned to drop hard nuts onto roads so passing cars will crack them open. Crows can even remember the faces of people who have treated them badly.",
+    "items": [
+      { "id": "Tb-r1", "skill": "reading", "q": "How do some crows crack nuts?", "choices": ["by using their beaks only", "by dropping them onto roads", "by hiding them"], "answer": 1 },
+      { "id": "Tb-r2", "skill": "reading", "q": "What can crows remember?", "choices": ["faces of people who treated them badly", "songs", "the colors of cars"], "answer": 0 },
+      { "id": "Tb-r3", "skill": "reading", "q": "How do crows get insects from narrow holes?", "choices": ["they dig with their feet", "they use sticks as tools", "they call other birds"], "answer": 1 },
+      { "id": "Tb-r4", "skill": "reading", "q": "How are crows described?", "choices": ["among the smartest of all birds", "the largest birds", "the fastest birds"], "answer": 0 },
+      { "id": "Tb-r5", "skill": "reading", "q": "Why do crows drop nuts on roads?", "choices": ["to hide them", "to feed other animals", "so passing cars will crack them open"], "answer": 2 },
+      { "id": "Tb-v3", "skill": "vocab", "q": "'remember' 의 뜻은?", "choices": ["기억하다", "잊다", "숨기다"], "answer": 0 },
+      { "id": "Tb-v1", "skill": "vocab", "q": "'tool' 의 뜻은?", "choices": ["도구", "장난감", "먹이"], "answer": 0 },
+      { "id": "Tb-v2", "skill": "vocab", "q": "'narrow' 의 뜻은?", "choices": ["넓은", "좁은", "깊은"], "answer": 1 }
+    ] },
+  { "grade": "6", "level": "U", "seriesId": 612, "targetLexile": 811,
+    "passage": "The Great Wall of China was built over many centuries by different rulers. Stretching thousands of miles, it was meant to defend the empire against invaders from the north. Soldiers used towers along the wall to send signals with smoke and fire. Much of it was built by hand, stone by stone, at enormous human cost.",
+    "items": [
+      { "id": "Ub-r1", "skill": "reading", "q": "Why was the Great Wall built?", "choices": ["to defend against invaders", "to store grain", "to mark a river"], "answer": 0 },
+      { "id": "Ub-r2", "skill": "reading", "q": "How did soldiers send signals?", "choices": ["by shouting", "with smoke and fire", "with flags only"], "answer": 1 },
+      { "id": "Ub-r3", "skill": "reading", "q": "How long was the Great Wall built over?", "choices": ["one year", "many centuries", "ten days"], "answer": 1 },
+      { "id": "Ub-r4", "skill": "reading", "q": "How far did the wall stretch?", "choices": ["thousands of miles", "a few meters", "one mile"], "answer": 0 },
+      { "id": "Ub-r5", "skill": "reading", "q": "How was much of the wall built?", "choices": ["by large machines", "by water power", "by hand, stone by stone"], "answer": 2 },
+      { "id": "Ub-v3", "skill": "vocab", "q": "'invader' 의 뜻은?", "choices": ["침략자", "여행자", "상인"], "answer": 0 },
+      { "id": "Ub-v1", "skill": "vocab", "q": "'defend' 의 뜻은?", "choices": ["공격하다", "떠나다", "방어하다"], "answer": 2 },
+      { "id": "Ub-v2", "skill": "vocab", "q": "'enormous' 의 뜻은?", "choices": ["거대한", "작은", "가벼운"], "answer": 0 }
+    ] },
+  { "grade": "6", "level": "V", "seriesId": 613, "targetLexile": 777,
+    "passage": "Deep in the ocean, where sunlight never reaches, strange creatures thrive around cracks in the sea floor. These vents release hot water rich in minerals. Instead of relying on the sun, bacteria there make food from chemicals. Entire communities of worms, crabs, and clams depend on this hidden source of energy.",
+    "items": [
+      { "id": "Vb-r1", "skill": "reading", "q": "How do bacteria near the vents make food?", "choices": ["from sunlight", "from chemicals, not sunlight", "from sand"], "answer": 1 },
+      { "id": "Vb-r2", "skill": "reading", "q": "What do the worms and crabs depend on?", "choices": ["this hidden source of energy", "warm surface water", "falling leaves"], "answer": 0 },
+      { "id": "Vb-r3", "skill": "reading", "q": "What do the sea-floor vents release?", "choices": ["cold fresh water", "hot water rich in minerals", "clouds of smoke"], "answer": 1 },
+      { "id": "Vb-r4", "skill": "reading", "q": "Instead of the sun, what do the bacteria rely on?", "choices": ["chemicals", "moonlight", "electricity"], "answer": 0 },
+      { "id": "Vb-r5", "skill": "reading", "q": "What creatures live in these communities?", "choices": ["birds and bats", "lions and tigers", "worms, crabs, and clams"], "answer": 2 },
+      { "id": "Vb-v3", "skill": "vocab", "q": "'crack (틈)' 의 뜻은?", "choices": ["갈라진 틈", "봉우리", "파도"], "answer": 0 },
+      { "id": "Vb-v1", "skill": "vocab", "q": "'thrive' 의 뜻은?", "choices": ["죽다", "번성하다(잘 자라다)", "숨다"], "answer": 1 },
+      { "id": "Vb-v2", "skill": "vocab", "q": "'release' 의 뜻은?", "choices": ["내보내다(방출하다)", "가두다", "얼리다"], "answer": 0 }
+    ] },
+  { "grade": "6", "level": "W", "seriesId": 614, "targetLexile": 837,
+    "passage": "For thousands of years, people measured time by the movement of the sun and stars. The invention of the mechanical clock changed daily life dramatically. Suddenly, towns could coordinate markets, prayers, and work by the ringing of a bell. Time became something shared and precise rather than a rough guess.",
+    "items": [
+      { "id": "Wb-r1", "skill": "reading", "q": "How did the mechanical clock change town life?", "choices": ["towns coordinated activities by a bell", "people stopped working", "markets closed"], "answer": 0 },
+      { "id": "Wb-r2", "skill": "reading", "q": "Before clocks, how was time measured?", "choices": ["by machines", "by the sun and stars", "by bells only"], "answer": 1 },
+      { "id": "Wb-r3", "skill": "reading", "q": "What did the ringing of a bell help towns do?", "choices": ["start fires", "coordinate markets, prayers, and work", "call soldiers"], "answer": 1 },
+      { "id": "Wb-r4", "skill": "reading", "q": "After the clock, how did time become?", "choices": ["shared and precise", "a rough guess", "completely forgotten"], "answer": 0 },
+      { "id": "Wb-r5", "skill": "reading", "q": "For how long had people measured time by the sun and stars?", "choices": ["a few weeks", "one century", "thousands of years"], "answer": 2 },
+      { "id": "Wb-v3", "skill": "vocab", "q": "'dramatically' 의 뜻은?", "choices": ["극적으로(크게)", "천천히", "거의 안"], "answer": 0 },
+      { "id": "Wb-v1", "skill": "vocab", "q": "'coordinate' 의 뜻은?", "choices": ["조정하다(맞추다)", "무시하다", "부수다"], "answer": 0 },
+      { "id": "Wb-v2", "skill": "vocab", "q": "'precise' 의 뜻은?", "choices": ["대략의", "정확한", "느린"], "answer": 1 }
+    ] },
+  { "grade": "7", "level": "X", "seriesId": 615, "targetLexile": 800,
+    "passage": "Elephants communicate in ways humans cannot easily hear. Much of their sound is too low for our ears, rumbling through the ground over long distances. Other elephants feel these vibrations through their feet. In this way, herds separated by miles can warn one another of danger or find their way to water.",
+    "items": [
+      { "id": "Xb-r1", "skill": "reading", "q": "How do elephants send messages over long distances?", "choices": ["by trumpeting loudly", "with low sounds through the ground", "by waving their trunks"], "answer": 1 },
+      { "id": "Xb-r2", "skill": "reading", "q": "How do other elephants sense these messages?", "choices": ["through vibrations in their feet", "with their eyes", "by smell only"], "answer": 0 },
+      { "id": "Xb-r3", "skill": "reading", "q": "Why can't humans easily hear elephant messages?", "choices": ["elephants are silent", "much of the sound is too low for our ears", "the sound is too high"], "answer": 1 },
+      { "id": "Xb-r4", "skill": "reading", "q": "What can herds miles apart do?", "choices": ["warn one another of danger", "never communicate", "only see each other"], "answer": 0 },
+      { "id": "Xb-r5", "skill": "reading", "q": "What does the low sound travel through?", "choices": ["the water only", "metal wires", "the ground"], "answer": 2 },
+      { "id": "Xb-v3", "skill": "vocab", "q": "'rumble' 의 뜻은?", "choices": ["우르릉 울리다", "반짝이다", "얼다"], "answer": 0 },
+      { "id": "Xb-v1", "skill": "vocab", "q": "'vibration' 의 뜻은?", "choices": ["냄새", "빛", "진동(떨림)"], "answer": 2 },
+      { "id": "Xb-v2", "skill": "vocab", "q": "'herd' 의 뜻은?", "choices": ["(동물) 무리", "한 마리", "사냥꾼"], "answer": 0 }
+    ] },
+  { "grade": "7", "level": "Y", "seriesId": 616, "targetLexile": 965,
+    "passage": "The printing of money rests on a fragile idea: trust. A banknote is only worth something because everyone agrees to accept it. If people suddenly doubted its value, the paper itself would be nearly worthless. Modern economies depend on this shared confidence far more than on the gold once kept in vaults.",
+    "items": [
+      { "id": "Yb-r1", "skill": "reading", "q": "Why is a banknote worth something?", "choices": ["everyone agrees to accept it", "it is made of gold", "it is very rare paper"], "answer": 0 },
+      { "id": "Yb-r2", "skill": "reading", "q": "What do modern economies depend on most?", "choices": ["gold in vaults", "shared confidence", "the weight of coins"], "answer": 1 },
+      { "id": "Yb-r3", "skill": "reading", "q": "What would happen if people doubted a banknote's value?", "choices": ["it would turn to gold", "the paper would be nearly worthless", "its value would rise"], "answer": 1 },
+      { "id": "Yb-r4", "skill": "reading", "q": "What idea does the printing of money rest on?", "choices": ["trust", "luck", "gold"], "answer": 0 },
+      { "id": "Yb-r5", "skill": "reading", "q": "Where was gold once kept?", "choices": ["in banknotes", "in the ocean", "in vaults"], "answer": 2 },
+      { "id": "Yb-v3", "skill": "vocab", "q": "'confidence' 의 뜻은?", "choices": ["신뢰(믿음)", "의심", "두려움"], "answer": 0 },
+      { "id": "Yb-v1", "skill": "vocab", "q": "'fragile' 의 뜻은?", "choices": ["튼튼한", "무거운", "깨지기 쉬운(취약한)"], "answer": 2 },
+      { "id": "Yb-v2", "skill": "vocab", "q": "'worthless' 의 뜻은?", "choices": ["가치 없는", "값진", "흔한"], "answer": 0 }
+    ] },
+  { "grade": "7", "level": "Z", "seriesId": 617, "targetLexile": 943,
+    "passage": "For centuries, doctors believed that illness was caused by bad air rather than invisible organisms. This idea led them to ignore the importance of cleanliness. Only after microscopes revealed a hidden world of microbes did medicine begin to change. Simple habits like washing hands went on to save countless lives.",
+    "items": [
+      { "id": "Zb-r1", "skill": "reading", "q": "What did doctors once believe caused illness?", "choices": ["bad air", "dirty hands", "cold weather"], "answer": 0 },
+      { "id": "Zb-r2", "skill": "reading", "q": "What helped change medicine?", "choices": ["warmer hospitals", "microscopes revealing microbes", "new medicines only"], "answer": 1 },
+      { "id": "Zb-r3", "skill": "reading", "q": "What did the 'bad air' idea lead doctors to ignore?", "choices": ["the need for sleep", "the importance of cleanliness", "the price of medicine"], "answer": 1 },
+      { "id": "Zb-r4", "skill": "reading", "q": "What did microscopes reveal?", "choices": ["a hidden world of microbes", "distant planets", "the inside of the heart"], "answer": 0 },
+      { "id": "Zb-r5", "skill": "reading", "q": "What simple habit went on to save countless lives?", "choices": ["running fast", "eating less", "washing hands"], "answer": 2 },
+      { "id": "Zb-v3", "skill": "vocab", "q": "'organism' 의 뜻은?", "choices": ["생물(유기체)", "기계", "돌"], "answer": 0 },
+      { "id": "Zb-v1", "skill": "vocab", "q": "'invisible' 의 뜻은?", "choices": ["보이지 않는", "밝은", "시끄러운"], "answer": 0 },
+      { "id": "Zb-v2", "skill": "vocab", "q": "'countless' 의 뜻은?", "choices": ["아주 적은", "위험한", "셀 수 없이 많은"], "answer": 2 }
+    ] },
+  { "grade": "7", "level": "Z1", "seriesId": 618, "targetLexile": 829,
+    "passage": "Artificial intelligence is reshaping how people work, learn, and communicate. Supporters argue that it can handle dull tasks and free humans for creative thinking. Critics worry that it may replace jobs faster than society can adapt. What seems certain is that ignoring the technology is no longer an option.",
+    "items": [
+      { "id": "Z1b-r1", "skill": "reading", "q": "What do supporters of AI argue?", "choices": ["it can free humans for creative thinking", "it should be banned", "it is useless"], "answer": 0 },
+      { "id": "Z1b-r2", "skill": "reading", "q": "What do critics worry about?", "choices": ["it is too slow", "it may replace jobs quickly", "it cannot learn"], "answer": 1 },
+      { "id": "Z1b-r3", "skill": "reading", "q": "What can AI handle, according to supporters?", "choices": ["human friendships", "dull tasks", "the weather"], "answer": 1 },
+      { "id": "Z1b-r4", "skill": "reading", "q": "How is AI described in relation to work and learning?", "choices": ["it is reshaping them", "it has no effect on them", "it stops them"], "answer": 0 },
+      { "id": "Z1b-r5", "skill": "reading", "q": "What does the passage say is no longer an option?", "choices": ["using computers", "reading books", "ignoring the technology"], "answer": 2 },
+      { "id": "Z1b-v3", "skill": "vocab", "q": "'replace' 의 뜻은?", "choices": ["대체하다", "돕다", "숨기다"], "answer": 0 },
+      { "id": "Z1b-v1", "skill": "vocab", "q": "'adapt' 의 뜻은?", "choices": ["적응하다", "포기하다", "반복하다"], "answer": 0 },
+      { "id": "Z1b-v2", "skill": "vocab", "q": "'reshape' 의 뜻은?", "choices": ["파괴하다", "다시 형성하다(바꾸다)", "숨기다"], "answer": 1 }
+    ] },
+  { "grade": "7", "level": "Z2", "seriesId": 619, "targetLexile": 992,
+    "passage": "The tragedy of the commons describes what happens when many individuals share a limited resource. Each person, acting in self-interest, takes a little more, assuming it will make no difference. Collectively, however, their choices can exhaust the very thing they all depend on. Overfished oceans and polluted air are stark reminders of this dilemma.",
+    "items": [
+      { "id": "Z2b-r1", "skill": "reading", "q": "What is the tragedy of the commons?", "choices": ["shared resources get exhausted by self-interest", "people share too little", "resources never run out"], "answer": 0 },
+      { "id": "Z2b-r2", "skill": "reading", "q": "Which is given as an example?", "choices": ["crowded cities", "overfished oceans", "tall buildings"], "answer": 1 },
+      { "id": "Z2b-r3", "skill": "reading", "q": "What does each person assume when taking a little more?", "choices": ["it will help others", "it will make no difference", "it is against the rules"], "answer": 1 },
+      { "id": "Z2b-r4", "skill": "reading", "q": "What kind of resource does the tragedy involve?", "choices": ["a limited, shared resource", "an endless resource", "a private resource"], "answer": 0 },
+      { "id": "Z2b-r5", "skill": "reading", "q": "Besides overfished oceans, what example is given?", "choices": ["crowded trains", "tall towers", "polluted air"], "answer": 2 },
+      { "id": "Z2b-v3", "skill": "vocab", "q": "'dilemma' 의 뜻은?", "choices": ["진퇴양난(딜레마)", "해결책", "축제"], "answer": 0 },
+      { "id": "Z2b-v1", "skill": "vocab", "q": "'exhaust (자원을)' 의 뜻은?", "choices": ["고갈시키다", "채우다", "보호하다"], "answer": 0 },
+      { "id": "Z2b-v2", "skill": "vocab", "q": "'collectively' 의 뜻은?", "choices": ["혼자서", "우연히", "다 함께(집합적으로)"], "answer": 2 }
+    ] }
+]

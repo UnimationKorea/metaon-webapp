@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.vite/
+coverage/
+qa-screenshots/
+.env
+.env.local
+*.log
+*.tsbuildinfo
+.metaon-*.log
+.metaon-*.err.log

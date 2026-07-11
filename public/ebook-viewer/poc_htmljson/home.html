@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RHK 이북 PoC — 결과물</title>
+<style>
+  :root { --bg:#1b1f2b; --panel:#262b3b; --txt:#eef1f7; --accent:#5b8cff; --muted:#8a92a8; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt);
+    font-family:-apple-system,"Segoe UI",Roboto,"Malgun Gothic",sans-serif; }
+  header { padding:26px 24px 18px; background:#242a39; box-shadow:0 2px 12px rgba(0,0,0,.35); }
+  h1 { margin:0; font-size:20px; }
+  header p { margin:8px 0 0; color:var(--muted); font-size:13px; line-height:1.6; }
+  .wrap { max-width:1080px; margin:0 auto; padding:26px 24px 70px; }
+  h2 { font-size:15px; margin:30px 0 14px; color:#cdd5e8; border-left:3px solid var(--accent); padding-left:10px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:18px; }
+  .card { background:var(--panel); border-radius:14px; overflow:hidden; text-decoration:none; color:inherit;
+    box-shadow:0 6px 20px rgba(0,0,0,.3); border:1px solid #333a4d; transition:transform .12s, border-color .12s; display:flex; flex-direction:column; }
+  .card:hover { transform:translateY(-3px); border-color:var(--accent); }
+  .thumb { aspect-ratio:16/10; background:#fff center/contain no-repeat; }
+  .card .body { padding:12px 14px 14px; }
+  .card .t { font-size:14.5px; font-weight:700; line-height:1.35; }
+  .card .m { font-size:12px; color:var(--muted); margin-top:5px; display:flex; gap:8px; flex-wrap:wrap; }
+  .pill { background:#333a4d; border-radius:8px; padding:2px 8px; font-size:11px; font-weight:600; }
+  .pill.o { background:#3a4b7a; } .pill.b { background:#3a6b4b; } .pill.anim { background:#7a5a2a; color:#ffe1b0; }
+  .demos .card { flex-direction:row; align-items:center; gap:12px; padding:14px 16px; }
+  .demos .ico { font-size:26px; }
+  .feat { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+  .feat span { background:#2a3040; border:1px solid #38415a; border-radius:20px; padding:6px 12px; font-size:12px; color:#cdd5e8; }
+  .hint { color:var(--muted); font-size:12px; margin-top:8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>📚 RHK 영어 이북 — 제작 결과물 (PoC)</h1>
+  <p>PDF + 음원으로 만든 읽기 이북. 카드를 누르면 해당 책이 앱에서 바로 열립니다.</p>
+  <div class="feat">
+    <span>🔊 음원 맞춰 단어 하이라이트</span><span>🈶 단어/문장 모드</span><span>📖 페이지별 한글 해석</span>
+    <span>📒 단어 사전 + 내 사전</span><span>🎞 이미지 모션</span><span>⚙ 넘김 효과·지연 설정</span>
+  </div>
+</header>
+
+<div class="wrap">
+  <h2>수록 도서</h2>
+  <div class="grid" id="books"></div>
+
+  <h2>부가 데모 / 도구</h2>
+  <div class="grid demos">
+    <a class="card" href="./aidemo/index.html"><span class="ico">🎬</span><div><div class="t">레이어 리깅 모션 데모</div><div class="m">캐릭터만 살아 움직이는 시범 (p10 강아지)</div></div></a>
+    <a class="card" href="./viewer.html"><span class="ico">🔍</span><div><div class="t">JSON 구조 뷰어</div><div class="m">book.json 등 데이터 구조 확인</div></div></a>
+  </div>
+  <p class="hint">※ 이 페이지는 로컬 미리보기 서버(localhost:8123)에서 동작합니다. 안 보이면 Ctrl+F5.</p>
+</div>
+
+<script>
+(async ()=>{
+  const encPath = p => String(p).split('/').map(encodeURIComponent).join('/');
+  const manifest = await fetch('./books.json').then(r=>r.json());
+  const host = document.getElementById('books');
+  for(let i=0;i<manifest.length;i++){
+    const b = manifest[i];
+    let thumb='', pages='';
+    try{
+      const bk = await fetch(`${encPath(b.dir)}/book.json`).then(r=>r.json());
+      thumb = `${encPath(b.dir)}/${encPath(bk.pages[0].img)}`;
+      pages = bk.pages.length + '쪽';
+    }catch(e){}
+    const lvlClass = b.level==='O'?'o':'b';
+    const a = document.createElement('a');
+    a.className='card'; a.href = `./index.html?book=${encodeURIComponent(b.id)}`;
+    a.innerHTML = `<div class="thumb" style="background-image:url('${thumb}')"></div>
+      <div class="body"><div class="t">${b.title}</div>
+      <div class="m"><span class="pill ${lvlClass}">Level ${b.level}</span>${pages?`<span class="pill">${pages}</span>`:''}${b.anim?'<span class="pill anim">🎞 애니메이션</span>':''}</div></div>`;
+    host.appendChild(a);
+  }
+})();
+</script>
+</body>
+</html>
