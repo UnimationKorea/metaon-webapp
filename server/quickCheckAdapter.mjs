@@ -191,7 +191,8 @@ export function normalizeRawQuestion(value, index) {
     options: normalizeFlatOptions(raw),
     subItems: [],
     tokens: [],
-    blankPositions: []
+    blankPositions: [],
+    contentRefs: normalizeContentRefs(raw, qjson)
   };
 
   if (unityType === 5) {
@@ -368,6 +369,38 @@ function normalizeFlatOptions(raw) {
     options.push({ index: options.length, sourceIndex, label, imageUrl, audioUrl });
   }
   return options;
+}
+
+function normalizeContentRefs(raw, qjson) {
+  const refs = [];
+  const seen = new Set();
+
+  function add(itemType, value, subItemIndex) {
+    const values = Array.isArray(value) ? value : [value];
+    for (const candidate of values) {
+      const itemIdx = numberValue(candidate);
+      if (itemIdx <= 0) continue;
+      const key = `${itemType}:${itemIdx}:${subItemIndex ?? ""}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      refs.push({ itemType, itemIdx, ...(subItemIndex == null ? {} : { subItemIndex }) });
+    }
+  }
+
+  for (const source of [raw, qjson]) {
+    add("word", source.word_idx ?? source.wordIdx ?? source.content_word_idx);
+    add("sentence", source.sentence_idx ?? source.sentenceIdx ?? source.content_sentence_idx);
+    const itemType = stringValue(source.item_type ?? source.itemType);
+    if (itemType === "word" || itemType === "sentence") add(itemType, source.item_idx ?? source.itemIdx);
+  }
+
+  arrayValue(qjson.quiz).forEach((item, subItemIndex) => {
+    const source = recordValue(item);
+    add("word", source.word_idx ?? source.wordIdx ?? source.content_word_idx, subItemIndex);
+    add("sentence", source.sentence_idx ?? source.sentenceIdx ?? source.content_sentence_idx, subItemIndex);
+  });
+
+  return refs;
 }
 
 function normalizeOption(value, index, sourceBase) {

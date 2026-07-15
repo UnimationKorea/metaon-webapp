@@ -25,6 +25,12 @@ export type QuickCheckSubItem = {
   options?: QuickCheckOption[];
 };
 
+export type QuickCheckContentRef = {
+  itemType: "sentence" | "word";
+  itemIdx: number;
+  subItemIndex?: number;
+};
+
 export type QuickCheckCorrectAnswer =
   | { mode: "single"; selectedIndex: number }
   | { mode: "text"; value: string }
@@ -50,6 +56,7 @@ export type QuickCheckQuestion = {
   subItems: QuickCheckSubItem[];
   tokens: string[];
   blankPositions: number[];
+  contentRefs?: QuickCheckContentRef[];
   correctAnswer: QuickCheckCorrectAnswer;
 };
 

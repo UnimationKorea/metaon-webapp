@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, CheckCircle2, Play } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Download, Play } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { EmptyState } from "../components/EmptyState";
@@ -81,6 +81,11 @@ export function HubBookPage() {
   const progress = getBookProgress(packageKeyFor(book));
   const progressValue = percent(progress.completedActivityIds.length, allActivities.length);
   const startRoute = firstDay && firstActivity ? routeForActivity(book, firstDay, firstActivity) : "";
+  const isResourceLoading = !packageState.isDownloaded && !packageState.error;
+  const visibleResourceProgress = packageState.progress.phase === "idle"
+    ? { phase: "downloading" as const, ratio: 0 }
+    : packageState.progress;
+  const resourceProgressLabel = packageState.isCheckingCache ? "저장된 Book 리소스 확인 중" : undefined;
 
   async function startActivity() {
     if (!startRoute || !packageState.isDownloaded) return;
@@ -139,11 +144,13 @@ export function HubBookPage() {
               <strong>{progressValue}%</strong>
               <span>{progress.completedActivityIds.length}/{allActivities.length || 0} 완료</span>
             </div>
-            <div className="hub-book-mini-stats" aria-label="Book resource summary">
-              <span><strong>{packageState.packageMeta?.totalFiles ?? 0}</strong> files</span>
-              <span><strong>{packageState.packageMeta?.lessonDays.length ?? 0}</strong> days</span>
-              <span><strong>{allActivities.length}</strong> acts</span>
-            </div>
+            {packageState.isDownloaded ? (
+              <div className="hub-book-mini-stats" aria-label="Book resource summary">
+                <span><strong>{packageState.packageMeta?.totalFiles ?? 0}</strong> files</span>
+                <span><strong>{packageState.packageMeta?.lessonDays.length ?? 0}</strong> days</span>
+                <span><strong>{allActivities.length}</strong> acts</span>
+              </div>
+            ) : null}
             <div className="hub-button-row compact">
               <button
                 className="hub-primary-action"
@@ -156,63 +163,66 @@ export function HubBookPage() {
               </button>
             </div>
           </div>
-          <p className="hub-resource-status-copy">
-            {packageState.isDownloaded
-              ? "Resources are ready."
-              : packageState.error
-                ? "Resources could not be downloaded. Reload this page to try again."
-                : packageState.isBusy
-                  ? "Preparing resources automatically..."
-                  : "Checking cached resources..."}
-          </p>
-          {!packageState.isDownloaded && packageState.progress.phase !== "idle" ? <ProgressMeter progress={packageState.progress} /> : null}
-          {packageState.error ? <p className="hub-error-copy">{packageState.error}</p> : null}
+          {packageState.isDownloaded ? <p className="hub-resource-status-copy">리소스 준비가 완료되었습니다.</p> : null}
+          {packageState.error ? (
+            <p className="hub-error-copy">리소스를 다운로드하지 못했습니다. 페이지를 새로고침해 다시 시도해 주세요.</p>
+          ) : null}
         </div>
       </div>
 
-      <section className="hub-book-activity-panel">
-        <div className="hub-section-heading">
-          <div>
-            <h2>Activity 목록</h2>
-            <p>리소스를 다운로드하면 실제 Activity metadata가 표시됩니다.</p>
-          </div>
-        </div>
-        {packageState.isDownloaded && allActivities.length > 0 ? (
-          <div className="hub-activity-flow" aria-label="Activity learning path">
-            {allActivities.map(({ activity, day }, index) => {
-              const isComplete = progress.completedActivityIds.includes(activity.id);
-              const activityKey = `${day.id}:${activity.actIdx || activity.actNum}`;
-              const activityRoute = routeForActivity(book, day, activity);
-              return (
-                <div className="hub-activity-flow-step" key={activityKey}>
-                  <Link
-                    className={`hub-activity-cube${isComplete ? " is-complete" : ""}${launchingActivityKey === activityKey ? " is-launching" : ""}`}
-                    to={activityRoute}
-                    aria-label={`${activity.title} ${isComplete ? "완료됨" : "미완료"}`}
-                    onClick={(event) => handleActivityCubeClick(event, activityRoute, activityKey)}
-                  >
-                    <span className="hub-activity-cube-status" aria-label={isComplete ? "완료됨" : "미완료"}>
-                      <CheckCircle2 size={18} strokeWidth={2.4} />
-                      <span>{isComplete ? "완료" : "대기"}</span>
-                    </span>
-                    <span className="hub-activity-cube-number">{String(index + 1).padStart(2, "0")}</span>
-                    <span className="hub-activity-cube-title">{activity.title}</span>
-                  </Link>
-                  {index < allActivities.length - 1 ? (
-                    <span className="hub-activity-flow-arrow" aria-hidden="true">
-                      <ArrowRight size={22} strokeWidth={2.8} />
-                    </span>
-                  ) : null}
-                </div>
-              );
-            })}
+      <section className={`hub-book-activity-panel${isResourceLoading ? " is-resource-loading" : ""}`}>
+        {isResourceLoading ? (
+          <div className="hub-resource-download-panel">
+            <span className="hub-resource-download-symbol" aria-hidden="true">
+              <Download size={28} strokeWidth={2.4} />
+            </span>
+            <ProgressMeter label={resourceProgressLabel} progress={visibleResourceProgress} />
           </div>
         ) : (
-          <div className="hub-empty-inline">
-            <Play size={24} fill="currentColor" strokeWidth={0} />
-            <strong>리소스를 준비하는 중입니다</strong>
-            <span>페이지에 진입하면 Book 리소스를 자동으로 다운로드합니다.</span>
-          </div>
+          <>
+            <div className="hub-section-heading">
+              <div>
+                <h2>Activity 목록</h2>
+              </div>
+            </div>
+            {packageState.isDownloaded && allActivities.length > 0 ? (
+              <div className="hub-activity-flow" aria-label="Activity learning path">
+                {allActivities.map(({ activity, day }, index) => {
+                  const isComplete = progress.completedActivityIds.includes(activity.id);
+                  const activityKey = `${day.id}:${activity.actIdx || activity.actNum}`;
+                  const activityRoute = routeForActivity(book, day, activity);
+                  return (
+                    <div className="hub-activity-flow-step" key={activityKey}>
+                      <Link
+                        className={`hub-activity-cube${isComplete ? " is-complete" : ""}${launchingActivityKey === activityKey ? " is-launching" : ""}`}
+                        to={activityRoute}
+                        aria-label={`${activity.title} ${isComplete ? "완료됨" : "미완료"}`}
+                        onClick={(event) => handleActivityCubeClick(event, activityRoute, activityKey)}
+                      >
+                        <span className="hub-activity-cube-status" aria-label={isComplete ? "완료됨" : "미완료"}>
+                          <CheckCircle2 size={18} strokeWidth={2.4} />
+                          <span>{isComplete ? "완료" : "대기"}</span>
+                        </span>
+                        <span className="hub-activity-cube-number">{String(index + 1).padStart(2, "0")}</span>
+                        <span className="hub-activity-cube-title">{activity.title}</span>
+                      </Link>
+                      {index < allActivities.length - 1 ? (
+                        <span className="hub-activity-flow-arrow" aria-hidden="true">
+                          <ArrowRight size={22} strokeWidth={2.8} />
+                        </span>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="hub-empty-inline">
+                {packageState.error ? <Download size={24} strokeWidth={2.4} /> : <Play size={24} fill="currentColor" strokeWidth={0} />}
+                <strong>{packageState.error ? "리소스를 준비하지 못했습니다" : "등록된 Activity가 없습니다"}</strong>
+                <span>{packageState.error ? "페이지를 새로고침해 다시 시도해 주세요." : "이 Book에는 실행 가능한 Activity가 없습니다."}</span>
+              </div>
+            )}
+          </>
         )}
       </section>
     </section>

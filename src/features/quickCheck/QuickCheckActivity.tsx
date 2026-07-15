@@ -351,7 +351,7 @@ function QuickCheckQuestionInput({
         {question.subItems.map((item, itemIndex) => (
           <section className="quick-check-v2-subquestion" key={item.id}>
             <strong>{item.prompt || `Item ${itemIndex + 1}`}</strong>
-            <div className="quick-check-v2-options compact">
+            <div className="quick-check-v2-options compact is-one-column">
               {(item.options || []).map((option) => (
                 <OptionButton
                   isReview={isReview}
@@ -435,7 +435,7 @@ function QuickCheckQuestionInput({
 
   if (answer.mode === "single") {
     return (
-      <div className="quick-check-v2-options">
+      <div className="quick-check-v2-options is-one-column">
         {question.options.map((option) => (
           <OptionButton
             isReview={isReview}

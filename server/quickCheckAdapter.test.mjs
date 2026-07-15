@@ -69,4 +69,26 @@ describe("Quick Check BFF adapter", () => {
     expect(built.payload.useranswer).not.toContain("and/or");
     expect(built.payload.useranswer).not.toContain("^");
   });
+
+  it("keeps explicit content PK references for mastery events", () => {
+    const payload = normalizeQuickCheckPayload({
+      resultCode: 1,
+      quizzes: [{
+        qc_idx: 30,
+        qcode: 100,
+        question: "Pick one",
+        word_idx: 84512,
+        sentence_idx: 33120,
+        answer_cnt: 2,
+        answer_1: "A",
+        answer_2: "B",
+        right_answer: 1
+      }]
+    }, "metaon3-current");
+
+    expect(payload.questions[0].contentRefs).toEqual([
+      { itemType: "word", itemIdx: 84512 },
+      { itemType: "sentence", itemIdx: 33120 }
+    ]);
+  });
 });

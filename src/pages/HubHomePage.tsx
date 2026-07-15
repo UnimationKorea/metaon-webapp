@@ -1,7 +1,9 @@
-import { ArrowRight, BookOpen, CheckCircle2, Clock3, GraduationCap, LogIn, Map, MessageCircle, PlayCircle, Target } from "lucide-react";
+import { ArrowRight, BookOpen, CheckCircle2, Clock3, GraduationCap, LogIn, Map, MessageCircle, PlayCircle, Rocket, Target } from "lucide-react";
 import { type CSSProperties, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { EmptyState } from "../components/EmptyState";
+import { HomeDepthScene, HomeMotionRoot } from "../components/HomeMotion";
+import { HomeLoadingScreen } from "../components/HomeLoadingScreen";
 import { useAuth } from "../hooks/useAuth";
 import { useCatalog } from "../hooks/useCatalog";
 import { useHubState, type HubPlacementState } from "../hooks/useHubState";
@@ -31,7 +33,7 @@ export function HubHomePage() {
   } as CSSProperties;
 
   if (isLoading) {
-    return <EmptyState title="Loading home" detail="Fetching MetaOn catalog." />;
+    return <HomeLoadingScreen backgroundImage={heroTheme.image} backgroundPosition={heroTheme.position} themeId={heroTheme.id} />;
   }
 
   if (!selectedBook) {
@@ -39,8 +41,9 @@ export function HubHomePage() {
   }
 
   return (
-    <section className="hub-home-grid">
+    <HomeMotionRoot themeId={heroTheme.id}>
       <section className="hub-home-feature-stage" aria-label="오늘의 학습 추천" data-hero-theme={heroTheme.id} style={heroThemeStyle}>
+        <HomeDepthScene themeId={heroTheme.id} />
         <div className="hub-hero hub-home-hero-adventure">
           <div className="hub-hero-copy">
             <h1>오늘의 Raz-Kids</h1>
@@ -61,6 +64,9 @@ export function HubHomePage() {
 
           <div className="hub-hero-adventure-board" aria-label="학습 진행 지도">
             <div className="hub-mission-map">
+              <span className="hub-mission-traveler" aria-hidden="true">
+                <Rocket size={15} strokeWidth={2.5} />
+              </span>
               <span className="hub-map-node complete">BOOK</span>
               <span className="hub-map-line"></span>
               <span className="hub-map-node active">Activity</span>
@@ -72,7 +78,7 @@ export function HubHomePage() {
           </div>
         </div>
 
-        <section className={`hub-placement-home-card ${placement.status}`} aria-label="Placement Test">
+        <section className={`hub-placement-home-card ${placement.status}`} aria-label="Placement Test" data-home-tilt="placement">
           <span className="hub-placement-home-icon">
             <GraduationCap size={26} strokeWidth={2.35} />
           </span>
@@ -94,7 +100,7 @@ export function HubHomePage() {
           <div className="hub-personalization-grid">
             {!isAuthenticated ? (
               <>
-                <Link className="hub-personal-card continue" to="/login">
+                <Link className="hub-personal-card continue" data-home-tilt="personal" to="/login">
                   <span className="hub-personal-tab">이어서 학습</span>
                   <span className="hub-personal-icon">
                     <Clock3 size={22} strokeWidth={2.4} />
@@ -109,7 +115,7 @@ export function HubHomePage() {
                   </span>
                 </Link>
 
-                <Link className="hub-personal-card custom" to="/login">
+                <Link className="hub-personal-card custom" data-home-tilt="personal" to="/login">
                   <span className="hub-personal-tab">오늘의 맞춤 학습</span>
                   <span className="hub-personal-icon">
                     <Target size={22} strokeWidth={2.4} />
@@ -124,7 +130,7 @@ export function HubHomePage() {
                   </span>
                 </Link>
 
-                <Link className="hub-personal-card recommend" to="/study">
+                <Link className="hub-personal-card recommend" data-home-tilt="personal" to="/study">
                   <span className="hub-personal-tab">추천 학습</span>
                   <span className="hub-personal-icon">
                     <CheckCircle2 size={22} strokeWidth={2.4} />
@@ -141,7 +147,7 @@ export function HubHomePage() {
               </>
             ) : (
               <>
-                <Link className="hub-personal-card continue" to={routeForBook(selectedBook)}>
+                <Link className="hub-personal-card continue" data-home-tilt="personal" to={routeForBook(selectedBook)}>
                   <span className="hub-personal-tab">이어서 학습</span>
                   <span className="hub-personal-icon">
                     <Clock3 size={22} strokeWidth={2.4} />
@@ -159,7 +165,7 @@ export function HubHomePage() {
                   </span>
                 </Link>
 
-                <Link className="hub-personal-card custom" to={reviewBookData ? routeForBook(reviewBookData) : "/study"}>
+                <Link className="hub-personal-card custom" data-home-tilt="personal" to={reviewBookData ? routeForBook(reviewBookData) : "/study"}>
                   <span className="hub-personal-tab">오늘의 맞춤 학습</span>
                   <span className="hub-personal-icon">
                     <Target size={22} strokeWidth={2.4} />
@@ -179,7 +185,7 @@ export function HubHomePage() {
                   </span>
                 </Link>
 
-                <Link className="hub-personal-card recommend" to={recommendedBookData ? routeForBook(recommendedBookData) : "/study"}>
+                <Link className="hub-personal-card recommend" data-home-tilt="personal" to={recommendedBookData ? routeForBook(recommendedBookData) : "/study"}>
                   <span className="hub-personal-tab">추천 학습</span>
                   <span className="hub-personal-icon">
                     <CheckCircle2 size={22} strokeWidth={2.4} />
@@ -206,9 +212,10 @@ export function HubHomePage() {
         </section>
       </section>
 
-      <Link className="hub-home-menu-card study" to="/study">
+      <Link className="hub-home-menu-card study" data-home-tilt="portal" to="/study">
         <span className="hub-menu-art">
           <SafeCoverImage fallbackIndex={1} src={selectedBook.thumbnailUrl} />
+          <PortalGate />
         </span>
         <span className="hub-menu-copy">
           <span className="hub-menu-badge">
@@ -224,9 +231,10 @@ export function HubHomePage() {
         <span className="hub-menu-action">입장하기</span>
       </Link>
 
-      <Link className="hub-home-menu-card ai" to="/ai-session">
+      <Link className="hub-home-menu-card ai" data-home-tilt="portal" to="/ai-session">
         <span className="hub-menu-art">
           <img src="/metaon-assets/ai-npc-preview.png" alt="" />
+          <PortalGate />
         </span>
         <span className="hub-menu-copy">
           <span className="hub-menu-badge">
@@ -239,9 +247,10 @@ export function HubHomePage() {
         <span className="hub-menu-action">대화 시작</span>
       </Link>
 
-      <Link className="hub-home-menu-card meta" to="/metaverse-world">
+      <Link className="hub-home-menu-card meta" data-home-tilt="portal" to="/metaverse-world">
         <span className="hub-menu-art">
           <img src="/metaon-assets/metaverse-preview.png" alt="" />
+          <PortalGate />
         </span>
         <span className="hub-menu-copy">
           <span className="hub-menu-badge">
@@ -253,7 +262,7 @@ export function HubHomePage() {
         </span>
         <span className="hub-menu-action">월드 열기</span>
       </Link>
-    </section>
+    </HomeMotionRoot>
   );
 }
 
@@ -304,5 +313,15 @@ function SafeCoverImage({ fallbackIndex, src }: { fallbackIndex: number; src?: s
         if (imageUrl !== fallback) setImageUrl(fallback);
       }}
     />
+  );
+}
+
+function PortalGate() {
+  return (
+    <span className="hub-menu-portal-gate" aria-hidden="true">
+      <i />
+      <i />
+      <i />
+    </span>
   );
 }

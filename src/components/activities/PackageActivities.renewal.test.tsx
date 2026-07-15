@@ -114,6 +114,19 @@ function mockRenewalPackage(sentenceRecords = sentences) {
   });
 }
 
+function matchVisibleMemoryPairs(container: HTMLElement) {
+  const wordFaces = Array.from(container.querySelectorAll<HTMLElement>(".memory-renewal-card-front strong"));
+  for (const face of wordFaces) {
+    const word = face.textContent || "";
+    const wordCard = face.closest("button");
+    const imageCard = container.querySelector(`.memory-renewal-card-front img[alt="${word}"]`)?.closest("button");
+    expect(wordCard).not.toBeNull();
+    expect(imageCard).not.toBeNull();
+    fireEvent.click(wordCard as HTMLButtonElement);
+    fireEvent.click(imageCard as HTMLButtonElement);
+  }
+}
+
 describe("Figma renewal activities", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -145,9 +158,24 @@ describe("Figma renewal activities", () => {
     await waitFor(() => expect(shell).toHaveAttribute("data-quiz-mode", "image-text"));
     expect(shell).toHaveAttribute("data-quiz-mode", "image-text");
     expect(container.querySelector(".voca-quiz-prompt img")).toBeInTheDocument();
-    const textOptions = container.querySelectorAll(".voca-quiz-options.is-text .voca-quiz-fit-text");
+    const textOptions = Array.from(container.querySelectorAll<HTMLElement>(".voca-quiz-options.is-text .voca-quiz-fit-text"));
     expect(textOptions).toHaveLength(4);
     textOptions.forEach((option) => expect(option).toHaveAttribute("data-fit-single-line", "true"));
+    const textOptionGroup = container.querySelector(".voca-quiz-options.is-text");
+    expect(textOptionGroup).toHaveAttribute("data-uniform-fit-group", "true");
+    textOptions.forEach((option, optionIndex) => {
+      Object.defineProperty(option, "clientWidth", { configurable: true, value: 100 });
+      Object.defineProperty(option, "scrollWidth", {
+        configurable: true,
+        get: () => (Number.parseFloat(option.style.fontSize) || 32) * (optionIndex === 0 ? 8 : 2)
+      });
+    });
+    fireEvent(window, new Event("resize"));
+    await waitFor(() => {
+      const fittedSizes = textOptions.map((option) => option.style.fontSize);
+      expect(new Set(fittedSizes).size).toBe(1);
+      expect(Number.parseFloat(fittedSizes[0])).toBeLessThan(32);
+    });
     expect(screen.getByLabelText("Question 1 of 6")).toHaveTextContent(/^1\/6$/);
 
     const nextQuestion = screen.getByRole("button", { name: "Next question" });
@@ -191,6 +219,7 @@ describe("Figma renewal activities", () => {
     expect(word?.children).toHaveLength(3);
     expect(word?.querySelector(".renewal-blank")).toBeInTheDocument();
     expect(container.querySelectorAll(".word-blank-renewal-options button")).toHaveLength(4);
+    expect(container.querySelectorAll(".word-blank-renewal-options [data-uniform-fit-text='true']")).toHaveLength(4);
   });
 
   it("aligns five English words with five Korean meaning choices", async () => {
@@ -198,25 +227,43 @@ describe("Figma renewal activities", () => {
       <MatchingGameActivity context={activityContext(ActType.MatchingGame, "WDPL01")} />
     );
 
+    const timer = screen.getByLabelText("60 seconds remaining");
+    expect(timer).toHaveClass("is-framed");
+    expect(timer.querySelector(".activity-timer-frame")).toHaveAttribute(
+      "src",
+      "/metaon-assets/activity/common-controls/timer_frame.png"
+    );
+    expect(timer.querySelector(".activity-timer-watch")).toHaveAttribute(
+      "src",
+      "/metaon-assets/activity/common-controls/watch.png"
+    );
     expect(await screen.findByRole("button", { name: "bridge" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "다리" })).toBeInTheDocument();
     const columns = container.querySelectorAll(".matching-renewal-column");
     expect(columns).toHaveLength(2);
     expect(columns[0].querySelectorAll("button")).toHaveLength(5);
     expect(columns[1].querySelectorAll("button")).toHaveLength(5);
+    expect(container.querySelectorAll(".matching-renewal-board [data-uniform-fit-text='true']")).toHaveLength(10);
   });
 
-  it("starts Memory Card at a 2x2, seven-second first round and advances after both pairs", async () => {
+  it("uses the configured card count and timer for every Memory Card round", async () => {
     const { container } = render(
       <MemoryGameActivity context={activityContext(ActType.MemoryGame, "WDPL02")} />
     );
 
     expect(await screen.findByText("ROUND 1 / 4")).toBeInTheDocument();
     await waitFor(() => expect(screen.getAllByRole("button", { name: /Open memory card/ })).toHaveLength(4));
+    expect(container.querySelector(".memory-renewal-shell")).toHaveAttribute("data-time-limit", "7");
     expect(screen.getByLabelText("7 seconds remaining")).toHaveTextContent("00:07");
-    expect(screen.getByLabelText("7 seconds remaining").querySelector("img")).toHaveAttribute(
+    const timer = screen.getByLabelText("7 seconds remaining");
+    expect(timer).toHaveClass("is-framed");
+    expect(timer.querySelector(".activity-timer-frame")).toHaveAttribute(
       "src",
-      "/metaon-assets/activity/common-controls/time.png"
+      "/metaon-assets/activity/common-controls/timer_frame.png"
+    );
+    expect(timer.querySelector(".activity-timer-watch")).toHaveAttribute(
+      "src",
+      "/metaon-assets/activity/common-controls/watch.png"
     );
     expect(screen.getByRole("button", { name: "Hint" }).querySelector("img")).toHaveAttribute(
       "src",
@@ -226,21 +273,27 @@ describe("Figma renewal activities", () => {
 
     const wordFaces = Array.from(container.querySelectorAll<HTMLElement>(".memory-renewal-card-front strong"));
     expect(wordFaces).toHaveLength(2);
-    for (const face of wordFaces) {
-      const word = face.textContent || "";
-      const wordCard = face.closest("button");
-      const imageCard = container.querySelector(`.memory-renewal-card-front img[alt="${word}"]`)?.closest("button");
-      expect(wordCard).not.toBeNull();
-      expect(imageCard).not.toBeNull();
-      fireEvent.click(wordCard as HTMLButtonElement);
-      fireEvent.click(imageCard as HTMLButtonElement);
-    }
+    wordFaces.forEach((face) => expect(face).toHaveAttribute("data-uniform-fit-text", "true"));
+    matchVisibleMemoryPairs(container);
 
     expect(await screen.findByText("Round clear!")).toBeInTheDocument();
     expect(await screen.findByText("ROUND 2 / 4", {}, { timeout: 1600 })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /Open memory card/ })).toHaveLength(6);
+    expect(container.querySelector(".memory-renewal-shell")).toHaveAttribute("data-time-limit", "10");
     expect(screen.getByLabelText("10 seconds remaining")).toHaveTextContent("00:10");
-  });
+
+    matchVisibleMemoryPairs(container);
+    expect(await screen.findByText("ROUND 3 / 4", {}, { timeout: 1600 })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /Open memory card/ })).toHaveLength(8);
+    expect(container.querySelector(".memory-renewal-shell")).toHaveAttribute("data-time-limit", "20");
+    expect(screen.getByLabelText("20 seconds remaining")).toHaveTextContent("00:20");
+
+    matchVisibleMemoryPairs(container);
+    expect(await screen.findByText("ROUND 4 / 4", {}, { timeout: 1600 })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /Open memory card/ })).toHaveLength(12);
+    expect(container.querySelector(".memory-renewal-shell")).toHaveAttribute("data-time-limit", "40");
+    expect(screen.getByLabelText("40 seconds remaining")).toHaveTextContent("00:40");
+  }, 8_000);
 
   it("ends Memory Card when round one expires and restarts from round one", async () => {
     vi.useFakeTimers();
@@ -283,6 +336,13 @@ describe("Figma renewal activities", () => {
     const optionTexts = container.querySelectorAll(".sentence-renewal-options .sentence-blank-option-text");
     expect(optionTexts).toHaveLength(4);
     optionTexts.forEach((option) => expect(option).toHaveAttribute("data-fit-single-line", "true"));
+    expect(container.querySelector(".sentence-renewal-options")).toHaveAttribute("data-uniform-fit-group", "true");
+    const previous = screen.getByRole("button", { name: "Previous question" });
+    const next = screen.getByRole("button", { name: "Next question" });
+    expect(previous.closest(".sentence-blank-renewal-shell")).not.toBeNull();
+    expect(next.closest(".sentence-blank-renewal-shell")).not.toBeNull();
+    expect(previous.closest(".sentence-renewal-panel")).toBeNull();
+    expect(next.closest(".sentence-renewal-panel")).toBeNull();
   });
 
   it("uses bracketed Slice content when the API does not provide a blank index", async () => {
@@ -331,6 +391,12 @@ describe("Figma renewal activities", () => {
       container.querySelector(".unscramble-renewal-bank")
     );
     expect(container.querySelectorAll(".unscramble-renewal-bank button")).toHaveLength(5);
+    const previous = screen.getByRole("button", { name: "Previous question" });
+    const next = screen.getByRole("button", { name: "Next question" });
+    expect(previous.closest(".unscramble-renewal-shell")).not.toBeNull();
+    expect(next.closest(".unscramble-renewal-shell")).not.toBeNull();
+    expect(previous.closest(".sentence-renewal-panel")).toBeNull();
+    expect(next.closest(".sentence-renewal-panel")).toBeNull();
   });
 
   it("limits long Sentence Unscramble questions to ten choices and prefills the remaining words", async () => {
@@ -349,6 +415,12 @@ describe("Figma renewal activities", () => {
 
     await waitFor(() => expect(container.querySelectorAll(".unscramble-renewal-slot")).toHaveLength(10));
     expect(container.querySelectorAll(".unscramble-renewal-bank button")).toHaveLength(10);
+    expect(container.querySelectorAll(".unscramble-renewal-bank [data-uniform-fit-text='true']")).toHaveLength(10);
+    await waitFor(() => {
+      const fittedSize = Number(container.querySelector(".unscramble-renewal-bank")?.getAttribute("data-uniform-fit-size"));
+      expect(fittedSize).toBeGreaterThan(0);
+      expect(fittedSize).toBeLessThanOrEqual(26);
+    });
     const builtSentence = screen.getByLabelText("Built sentence");
     expect(builtSentence).toHaveTextContent("supplies");
     expect(builtSentence).toHaveTextContent("together");

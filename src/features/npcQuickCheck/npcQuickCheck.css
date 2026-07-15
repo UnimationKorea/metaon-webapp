@@ -1,0 +1,65 @@
+.npc-quick-check-frame {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #eaf8ff;
+}
+
+.npc-quick-check-iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #eaf8ff;
+}
+
+.npc-quick-check-state {
+  width: min(560px, calc(100% - 48px));
+  margin: auto;
+  padding: 32px;
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  text-align: center;
+  color: #173253;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(46, 119, 172, 0.18);
+  border-radius: 8px;
+  box-shadow: 0 20px 50px rgba(31, 94, 136, 0.16);
+}
+
+.npc-quick-check-state strong {
+  font-size: 24px;
+}
+
+.npc-quick-check-state p {
+  margin: 0;
+  line-height: 1.55;
+  color: #557087;
+}
+
+.npc-quick-check-state button {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  background: #1677d2;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.npc-quick-check-state-orbit {
+  width: 48px;
+  aspect-ratio: 1;
+  border: 5px solid rgba(22, 119, 210, 0.2);
+  border-top-color: #1677d2;
+  border-radius: 50%;
+  animation: npc-quick-check-spin 0.9s linear infinite;
+}
+
+@keyframes npc-quick-check-spin {
+  to { transform: rotate(360deg); }
+}

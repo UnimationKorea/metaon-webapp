@@ -1,6 +1,7 @@
 import { scoreQuickCheckAttempt } from "../../../shared/quickCheckScoring.mjs";
 import type {
   QuickCheckAnswerRecord,
+  QuickCheckContentRef,
   QuickCheckCorrectAnswer,
   QuickCheckIndexBase,
   QuickCheckLoadResult,
@@ -121,7 +122,8 @@ export function normalizeRawQuestion(value: unknown, index: number): QuickCheckQ
     options: normalizeFlatOptions(raw),
     subItems: [] as QuickCheckSubItem[],
     tokens: [] as string[],
-    blankPositions: [] as number[]
+    blankPositions: [] as number[],
+    contentRefs: normalizeContentRefs(raw, qjson)
   };
 
   if (unityType === 5) {
@@ -274,8 +276,56 @@ function normalizeCanonicalQuestion(value: unknown, index: number): QuickCheckQu
     subItems: arrayValue(raw.subItems ?? raw.sub_items).map((item, itemIndex) => normalizeCanonicalSubItem(item, itemIndex)),
     tokens: arrayValue(raw.tokens).map(stringValue),
     blankPositions: arrayValue(raw.blankPositions ?? raw.blank_positions).map((position) => numberValue(position)).filter(Number.isInteger),
+    contentRefs: normalizeCanonicalContentRefs(raw.contentRefs ?? raw.content_refs),
     correctAnswer
   };
+}
+
+function normalizeCanonicalContentRefs(value: unknown): QuickCheckContentRef[] {
+  return arrayValue(value).flatMap((item) => {
+    const raw = recordValue(item);
+    const itemType = stringValue(raw.itemType ?? raw.item_type);
+    const itemIdx = numberValue(raw.itemIdx ?? raw.item_idx);
+    if ((itemType !== "word" && itemType !== "sentence") || itemIdx <= 0) return [];
+    const subItemIndex = numberValue(raw.subItemIndex ?? raw.sub_item_index, -1);
+    return [{
+      itemType,
+      itemIdx,
+      ...(subItemIndex >= 0 ? { subItemIndex } : {})
+    }];
+  });
+}
+
+function normalizeContentRefs(raw: UnknownRecord, qjson: UnknownRecord): QuickCheckContentRef[] {
+  const refs: QuickCheckContentRef[] = [];
+  const seen = new Set<string>();
+
+  function add(itemType: QuickCheckContentRef["itemType"], value: unknown, subItemIndex?: number) {
+    const values = Array.isArray(value) ? value : [value];
+    values.forEach((candidate) => {
+      const itemIdx = numberValue(candidate);
+      if (itemIdx <= 0) return;
+      const key = `${itemType}:${itemIdx}:${subItemIndex ?? ""}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      refs.push({ itemType, itemIdx, ...(subItemIndex == null ? {} : { subItemIndex }) });
+    });
+  }
+
+  [raw, qjson].forEach((source) => {
+    add("word", source.word_idx ?? source.wordIdx ?? source.content_word_idx);
+    add("sentence", source.sentence_idx ?? source.sentenceIdx ?? source.content_sentence_idx);
+    const itemType = stringValue(source.item_type ?? source.itemType);
+    if (itemType === "word" || itemType === "sentence") add(itemType, source.item_idx ?? source.itemIdx);
+  });
+
+  arrayValue(qjson.quiz).forEach((item, subItemIndex) => {
+    const source = recordValue(item);
+    add("word", source.word_idx ?? source.wordIdx ?? source.content_word_idx, subItemIndex);
+    add("sentence", source.sentence_idx ?? source.sentenceIdx ?? source.content_sentence_idx, subItemIndex);
+  });
+
+  return refs;
 }
 
 function normalizeCanonicalCorrectAnswer(value: unknown): QuickCheckCorrectAnswer | null {

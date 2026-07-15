@@ -8,17 +8,20 @@ import { useBookPackage } from "../hooks/useBookPackage";
 import { useCatalog } from "../hooks/useCatalog";
 import { useHubState } from "../hooks/useHubState";
 import { getActivityBackgroundUrl } from "../services/activityBackgrounds";
+import { MetaOnActivityCode, normalizeActivityCode } from "../services/activityCodes";
 import { getActivityRenderer } from "../services/activityRegistry";
 import { routeForActivity, routeForBook } from "../services/hubCatalog";
 import { createLearnEventRecorder } from "../services/learnEventRecorder";
 import { packageKeyFor } from "../services/packageKeys";
 import { findBook, findBookByIdx } from "../utils/catalogLookup";
 import { exitFullscreen, isDocumentFullscreen, requestFullscreen } from "../utils/fullscreen";
+import type { ActivityCompletionResult } from "../types/metaonTypes";
 
 export function ActivityPage() {
   const navigate = useNavigate();
   const activityRootRef = useRef<HTMLDivElement>(null);
   const learnEventRecorderRef = useRef(createLearnEventRecorder());
+  const completionLockRef = useRef(false);
   const [isFullscreen, setIsFullscreen] = useState(isDocumentFullscreen);
   const [studyLogIdx, setStudyLogIdx] = useState<number>();
   const [studyError, setStudyError] = useState<string>();
@@ -45,12 +48,16 @@ export function ActivityPage() {
     day?.activities.find((item) => (routeActIdx ? item.actIdx === routeActIdx : item.actNum === actNum)) ||
     day?.activities[actNum] ||
     day?.activities[0];
-  const renderer = getActivityRenderer(activity?.actType);
+  const renderer = getActivityRenderer(activity?.actType, activity?.activityCode);
   const progress = book ? getBookProgress(packageKeyFor(book)) : undefined;
   const isComplete = Boolean(activity && progress?.completedActivityIds.includes(activity.id));
   const currentActivityIndex = day && activity ? Math.max(0, day.activities.findIndex((item) => item.id === activity.id)) : 0;
   const isFirstActivity = currentActivityIndex <= 0;
   const isLastActivity = Boolean(day && currentActivityIndex >= day.activities.length - 1);
+  const normalizedActivityCode = normalizeActivityCode(activity?.activityCode);
+  const isNpcQuickCheck =
+    normalizedActivityCode === MetaOnActivityCode.NpcQuickCheck ||
+    normalizedActivityCode === MetaOnActivityCode.LegacyNpcQuickCheck;
   const activityLayoutStyle = {
     "--unity-activity-bg": `url("${getActivityBackgroundUrl(activity?.actType)}")`
   } as CSSProperties;
@@ -69,6 +76,7 @@ export function ActivityPage() {
     let cancelled = false;
     setStudyLogIdx(undefined);
     setStudyError(undefined);
+    completionLockRef.current = false;
     learnEventRecorderRef.current.reset();
     if (!activity?.actIdx) return undefined;
 
@@ -131,8 +139,23 @@ export function ActivityPage() {
     }
   }
 
-  async function markComplete() {
-    if (!book || !activity || isComplete) return;
+  async function markComplete(result?: ActivityCompletionResult) {
+    if (!book || !activity || isComplete || completionLockRef.current) return;
+    completionLockRef.current = true;
+    if (isNpcQuickCheck) {
+      learnEventRecorderRef.current.record({
+        action: "activity_complete",
+        item_type: "activity",
+        item_idx: activity.actIdx ?? null,
+        score: result?.score,
+        extra: {
+          source: "npc_quick_check",
+          correct_count: result?.correctCount,
+          new_points: result?.newPoints,
+          total: result?.total
+        }
+      });
+    }
     if (studyLogIdx) {
       try {
         await endStudy({ log_idx: studyLogIdx });
@@ -164,18 +187,28 @@ export function ActivityPage() {
         onNext={() => goToActivity(currentActivityIndex + 1)}
         onToggleFullscreen={toggleFullscreen}
       />
-      {renderer.render({ packageMeta: packageState.packageMeta, day, activity, learnEventRecorder: learnEventRecorderRef.current, studyLogIdx })}
+      {renderer.render({
+        packageMeta: packageState.packageMeta,
+        day,
+        activity,
+        learnEventRecorder: learnEventRecorderRef.current,
+        studyLogIdx,
+        onComplete: markComplete,
+        onExit: returnToBook
+      })}
       {studyError ? <p className="activity-study-error">{studyError}</p> : null}
-      <button
-        aria-label={isComplete ? "Activity completion saved" : "Complete activity"}
-        aria-pressed={isComplete}
-        className={`hub-activity-complete-button${isComplete ? " is-complete" : ""}`}
-        title="완료"
-        type="button"
-        onClick={() => void markComplete()}
-      >
-        <img aria-hidden="true" draggable={false} src={activityControlAssets.check} alt="" />
-      </button>
+      {!isNpcQuickCheck ? (
+        <button
+          aria-label={isComplete ? "Activity completion saved" : "Complete activity"}
+          aria-pressed={isComplete}
+          className={`hub-activity-complete-button${isComplete ? " is-complete" : ""}`}
+          title="완료"
+          type="button"
+          onClick={() => void markComplete()}
+        >
+          <img aria-hidden="true" draggable={false} src={activityControlAssets.check} alt="" />
+        </button>
+      ) : null}
     </div>
   );
 }

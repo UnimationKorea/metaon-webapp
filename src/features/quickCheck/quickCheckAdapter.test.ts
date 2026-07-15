@@ -65,4 +65,23 @@ describe("Quick Check response adapter", () => {
     expect(question.blankPositions).toEqual([0, 2]);
     expect(question.correctAnswer).toEqual({ mode: "composite", selectedIndexes: [0, 1] });
   });
+
+  it("preserves only explicit word and sentence primary-key references", () => {
+    const question = normalizeRawQuestion({
+      q_idx: 93,
+      qcode: 600,
+      word_idx: 84512,
+      qjson: JSON.stringify({
+        quiz: [
+          { text: "First", sentence_idx: 33120, answers: ["A", "B"], rightAnswer: 1 },
+          { text: "Second", answers: ["A", "B"], rightAnswer: 2 }
+        ]
+      })
+    }, 0);
+
+    expect(question.contentRefs).toEqual([
+      { itemType: "word", itemIdx: 84512 },
+      { itemType: "sentence", itemIdx: 33120, subItemIndex: 0 }
+    ]);
+  });
 });

@@ -6,7 +6,9 @@ export const activityControlAssets = {
   next: "/metaon-assets/activity/common-controls/btn-page-next.png",
   prev: "/metaon-assets/activity/common-controls/btn-page-prev.png",
   sound: "/metaon-assets/activity/common-controls/sound.png",
-  timer: "/metaon-assets/activity/common-controls/time.png"
+  timer: "/metaon-assets/activity/common-controls/time.png",
+  timerFrame: "/metaon-assets/activity/common-controls/timer_frame.png",
+  watch: "/metaon-assets/activity/common-controls/watch.png"
 } as const;
 
 export function ActivityPageArrowImage({ direction }: { direction: "prev" | "next" }) {
@@ -51,21 +53,31 @@ export function ActivityHintImage() {
 
 export function ActivityTimerBadge({
   seconds,
-  className = ""
+  className = "",
+  visualStyle = "legacy"
 }: {
   seconds: number;
   className?: string;
+  visualStyle?: "legacy" | "framed";
 }) {
   const safeSeconds = Math.max(0, Math.floor(seconds));
   const minutes = String(Math.floor(safeSeconds / 60)).padStart(2, "0");
   const remainder = String(safeSeconds % 60).padStart(2, "0");
+  const isFramed = visualStyle === "framed";
 
   return (
     <div
       aria-label={`${safeSeconds} seconds remaining`}
-      className={`activity-timer-image-badge${className ? ` ${className}` : ""}`}
+      className={`activity-timer-image-badge${isFramed ? " is-framed" : ""}${className ? ` ${className}` : ""}`}
     >
-      <img aria-hidden="true" draggable={false} src={activityControlAssets.timer} alt="" />
+      <img
+        aria-hidden="true"
+        className="activity-timer-frame"
+        draggable={false}
+        src={isFramed ? activityControlAssets.timerFrame : activityControlAssets.timer}
+        alt=""
+      />
+      {isFramed ? <img aria-hidden="true" className="activity-timer-watch" draggable={false} src={activityControlAssets.watch} alt="" /> : null}
       <strong>{minutes}:{remainder}</strong>
     </div>
   );

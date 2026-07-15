@@ -28,7 +28,9 @@ import {
   rendererNameForActType
 } from "../components/activities/PackageActivities";
 import { QuickCheckActivity } from "../features/quickCheck/QuickCheckActivity";
+import { NpcQuickCheckActivity } from "../features/npcQuickCheck/NpcQuickCheckActivity";
 import { allUnityActTypes, getActTypeDefinition, getActTypeLabel } from "./actTypeCatalog";
+import { MetaOnActivityCode, normalizeActivityCode } from "./activityCodes";
 import { ActType, type ActivityRenderer } from "../types/metaonTypes";
 
 export const recognizedActTypes = new Set<ActType>(allUnityActTypes);
@@ -359,7 +361,23 @@ export const activityRenderers: ActivityRenderer[] = [
   }
 ];
 
-export function getActivityRenderer(actType?: ActType): ActivityRenderer {
+const npcQuickCheckRenderer: ActivityRenderer = {
+  actType: ActType.QuickCheck,
+  name: "NPC Quick Check",
+  requires: ["audio", "indexeddb"],
+  loadAssets: async () => undefined,
+  render: (context) => <NpcQuickCheckActivity context={context} />
+};
+
+export function getActivityRenderer(actType?: ActType, activityCode?: string): ActivityRenderer {
+  const normalizedActivityCode = normalizeActivityCode(activityCode);
+  if (
+    normalizedActivityCode === MetaOnActivityCode.NpcQuickCheck ||
+    normalizedActivityCode === MetaOnActivityCode.LegacyNpcQuickCheck
+  ) {
+    return npcQuickCheckRenderer;
+  }
+
   const renderer = activityRenderers.find((item) => item.actType === actType);
   if (renderer) return renderer;
 

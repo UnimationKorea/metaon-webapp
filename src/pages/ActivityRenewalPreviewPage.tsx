@@ -7,6 +7,7 @@ import {
   MatchingGameActivity,
   MemoryGameActivity,
   SentenceBlankActivity,
+  SentenceRecordActivity,
   SentenceUnscrambleActivity,
   VocaQuizActivity,
   WordBlankActivity,
@@ -65,6 +66,29 @@ const sentenceUnscrambleLongData: PrototypeActivityData = {
       mean: "폭풍이 마침내 끝나자 아이들은 낡은 나무다리를 건너 물품을 조심스럽게 함께 옮겼습니다.",
       slice: "When/the/storm/finally/ended/the/children/carefully/carried/their/supplies/across/the/old/wooden/bridge/together/.",
       blankIndex: 0,
+      audioUrl: silentAudio
+    }
+  ]
+};
+
+const sentenceRecordData: PrototypeActivityData = {
+  sentences: [
+    {
+      index: 0,
+      sentenceIdx: 204,
+      eng: "Let's use rocks to see how strong each bridge is.",
+      mean: "돌을 사용해 각각의 다리가 얼마나 튼튼한지 살펴봅시다.",
+      slice: "Let's/use/rocks/to/see/how/strong/each/bridge/is/.",
+      blankIndex: 6,
+      audioUrl: silentAudio
+    },
+    {
+      index: 1,
+      sentenceIdx: 205,
+      eng: "The wooden bridge stretches across the river.",
+      mean: "나무다리가 강을 가로질러 뻗어 있습니다.",
+      slice: "The/wooden/bridge/stretches/across/the/river/.",
+      blankIndex: 3,
       audioUrl: silentAudio
     }
   ]
@@ -130,6 +154,9 @@ export function ActivityRenewalPreviewPage() {
       break;
     case "unscramble-long":
       activity = <SentenceUnscrambleActivity context={previewContext(ActType.SentenceUnscrambleSpace, "STSC01")} prototypeData={sentenceUnscrambleLongData} />;
+      break;
+    case "sentence-record":
+      activity = <SentenceRecordActivity context={previewContext(ActType.SentenceShadowingSpace, "STRC01")} prototypeData={sentenceRecordData} />;
       break;
     default:
       return <Navigate replace to="/activity-preview/voca-text" />;

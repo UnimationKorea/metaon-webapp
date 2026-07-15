@@ -203,12 +203,21 @@ export type ActivityRequirement =
   | "recognition"
   | "indexeddb";
 
+export type ActivityCompletionResult = {
+  correctCount?: number;
+  newPoints?: number;
+  score?: number;
+  total?: number;
+};
+
 export type ActivityRendererContext = {
   packageMeta?: BookPackage;
   day?: LessonDay;
   activity?: Activity;
   learnEventRecorder?: LearnEventRecorder;
   studyLogIdx?: number;
+  onComplete?: (result?: ActivityCompletionResult) => Promise<void>;
+  onExit?: () => Promise<void>;
 };
 
 export type ActivityRenderer = {

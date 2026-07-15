@@ -33,4 +33,16 @@ describe("MetaOn activity code mapping", () => {
   it("can route EBOOK01 to the old Reading renderer when the API marks it as reading-only", () => {
     expect(resolveActTypeFromActivityCode(MetaOnActivityCode.ListenRead, { category: "reading", title: "Read" })).toBe(ActType.Reading);
   });
+
+  it("maps NPCQHK01 to the dedicated resource-based NPC Quick Check renderer", () => {
+    expect(resolveActTypeFromActivityCode(MetaOnActivityCode.NpcQuickCheck)).toBe(ActType.QuickCheck);
+    expect(canonicalActivityCodeForActType(ActType.QuickCheck, MetaOnActivityCode.NpcQuickCheck))
+      .toBe(MetaOnActivityCode.NpcQuickCheck);
+    expect(activityTitleForCode(MetaOnActivityCode.NpcQuickCheck, "Fallback")).toBe("NPC Quick Check");
+  });
+
+  it("keeps QCNP01 compatible while new Book data uses NPCQHK01", () => {
+    expect(resolveActTypeFromActivityCode(MetaOnActivityCode.LegacyNpcQuickCheck)).toBe(ActType.QuickCheck);
+    expect(activityTitleForCode(MetaOnActivityCode.LegacyNpcQuickCheck, "Fallback")).toBe("NPC Quick Check");
+  });
 });

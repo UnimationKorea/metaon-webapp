@@ -193,6 +193,18 @@
   gap: 8px;
 }
 
+.quick-check-v2-options.is-one-column {
+  grid-template-columns: minmax(0, 1fr);
+  width: min(720px, 100%);
+  margin-inline: auto;
+  gap: 10px;
+}
+
+.quick-check-v2-options.compact.is-one-column {
+  width: min(640px, 100%);
+  gap: 8px;
+}
+
 .quick-check-v2-options > button,
 .quick-check-v2-connect-targets > button {
   position: relative;
@@ -210,6 +222,10 @@
   font-size: 16px;
   font-weight: 850;
   text-align: left;
+}
+
+.quick-check-v2-options.is-one-column > button {
+  font-size: 20px;
 }
 
 .quick-check-v2-options > button:hover:not(:disabled),
@@ -764,6 +780,10 @@
     font-size: 14px;
   }
 
+  .quick-check-v2-options.is-one-column > button {
+    font-size: 17px;
+  }
+
   .quick-check-v2-sentence-input textarea {
     min-height: 82px;
     font-size: 20px;
@@ -802,10 +822,18 @@
     gap: 7px;
   }
 
+  .quick-check-v2-options.is-one-column {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .quick-check-v2-options > button {
     min-height: 48px;
     padding: 6px 8px;
     font-size: 12px;
+  }
+
+  .quick-check-v2-options.is-one-column > button {
+    font-size: 16px;
   }
 
   .quick-check-v2-subquestion {

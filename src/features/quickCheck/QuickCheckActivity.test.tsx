@@ -28,6 +28,7 @@ describe("QuickCheckActivity", () => {
     expect(screen.queryByRole("heading", { name: "Second question" })).not.toBeInTheDocument();
 
     const alpha = screen.getByRole("button", { name: /A Alpha/ });
+    expect(alpha.closest(".quick-check-v2-options")).toHaveClass("is-one-column");
     fireEvent.click(alpha);
     expect(alpha).toHaveAttribute("aria-pressed", "true");
 

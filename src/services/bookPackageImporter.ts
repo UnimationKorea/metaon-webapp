@@ -5,7 +5,7 @@ import { packageKeyFor } from "./packageKeys";
 import type { StoredPackageFile } from "../types/ports";
 import type { BookData, BookPackage, BookResource, DownloadProgress } from "../types/metaonTypes";
 
-export const BOOK_PACKAGE_CACHE_VERSION = 2;
+export const BOOK_PACKAGE_CACHE_VERSION = 3;
 
 export async function downloadAndCacheBookPackage(
   book: BookData,
@@ -86,16 +86,18 @@ export async function downloadAndCacheBookPackage(
   }
 
   const ebookAssetResources = await collectEbookAssetResources(manifest.resources, key, downloadedFileMap, cachedBlobMap);
-  const newEbookAssetResources = ebookAssetResources.filter((resource) => {
+  const npcQuickCheckAssetResources = await collectNpcQuickCheckAssetResources(manifest.resources, key, downloadedFileMap, cachedBlobMap);
+  const discoveredAssetResources = [...ebookAssetResources, ...npcQuickCheckAssetResources];
+  const newDiscoveredAssetResources = discoveredAssetResources.filter((resource) => {
     const path = normalizePath(resource.path);
     if (seenResourcePaths.has(path)) return false;
     seenResourcePaths.add(path);
     return true;
   });
 
-  if (newEbookAssetResources.length > 0) {
-    totalFiles += newEbookAssetResources.length;
-    for (const resource of newEbookAssetResources) {
+  if (newDiscoveredAssetResources.length > 0) {
+    totalFiles += newDiscoveredAssetResources.length;
+    for (const resource of newDiscoveredAssetResources) {
       await downloadResource(resource);
     }
   }
@@ -155,6 +157,31 @@ async function collectEbookAssetResources(
   return result;
 }
 
+async function collectNpcQuickCheckAssetResources(
+  resources: BookResource[],
+  key: string,
+  downloadedFileMap: Map<string, StoredPackageFile>,
+  cachedBlobMap: Map<string, Blob>
+): Promise<BookResource[]> {
+  const result: BookResource[] = [];
+
+  for (const resource of resources) {
+    const scriptPath = normalizePath(resource.path);
+    if (!/\/npcqhk\/script\.json$/i.test(scriptPath)) continue;
+
+    const blob = downloadedFileMap.get(scriptPath)?.blob || cachedBlobMap.get(scriptPath) || (await indexedDbStorage.getFileBlob(key, scriptPath));
+    if (!blob) continue;
+
+    const script = parseJsonSafely(await readBlobText(blob));
+    if (!script) continue;
+    for (const audioPath of npcQuickCheckAudioPaths(script)) {
+      result.push(npcQuickCheckAssetResource(resource, audioPath));
+    }
+  }
+
+  return result;
+}
+
 function ebookAssetResourcesFromBookJson(value: unknown, bookJsonResource: BookResource): BookResource[] {
   const book = recordValue(value);
   const pages = Array.isArray(book.pages) ? book.pages : [];
@@ -186,6 +213,22 @@ function ebookAssetResource(bookJsonResource: BookResource, relativePath: string
     url,
     mimeType: guessMimeType(normalizedRelativePath),
     category: "ebook"
+  };
+}
+
+function npcQuickCheckAssetResource(scriptResource: BookResource, relativePath: string): BookResource {
+  const normalizedRelativePath = relativePath.replace(/\\/g, "/").replace(/^\/+/, "");
+  const scriptVirtualPath = normalizePath(scriptResource.path);
+  const npcqhkVirtualBase = scriptVirtualPath.replace(/\/script\.json$/i, "");
+  const sourcePath = resolveRelativeSourcePath(scriptResource.sourcePath, normalizedRelativePath);
+  const url = resolveRelativeUrl(scriptResource.url, normalizedRelativePath);
+
+  return {
+    path: resolveRelativeVirtualPath(npcqhkVirtualBase, normalizedRelativePath),
+    sourcePath,
+    url,
+    mimeType: guessMimeType(normalizedRelativePath),
+    category: "npcqhk"
   };
 }
 
@@ -246,4 +289,36 @@ function firstStringArray(...values: unknown[]): string[] {
     if (typeof value === "string" && value.trim()) return [value.trim()];
   }
   return [];
+}
+
+function npcQuickCheckAudioPaths(value: unknown): string[] {
+  const result = new Set<string>();
+  const seen = new Set<unknown>();
+
+  function visit(current: unknown): void {
+    if (!current || typeof current !== "object" || seen.has(current)) return;
+    seen.add(current);
+    if (Array.isArray(current)) {
+      current.forEach(visit);
+      return;
+    }
+
+    for (const [key, entry] of Object.entries(current as Record<string, unknown>)) {
+      if (isNpcQuickCheckAudioKey(key)) {
+        if (typeof entry === "string" && entry.trim()) result.add(entry.trim());
+        if (Array.isArray(entry)) {
+          entry.filter((item): item is string => typeof item === "string" && item.trim().length > 0).forEach((item) => result.add(item.trim()));
+        }
+      }
+      visit(entry);
+    }
+  }
+
+  visit(value);
+  return Array.from(result);
+}
+
+function isNpcQuickCheckAudioKey(value: string): boolean {
+  const key = value.replace(/[_-]/g, "").toLowerCase();
+  return key === "audio" || key === "audios" || key === "audiopath" || key === "audiopaths" || key === "audiourl";
 }

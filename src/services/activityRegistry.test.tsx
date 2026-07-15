@@ -38,6 +38,11 @@ describe("activityRegistry", () => {
     expect(renderer.name).toBe("Movie Record");
   });
 
+  it("routes QCNP01 to the NPC renderer without replacing QCHK01", () => {
+    expect(getActivityRenderer(ActType.QuickCheck, "QCNP01").name).toBe("NPC Quick Check");
+    expect(getActivityRenderer(ActType.QuickCheck, "QCHK01").name).toBe("Quick Check");
+  });
+
   it("exposes Type 67 as the Listen & Read activity contract", () => {
     expect(getActTypeDefinition(ActType.Listening)).toMatchObject({
       unityName: "EBOOK01",

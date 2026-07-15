@@ -51,6 +51,7 @@ export function normalizeBookResourceManifest(raw: unknown): BookResourceManifes
       collectReadingResources(day, virtualBase, resources);
       collectListeningResources(day, virtualBase, resources);
       collectEbookResources(day, virtualBase, resources);
+      collectNpcQuickCheckResources(day, virtualBase, resources);
 
       lessonDays.push({
         id: dayIdx ? String(dayIdx) : `${lessonNumber}:${dayNumber}`,
@@ -385,6 +386,57 @@ function collectEbookResources(day: UnknownRecord, virtualBase: string, resource
   const assets = asRecord(ebook.assets);
   collectEbookAssetEntries(resources, ebookBase, "pages", [...arrayValue(assets.pages), ...arrayValue(ebook.pages)]);
   collectEbookAssetEntries(resources, ebookBase, "audio", [...arrayValue(assets.audio), ...arrayValue(ebook.audio), ...arrayValue(ebook.audios)]);
+}
+
+function collectNpcQuickCheckResources(day: UnknownRecord, virtualBase: string, resources: Map<string, BookResource>): void {
+  const npcqhk = npcQuickCheckRecord(day);
+  if (!npcqhk) return;
+
+  const npcqhkBase = `${virtualBase}/npcqhk`;
+  const scriptPath = npcQuickCheckScriptPath(npcqhk);
+  addResource(resources, `${npcqhkBase}/script.json`, scriptPath, "npcqhk");
+
+  const assets = asRecord(npcqhk.assets);
+  const audioPaths = [
+    ...firstResourcePaths(npcqhk.audio, npcqhk.audios, npcqhk.audio_paths, npcqhk.audioPaths),
+    ...firstResourcePaths(assets.audio, assets.audios, assets.audio_paths, assets.audioPaths)
+  ];
+  audioPaths.forEach((path, index) => {
+    addResource(resources, npcQuickCheckVirtualPath(npcqhkBase, path, index), path, "npcqhk");
+  });
+}
+
+function npcQuickCheckRecord(day: UnknownRecord): UnknownRecord | undefined {
+  const value = day.npcqhk ?? day.npc_qhk ?? day.npcQuickCheck ?? day.npc_quick_check;
+  if (typeof value === "string" && value.trim()) return { path: value.trim() };
+  if (Array.isArray(value)) return value.map(asRecord).find((item) => Object.keys(item).length > 0);
+  const record = asRecord(value);
+  return Object.keys(record).length > 0 ? record : undefined;
+}
+
+function npcQuickCheckScriptPath(value: UnknownRecord): string {
+  const source = firstResourcePath(
+    value.script_json,
+    value.scriptJson,
+    value.script,
+    value.manifest,
+    value.json,
+    value.resource_path,
+    value.resourcePath,
+    value.path
+  );
+  if (!source) return "";
+  return /\.json(?:\?.*)?$/i.test(source) ? source : `${source.replace(/\/+$/, "")}/script.json`;
+}
+
+function npcQuickCheckVirtualPath(npcqhkBase: string, sourcePath: string, index: number): string {
+  const normalized = sourcePath.replace(/\\/g, "/").split("?")[0];
+  const marker = "/npcqhk/";
+  const markerIndex = normalized.toLowerCase().lastIndexOf(marker);
+  if (markerIndex >= 0) return `${npcqhkBase}/${normalized.slice(markerIndex + marker.length)}`;
+
+  const fileName = normalized.split("/").filter(Boolean).pop() || `audio_${twoDigit(index + 1)}.mp3`;
+  return `${npcqhkBase}/audio/${fileName}`;
 }
 
 function ebookRecord(day: UnknownRecord): UnknownRecord | undefined {

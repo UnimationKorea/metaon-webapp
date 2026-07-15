@@ -6,6 +6,8 @@ import { pipeline } from "node:stream/promises";
 import { createHmac, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
 import { isConfirmedAuthenticationFailure, resolveUpstreamCredentials } from "./authSession.mjs";
 import { discoverEbookResources } from "./ebookResourceDiscovery.mjs";
+import { createNpcQuickCheckLaunch } from "./npcQuickCheckLaunch.mjs";
+import { loadNpcQuickCheckScenario } from "./npcQuickCheckScenarioSource.mjs";
 import {
   QUICK_CHECK_CURRENT_CONTRACT,
   QUICK_CHECK_UNITY_CONTRACT,
@@ -53,6 +55,14 @@ const DEFAULT_METAVERSE_URL = "https://meta.unimation-slack-bot.com/metaplanet-v
 const AI_CHAT_URL = process.env.METAON_AI_CHAT_URL || DEFAULT_AI_CHAT_URL;
 const METAVERSE_URL = process.env.METAON_METAVERSE_URL || DEFAULT_METAVERSE_URL;
 const EXTERNAL_LAUNCH_SECRET = process.env.METAON_EXTERNAL_LAUNCH_SECRET || AUTH_COOKIE_SECRET;
+const NPC_QUICK_CHECK_URL =
+  process.env.METAON_NPC_QUICK_CHECK_URL ||
+  (process.env.NODE_ENV === "production" ? "" : "http://127.0.0.1:5174/");
+const NPC_QUICK_CHECK_LAUNCH_SECRET = process.env.METAON_NPC_LAUNCH_SECRET || EXTERNAL_LAUNCH_SECRET;
+const METAON_PUBLIC_ORIGIN = process.env.METAON_PUBLIC_ORIGIN || "";
+const NPC_QUICK_CHECK_SCENARIO_API_URL = process.env.METAON_NPC_SCENARIO_API_URL || "";
+const NPC_QUICK_CHECK_SCENARIO_API_KEY = process.env.METAON_NPC_SCENARIO_API_KEY || "";
+const NPC_QUICK_CHECK_SCENARIO_TIMEOUT_MS = Number(process.env.METAON_NPC_SCENARIO_TIMEOUT_MS || 5000);
 
 const catalogCache = new Map();
 const CATALOG_TTL_MS = 60_000;
@@ -597,6 +607,58 @@ app.post("/api/external/launch", (req, res) => {
     });
   } catch (error) {
     sendError(res, error, "Failed to create external launch");
+  }
+});
+
+app.post("/api/activities/npc-quick-check/launch", (req, res) => {
+  try {
+    const auth = getRequestAuth(req);
+    if (!auth) {
+      res.status(401).json({ message: "Authentication required", detail: "Sign in before starting NPC Quick Check." });
+      return;
+    }
+
+    const parentOrigin = METAON_PUBLIC_ORIGIN || req.get("origin") || `${req.protocol}://${req.get("host")}`;
+    const launch = createNpcQuickCheckLaunch({
+      auth,
+      body: req.body,
+      parentOrigin,
+      secret: NPC_QUICK_CHECK_LAUNCH_SECRET,
+      viewerUrl: NPC_QUICK_CHECK_URL
+    });
+    res.json(launch);
+  } catch (error) {
+    sendError(res, error, "Failed to create NPC Quick Check launch");
+  }
+});
+
+app.get("/api/activities/npc-quick-check/scenario", async (req, res) => {
+  try {
+    const auth = getRequestAuth(req);
+    if (!auth) {
+      res.status(401).json({ message: "Authentication required", detail: "Sign in before loading an NPC scenario." });
+      return;
+    }
+
+    const bookIdx = numberValue(req.query.bookIdx ?? req.query.book_idx);
+    const dayIdx = numberValue(req.query.dayIdx ?? req.query.day_idx);
+    const actIdx = numberValue(req.query.actIdx ?? req.query.act_idx);
+    if (bookIdx <= 0 || dayIdx <= 0 || actIdx <= 0) {
+      res.status(400).json({ message: "bookIdx, dayIdx, and actIdx must be positive integers." });
+      return;
+    }
+
+    const result = await loadNpcQuickCheckScenario({
+      apiUrl: NPC_QUICK_CHECK_SCENARIO_API_URL,
+      apiKey: NPC_QUICK_CHECK_SCENARIO_API_KEY,
+      timeoutMs: NPC_QUICK_CHECK_SCENARIO_TIMEOUT_MS,
+      bookIdx,
+      dayIdx,
+      actIdx
+    });
+    res.json({ resultCode: 1, resultMessage: "success", ...result });
+  } catch (error) {
+    sendError(res, error, "Failed to load NPC Quick Check scenario");
   }
 });
 
@@ -1371,7 +1433,8 @@ const METAON_ACTIVITY_CODE = {
   sentenceBlank: "STBL01",
   unscramble: "STSC01",
   sentenceRecord: "STRC01",
-  quickCheck: "QCHK01"
+  quickCheck: "QCHK01",
+  npcQuickCheck: "QCNP01"
 };
 
 const actTypeByActivityCode = new Map([
@@ -1383,7 +1446,8 @@ const actTypeByActivityCode = new Map([
   [METAON_ACTIVITY_CODE.sentenceBlank, 1006],
   [METAON_ACTIVITY_CODE.unscramble, 1007],
   [METAON_ACTIVITY_CODE.sentenceRecord, 1009],
-  [METAON_ACTIVITY_CODE.quickCheck, 65]
+  [METAON_ACTIVITY_CODE.quickCheck, 65],
+  [METAON_ACTIVITY_CODE.npcQuickCheck, 65]
 ]);
 
 const activityCodeByActType = new Map([
@@ -1419,7 +1483,8 @@ const titleByActivityCode = new Map([
   [METAON_ACTIVITY_CODE.sentenceBlank, "Sentence Blank"],
   [METAON_ACTIVITY_CODE.unscramble, "Unscramble"],
   [METAON_ACTIVITY_CODE.sentenceRecord, "Sentence Record"],
-  [METAON_ACTIVITY_CODE.quickCheck, "Quick Check"]
+  [METAON_ACTIVITY_CODE.quickCheck, "Quick Check"],
+  [METAON_ACTIVITY_CODE.npcQuickCheck, "NPC Quick Check"]
 ]);
 
 function normalizeActivityCodeValue(value) {
@@ -1504,6 +1569,58 @@ function collectBookInfoResources(day, virtualBase, resources) {
     collectCaptionBookInfoResources(listening, virtualBase, index + 1, "listening", resources);
   });
   collectEbookBookInfoResources(day, virtualBase, resources);
+  collectNpcQuickCheckBookInfoResources(day, virtualBase, resources);
+}
+
+function collectNpcQuickCheckBookInfoResources(day, virtualBase, resources) {
+  const npcqhk = npcQuickCheckBookInfoRecord(day);
+  if (!npcqhk) return;
+
+  const npcqhkBase = `${virtualBase}/npcqhk`;
+  const scriptPath = npcQuickCheckBookInfoScriptPath(npcqhk);
+  addBookInfoResource(resources, `${npcqhkBase}/script.json`, scriptPath, "npcqhk");
+
+  const assets = recordValue(npcqhk.assets);
+  const audioPaths = [
+    ...firstBookInfoResourcePaths(npcqhk.audio, npcqhk.audios, npcqhk.audio_paths, npcqhk.audioPaths),
+    ...firstBookInfoResourcePaths(assets.audio, assets.audios, assets.audio_paths, assets.audioPaths)
+  ];
+  audioPaths.forEach((path, index) => {
+    addBookInfoResource(resources, npcQuickCheckBookInfoVirtualPath(npcqhkBase, path, index), path, "npcqhk");
+  });
+}
+
+function npcQuickCheckBookInfoRecord(day) {
+  const value = day.npcqhk ?? day.npc_qhk ?? day.npcQuickCheck ?? day.npc_quick_check;
+  if (typeof value === "string" && value.trim()) return { path: value.trim() };
+  if (Array.isArray(value)) return value.map(recordValue).find((item) => Object.keys(item).length > 0);
+  const record = recordValue(value);
+  return Object.keys(record).length > 0 ? record : undefined;
+}
+
+function npcQuickCheckBookInfoScriptPath(value) {
+  const source = firstBookInfoResourcePath(
+    value.script_json,
+    value.scriptJson,
+    value.script,
+    value.manifest,
+    value.json,
+    value.resource_path,
+    value.resourcePath,
+    value.path
+  );
+  if (!source) return "";
+  return /\.json(?:\?.*)?$/i.test(source) ? source : `${source.replace(/\/+$/, "")}/script.json`;
+}
+
+function npcQuickCheckBookInfoVirtualPath(npcqhkBase, sourcePath, index) {
+  const normalized = sourcePath.replace(/\\/g, "/").split("?")[0];
+  const marker = "/npcqhk/";
+  const markerIndex = normalized.toLowerCase().lastIndexOf(marker);
+  if (markerIndex >= 0) return `${npcqhkBase}/${normalized.slice(markerIndex + marker.length)}`;
+
+  const fileName = normalized.split("/").filter(Boolean).pop() || `audio_${twoDigit(index + 1)}.mp3`;
+  return `${npcqhkBase}/audio/${fileName}`;
 }
 
 function collectEbookBookInfoResources(day, virtualBase, resources) {

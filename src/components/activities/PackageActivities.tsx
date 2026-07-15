@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
-import { BookOpen, Check, ChevronLeft, ChevronRight, Flag, ImageOff, Keyboard, Mic, RotateCcw, Square, Star, Trophy, Volume2, Wrench, X } from "lucide-react";
+import { BarChart3, BookOpen, Check, ChevronLeft, ChevronRight, Flag, Gauge, ImageOff, Keyboard, Mic, Pause, Play, RotateCcw, Square, Star, Trophy, Volume2, Wrench, X } from "lucide-react";
 import { uploadLearnRecording } from "../../api/uniplanetApi";
 import { ActivityHintImage, ActivityListeningImage, ActivityPageArrowImage, ActivitySoundImage, ActivityTimerBadge } from "../ActivityImageControls";
 import { bffRecognitionPort } from "../../ports/bffRecognitionPort";
@@ -292,8 +292,8 @@ const FIGMA_RENEWAL_ASSET_BASE = "/metaon-assets/activity/figma-renewal";
 const MEMORY_GAME_ROUNDS: readonly MemoryRoundConfig[] = [
   { pairCount: 2, columns: 2, rows: 2, timeLimit: 7 },
   { pairCount: 3, columns: 3, rows: 2, timeLimit: 10 },
-  { pairCount: 4, columns: 4, rows: 2, timeLimit: 15 },
-  { pairCount: 6, columns: 4, rows: 3, timeLimit: 20 }
+  { pairCount: 4, columns: 4, rows: 2, timeLimit: 20 },
+  { pairCount: 6, columns: 4, rows: 3, timeLimit: 40 }
 ];
 const READ_RECORD_WAVEFORM = [
   18, 34, 48, 62, 78, 92, 84, 67, 52, 72, 88, 96, 82, 58, 43, 66, 76, 61, 49, 36, 54, 70, 86, 93, 98, 87,
@@ -1669,6 +1669,28 @@ export function FlashCardActivity({
   );
 }
 
+function calculateSingleLineFontSize(element: HTMLElement, maximumSize: number, minimumSize: number): number {
+  const availableWidth = element.clientWidth;
+  const effectiveMinimumSize = Math.min(maximumSize, minimumSize);
+  element.style.fontSize = `${maximumSize}px`;
+
+  if (availableWidth <= 0 || element.scrollWidth <= availableWidth + 0.5) return maximumSize;
+
+  let lower = effectiveMinimumSize;
+  let upper = maximumSize;
+  for (let iteration = 0; iteration < 10; iteration += 1) {
+    const candidate = (lower + upper) / 2;
+    element.style.fontSize = `${candidate}px`;
+    if (element.scrollWidth <= availableWidth + 0.5) {
+      lower = candidate;
+    } else {
+      upper = candidate;
+    }
+  }
+
+  return Math.max(effectiveMinimumSize, Math.floor(lower * 10) / 10);
+}
+
 function AutoFitSingleLineText({
   className,
   maximumSize,
@@ -1692,28 +1714,7 @@ function AutoFitSingleLineText({
     let animationFrame = 0;
     const fitText = () => {
       if (!active) return;
-      element.style.fontSize = "";
-
-      const availableWidth = element.clientWidth;
-      if (availableWidth <= 0) return;
-
-      const effectiveMinimumSize = Math.min(maximumSize, minimumSize);
-
-      element.style.fontSize = `${maximumSize}px`;
-      if (element.scrollWidth <= availableWidth + 0.5) return;
-
-      let lower = effectiveMinimumSize;
-      let upper = maximumSize;
-      for (let iteration = 0; iteration < 10; iteration += 1) {
-        const candidate = (lower + upper) / 2;
-        element.style.fontSize = `${candidate}px`;
-        if (element.scrollWidth <= availableWidth + 0.5) {
-          lower = candidate;
-        } else {
-          upper = candidate;
-        }
-      }
-      element.style.fontSize = `${Math.max(effectiveMinimumSize, Math.floor(lower * 10) / 10)}px`;
+      element.style.fontSize = `${calculateSingleLineFontSize(element, maximumSize, minimumSize)}px`;
     };
 
     const scheduleFit = () => {
@@ -1747,6 +1748,89 @@ function AutoFitSingleLineText({
   );
 }
 
+function UniformAutoFitText({ className = "", text }: { className?: string; text: string }) {
+  return (
+    <strong
+      className={`uniform-choice-text${className ? ` ${className}` : ""}`}
+      data-fit-single-line="true"
+      data-uniform-fit-text="true"
+    >
+      {text}
+    </strong>
+  );
+}
+
+function UniformAutoFitTextGroup({
+  children,
+  className,
+  maximumSize,
+  minimumSize,
+  style
+}: {
+  children: ReactNode;
+  className: string;
+  maximumSize: number;
+  minimumSize: number;
+  style?: CSSProperties;
+}) {
+  const groupRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const group = groupRef.current;
+    if (!group) return undefined;
+
+    let active = true;
+    let animationFrame = 0;
+    const resizeObserver = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(() => scheduleFit());
+
+    const fitTextGroup = () => {
+      if (!active) return;
+      const textElements = Array.from(group.querySelectorAll<HTMLElement>("[data-uniform-fit-text='true']"));
+      if (textElements.length === 0) {
+        delete group.dataset.uniformFitSize;
+        return;
+      }
+
+      const fittedSizes = textElements.map((element) => calculateSingleLineFontSize(element, maximumSize, minimumSize));
+      const sharedSize = Math.min(...fittedSizes);
+      textElements.forEach((element) => {
+        element.style.fontSize = `${sharedSize}px`;
+        if (element.parentElement) resizeObserver?.observe(element.parentElement);
+      });
+      group.dataset.uniformFitSize = String(sharedSize);
+    };
+
+    function scheduleFit() {
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = window.requestAnimationFrame(fitTextGroup);
+    }
+
+    fitTextGroup();
+    scheduleFit();
+    resizeObserver?.observe(group);
+    const mutationObserver = typeof MutationObserver === "undefined"
+      ? undefined
+      : new MutationObserver(scheduleFit);
+    mutationObserver?.observe(group, { childList: true, characterData: true, subtree: true });
+    window.addEventListener("resize", scheduleFit);
+    void document.fonts?.ready.then(scheduleFit);
+
+    return () => {
+      active = false;
+      window.cancelAnimationFrame(animationFrame);
+      resizeObserver?.disconnect();
+      mutationObserver?.disconnect();
+      window.removeEventListener("resize", scheduleFit);
+    };
+  }, [maximumSize, minimumSize]);
+
+  return (
+    <div className={className} data-uniform-fit-group="true" ref={groupRef} style={style}>
+      {children}
+    </div>
+  );
+}
+
 function AutoFitFlashCardWord({ compact, text }: { compact: boolean; text: string }) {
   return (
     <AutoFitSingleLineText
@@ -1760,11 +1844,15 @@ function AutoFitFlashCardWord({ compact, text }: { compact: boolean; text: strin
 }
 
 function AutoFitVocaQuizText({ text, variant }: { text: string; variant: "prompt" | "option" }) {
+  if (variant === "option") {
+    return <UniformAutoFitText className="voca-quiz-fit-text is-option" text={text} />;
+  }
+
   return (
     <AutoFitSingleLineText
-      className={`voca-quiz-fit-text is-${variant}`}
-      maximumSize={variant === "prompt" ? 64 : 32}
-      minimumSize={variant === "prompt" ? 8 : 5}
+      className="voca-quiz-fit-text is-prompt"
+      maximumSize={64}
+      minimumSize={8}
       observedSelectors=".voca-quiz-option,.voca-quiz-prompt,.voca-quiz-options,.voca-quiz-renewal-shell"
       text={text}
     />
@@ -1772,15 +1860,7 @@ function AutoFitVocaQuizText({ text, variant }: { text: string; variant: "prompt
 }
 
 function AutoFitSentenceBlankOption({ text }: { text: string }) {
-  return (
-    <AutoFitSingleLineText
-      className="sentence-blank-option-text"
-      maximumSize={32}
-      minimumSize={5}
-      observedSelectors=".renewal-option-button,.sentence-renewal-options,.sentence-renewal-panel,.sentence-blank-renewal-shell"
-      text={text}
-    />
-  );
+  return <UniformAutoFitText className="sentence-blank-option-text" text={text} />;
 }
 
 function AutoAlignedFlashCardExample({ text }: { text: string }) {
@@ -2027,7 +2107,7 @@ export function WordBlankActivity({
               </span>
               <span>{wordSuffix}</span>
             </div>
-            <div className="word-blank-renewal-options">
+            <UniformAutoFitTextGroup className="word-blank-renewal-options" maximumSize={40} minimumSize={8}>
               {question.options.map((option) => (
                 <button
                   className={[
@@ -2041,10 +2121,10 @@ export function WordBlankActivity({
                   onClick={() => chooseLetter(option)}
                   type="button"
                 >
-                  {option}
+                  <UniformAutoFitText className="word-blank-option-text" text={option} />
                 </button>
               ))}
-            </div>
+            </UniformAutoFitTextGroup>
             {selected ? (
               <p className={isCorrect ? "renewal-feedback is-correct" : "renewal-feedback is-wrong"} role="status">
                 {isCorrect ? "Correct" : `Answer: ${question.answer}`}
@@ -2177,10 +2257,11 @@ export function MatchingGameActivity({
         <ActivityTimerBadge
           seconds={secondsLeft}
           className={isTimedOut ? "matching-renewal-timer is-expired" : "matching-renewal-timer"}
+          visualStyle="framed"
         />
         {gameWords.length > 0 ? (
           <>
-            <div className="matching-renewal-board">
+            <UniformAutoFitTextGroup className="matching-renewal-board" maximumSize={32} minimumSize={7}>
               <div className="matching-renewal-column">
               {gameWords.map((word) => (
                 <button
@@ -2197,7 +2278,7 @@ export function MatchingGameActivity({
                   }}
                   type="button"
                 >
-                  {word.eng}
+                  <UniformAutoFitText className="matching-renewal-card-text" text={word.eng} />
                 </button>
               ))}
               </div>
@@ -2217,11 +2298,11 @@ export function MatchingGameActivity({
                   }}
                   type="button"
                 >
-                  {word.mean || word.eng}
+                  <UniformAutoFitText className="matching-renewal-card-text" text={word.mean || word.eng} />
                 </button>
               ))}
               </div>
-            </div>
+            </UniformAutoFitTextGroup>
             {message ? <p className={message === "Correct" ? "renewal-feedback is-correct" : "renewal-feedback is-wrong"}>{message}</p> : null}
             {matched.size === gameWords.length ? <div className="renewal-game-overlay is-success"><strong>Complete!</strong></div> : null}
             {isTimedOut ? (
@@ -2453,11 +2534,16 @@ export function MemoryGameActivity({
 
   return (
     <ActivityFrame context={context} actionLabel={label} className="figma-renewal-frame">
-      <div className="figma-renewal-shell memory-renewal-shell" data-round={roundIndex + 1}>
+      <div
+        className="figma-renewal-shell memory-renewal-shell"
+        data-round={roundIndex + 1}
+        data-time-limit={round.timeLimit}
+      >
         <div className="memory-round-label">ROUND {roundIndex + 1} / {MEMORY_GAME_ROUNDS.length}</div>
         <ActivityTimerBadge
           seconds={secondsLeft}
           className={secondsLeft <= 3 ? "memory-round-timer is-urgent" : "memory-round-timer"}
+          visualStyle="framed"
         />
         <button
           aria-label="Hint"
@@ -2471,8 +2557,10 @@ export function MemoryGameActivity({
         </button>
         {cards.length > 0 ? (
           <>
-            <div
+            <UniformAutoFitTextGroup
               className="memory-renewal-grid"
+              maximumSize={40}
+              minimumSize={7}
               style={{ "--memory-columns": round.columns, "--memory-rows": round.rows } as CSSProperties}
             >
               {cards.map((card, cardIndex) => {
@@ -2494,12 +2582,16 @@ export function MemoryGameActivity({
                       <img src={`${FIGMA_RENEWAL_ASSET_BASE}/memory-card-back.png`} alt="" />
                     </span>
                     <span className="memory-renewal-card-front">
-                      {card.kind === "image" && card.word.imageUrl ? <img src={card.word.imageUrl} alt={card.word.eng} /> : <strong>{card.word.eng}</strong>}
+                      {card.kind === "image" && card.word.imageUrl ? (
+                        <img src={card.word.imageUrl} alt={card.word.eng} />
+                      ) : (
+                        <UniformAutoFitText className="memory-renewal-card-text" text={card.word.eng} />
+                      )}
                     </span>
                   </button>
                 );
               })}
-            </div>
+            </UniformAutoFitTextGroup>
             {status === "round-complete" ? <div className="renewal-game-overlay is-success"><strong>Round clear!</strong></div> : null}
             {status === "complete" ? (
               <div className="renewal-game-overlay is-success">
@@ -2849,7 +2941,11 @@ export function VocaQuizActivity({
             />
           ) : null}
         </div>
-        <div className={`voca-quiz-options is-${optionKind}`}>
+        <UniformAutoFitTextGroup
+          className={`voca-quiz-options is-${optionKind}`}
+          maximumSize={32}
+          minimumSize={5}
+        >
           {answers.map((answer) => (
             <button
               aria-label={`Answer ${answer.eng}`}
@@ -2871,7 +2967,7 @@ export function VocaQuizActivity({
               )}
             </button>
           ))}
-        </div>
+        </UniformAutoFitTextGroup>
         {selected ? (
           <p className={selected === target?.eng ? "renewal-feedback is-correct" : "renewal-feedback is-wrong"} role="status">
             {selected === target?.eng ? "Correct" : `Answer: ${target?.eng}`}
@@ -3038,9 +3134,9 @@ export function SentenceBlankActivity({
   return (
     <ActivityFrame context={context} actionLabel={label} className="figma-renewal-frame">
       <div className="figma-renewal-shell sentence-blank-renewal-shell">
+        <ActivityQuestionNavigation current={index} total={sentences.length} onChange={setIndex} />
         <div className="sentence-renewal-panel">
           <RenewalCounter current={sentences.length === 0 ? 0 : index + 1} total={sentences.length} className="sentence-renewal-counter" />
-          <ActivityQuestionNavigation current={index} total={sentences.length} onChange={setIndex} />
           <RenewalSoundButton
             src={sentence?.audioUrl}
             label={`Play sentence ${index + 1}`}
@@ -3067,7 +3163,7 @@ export function SentenceBlankActivity({
               </p>
             ) : <span>No sentence data.</span>}
           </div>
-          <div className="sentence-renewal-options">
+          <UniformAutoFitTextGroup className="sentence-renewal-options" maximumSize={32} minimumSize={5}>
             {options.map((option) => (
               <button
                 className={[
@@ -3084,7 +3180,7 @@ export function SentenceBlankActivity({
                 <AutoFitSentenceBlankOption text={option} />
               </button>
             ))}
-          </div>
+          </UniformAutoFitTextGroup>
           {selected ? (
             <p className={isCorrect ? "renewal-feedback is-correct" : "renewal-feedback is-wrong"} role="status">
               {isCorrect ? "Correct" : `Answer: ${answer}`}
@@ -3207,9 +3303,9 @@ export function SentenceUnscrambleActivity({
   return (
     <ActivityFrame context={context} actionLabel={label} className="figma-renewal-frame">
       <div className="figma-renewal-shell unscramble-renewal-shell">
+        <ActivityQuestionNavigation current={index} total={sentences.length} onChange={setIndex} />
         <div className="sentence-renewal-panel unscramble-renewal-panel">
           <RenewalCounter current={sentences.length === 0 ? 0 : index + 1} total={sentences.length} className="sentence-renewal-counter" />
-          <ActivityQuestionNavigation current={index} total={sentences.length} onChange={setIndex} />
           <RenewalSoundButton
             src={sentence?.audioUrl}
             label={`Play sentence ${index + 1}`}
@@ -3239,7 +3335,7 @@ export function SentenceUnscrambleActivity({
                 );
               })}
             </div>
-            <div className="unscramble-renewal-bank">
+            <UniformAutoFitTextGroup className="unscramble-renewal-bank" maximumSize={26} minimumSize={5}>
               {answerBank.map((token, tokenIndex) => (
                 <button
                   className="renewal-option-button"
@@ -3248,10 +3344,10 @@ export function SentenceUnscrambleActivity({
                   disabled={selectedIndexes.includes(tokenIndex)}
                   onClick={() => chooseUnscrambleToken(token, tokenIndex)}
                 >
-                  {token}
+                  <UniformAutoFitText className="unscramble-renewal-option-text" text={token} />
                 </button>
               ))}
-            </div>
+            </UniformAutoFitTextGroup>
           </div>
           {isComplete ? (
             <p className={isCorrect ? "renewal-feedback is-correct" : "renewal-feedback is-wrong"} role="status">
@@ -4134,35 +4230,348 @@ export function ListenRecordActivity({ context }: { context: ActivityRendererCon
   );
 }
 
-export function SentenceRecordActivity({ context }: { context: ActivityRendererContext }) {
-  const sentences = useSentences(context);
+export function SentenceRecordActivity({
+  context,
+  prototypeData
+}: {
+  context: ActivityRendererContext;
+  prototypeData?: PrototypeActivityData;
+}) {
+  const packageSentences = useSentences(context);
+  const sentences = prototypeData?.sentences || packageSentences;
   const [index, setIndex] = useState(0);
-  const sentence = sentences[index];
+  const safeIndex = Math.min(index, Math.max(sentences.length - 1, 0));
+  const sentence = sentences[safeIndex];
+
+  useEffect(() => {
+    if (index >= sentences.length && sentences.length > 0) setIndex(0);
+  }, [index, sentences.length]);
+
+  if (!sentence) {
+    return (
+      <ActivityFrame context={context} actionLabel="Sentence Record" className="figma-renewal-frame">
+        <div className="figma-renewal-shell sentence-record-renewal-shell">
+          <div className="sentence-record-renewal-panel is-empty">
+            <ResourceMissing label="sentence data" />
+          </div>
+        </div>
+      </ActivityFrame>
+    );
+  }
 
   return (
-    <ActivityFrame context={context} actionLabel="Sentence Record">
-      <RecordPanel
-        context={context}
-        eventItemType="sentence"
-        eventItemIdx={sentenceItemIdx(sentence)}
-        eventItemLabel={sentence?.eng}
-        expectedText={sentence?.eng}
-        mediaUrl={sentence?.audioUrl}
-        title={sentence?.eng || context.activity?.title || "Sentence"}
-        detail="Listen to the sentence audio, then record the sentence with the browser microphone."
-      />
-      <div className="inline-actions">
-        <button className="activity-question-edge-nav previous image-page-control" aria-label="Previous sentence" type="button" onClick={() => setIndex((value) => Math.max(0, value - 1))} disabled={index === 0}>
-          <ActivityPageArrowImage direction="prev" />
-        </button>
-        <span>
-          {sentences.length === 0 ? 0 : index + 1} / {sentences.length}
-        </span>
-        <button className="activity-question-edge-nav next image-page-control" aria-label="Next sentence" type="button" onClick={() => setIndex((value) => Math.min(sentences.length - 1, value + 1))} disabled={index >= sentences.length - 1}>
-          <ActivityPageArrowImage direction="next" />
-        </button>
+    <SentenceRecordRenewalPanel
+      context={context}
+      current={safeIndex}
+      key={`${sentenceItemIdx(sentence) ?? sentence.index}:${safeIndex}`}
+      onChange={setIndex}
+      sentence={sentence}
+      total={sentences.length}
+    />
+  );
+}
+
+type SentenceRecordMode = "native" | "record-ready" | "recording" | "review";
+
+function SentenceRecordRenewalPanel({
+  context,
+  current,
+  onChange,
+  sentence,
+  total
+}: {
+  context: ActivityRendererContext;
+  current: number;
+  onChange: (nextIndex: number) => void;
+  sentence: LoadedSentence;
+  total: number;
+}) {
+  const recorder = useActivityRecording({
+    context,
+    eventItemType: "sentence",
+    eventItemIdx: sentenceItemIdx(sentence),
+    eventItemLabel: sentence.eng,
+    expectedText: sentence.eng
+  });
+  const nativeAudioRef = useRef<HTMLAudioElement>(null);
+  const recordingAudioRef = useRef<HTMLAudioElement>(null);
+  const sentenceKey = `${sentence.sentenceIdx ?? sentence.index}:${sentence.eng}`;
+  const [phase, setPhase] = useState<"native" | "record" | "review">(sentence.audioUrl ? "native" : "record");
+  const [nativeOfferedFor, setNativeOfferedFor] = useState<string | null>(sentence.audioUrl ? sentenceKey : null);
+  const [nativeProgress, setNativeProgress] = useState(0);
+  const [recordProgress, setRecordProgress] = useState(0);
+  const [reviewProgress, setReviewProgress] = useState(0);
+  const [isNativePlaying, setIsNativePlaying] = useState(false);
+  const [isReviewPlaying, setIsReviewPlaying] = useState(false);
+
+  const mode: SentenceRecordMode = recorder.isRecording
+    ? "recording"
+    : recorder.recordingUrl
+      ? "review"
+      : phase === "native" && sentence.audioUrl
+        ? "native"
+        : "record-ready";
+  const progress = mode === "native"
+    ? nativeProgress
+    : mode === "recording"
+      ? recordProgress
+      : mode === "review"
+        ? reviewProgress
+        : 0;
+  const recorderError = !["Ready", "Recording...", "Recording saved locally"].includes(recorder.status)
+    ? recorder.status
+    : "";
+
+  useEffect(() => {
+    nativeAudioRef.current?.pause();
+    recordingAudioRef.current?.pause();
+    setPhase(sentence.audioUrl ? "native" : "record");
+    setNativeOfferedFor(sentence.audioUrl ? sentenceKey : null);
+    setNativeProgress(0);
+    setRecordProgress(0);
+    setReviewProgress(0);
+    setIsNativePlaying(false);
+    setIsReviewPlaying(false);
+  }, [sentenceKey]);
+
+  useEffect(() => {
+    if (!sentence.audioUrl || nativeOfferedFor === sentenceKey) return;
+    setNativeOfferedFor(sentenceKey);
+    setPhase("native");
+  }, [nativeOfferedFor, sentence.audioUrl, sentenceKey]);
+
+  useEffect(() => {
+    recordLearnEvent(context, {
+      action: "question_view",
+      item_type: "sentence",
+      item_idx: sentenceItemIdx(sentence),
+      extra: {
+        question_index: current + 1,
+        sentence: sentence.eng,
+        blank_index: parseSentenceTokens(sentence).blankTokenIndex
+      }
+    });
+  }, [context, current, sentence]);
+
+  useEffect(() => {
+    if (!recorder.isRecording) return undefined;
+    const startedAt = Date.now();
+    setRecordProgress(8);
+    const timer = window.setInterval(() => {
+      const elapsed = Date.now() - startedAt;
+      setRecordProgress(Math.min(94, 8 + (elapsed / 12_000) * 86));
+    }, 120);
+    return () => window.clearInterval(timer);
+  }, [recorder.isRecording]);
+
+  async function toggleNativeVoice() {
+    const audio = nativeAudioRef.current;
+    if (!audio) {
+      setPhase("record");
+      return;
+    }
+    if (!audio.paused) {
+      audio.pause();
+      setIsNativePlaying(false);
+      return;
+    }
+    if (Number.isFinite(audio.duration) && audio.currentTime >= audio.duration) audio.currentTime = 0;
+    setIsNativePlaying(true);
+    try {
+      await audio.play();
+      recordLearnEvent(context, {
+        action: "audio_play",
+        item_type: "sentence",
+        item_idx: sentenceItemIdx(sentence),
+        audio_replays: 1,
+        extra: { question_index: current + 1, source: "native_voice" }
+      });
+    } catch {
+      setIsNativePlaying(false);
+    }
+  }
+
+  async function toggleRecordedVoice() {
+    const audio = recordingAudioRef.current;
+    if (!audio) return;
+    if (!audio.paused) {
+      audio.pause();
+      setIsReviewPlaying(false);
+      return;
+    }
+    if (Number.isFinite(audio.duration) && audio.currentTime >= audio.duration) audio.currentTime = 0;
+    setIsReviewPlaying(true);
+    try {
+      await audio.play();
+    } catch {
+      setIsReviewPlaying(false);
+    }
+  }
+
+  async function handleMainControl() {
+    if (mode === "native") {
+      await toggleNativeVoice();
+      return;
+    }
+    if (mode === "review") {
+      await toggleRecordedVoice();
+      return;
+    }
+
+    const result = await recorder.toggleRecording();
+    if (result === "started") {
+      setPhase("record");
+      setReviewProgress(0);
+    } else if (result === "stopped") {
+      setPhase("review");
+      setRecordProgress(100);
+      setReviewProgress(0);
+    }
+  }
+
+  const controlLabel = mode === "native"
+    ? isNativePlaying ? "Pause native voice" : "Play native voice"
+    : mode === "record-ready"
+      ? "Start recording"
+      : mode === "recording"
+        ? "Stop recording"
+        : isReviewPlaying ? "Pause my recording" : "Play my recording";
+  const statusLabel = mode === "native"
+    ? "Native Voice"
+    : mode === "record-ready"
+      ? "Your Voice"
+      : mode === "recording"
+        ? "Recording...."
+        : "";
+
+  return (
+    <ActivityFrame context={context} actionLabel="Sentence Record" className="figma-renewal-frame">
+      <div className="figma-renewal-shell sentence-record-renewal-shell">
+        <ActivityQuestionNavigation
+          current={current}
+          disableNext={recorder.isRecording}
+          disablePrev={recorder.isRecording}
+          onChange={onChange}
+          total={total}
+        />
+        <div className="sentence-record-renewal-panel">
+          <div className="sentence-record-meta" aria-label="Activity settings">
+            <span><Gauge aria-hidden="true" />Speed: Normal</span>
+            <span><BarChart3 aria-hidden="true" />Difficulty: Normal</span>
+          </div>
+          <RenewalCounter className="sentence-record-counter" current={current + 1} total={total} />
+          <SentenceRecordPrompt sentence={sentence} />
+          <div className={`sentence-record-media is-${mode}`}>
+            {statusLabel ? <span className="sentence-record-status-label">{statusLabel}</span> : null}
+            <span className={`sentence-record-step-check${recorder.recordingUrl ? " is-complete" : ""}`} aria-hidden="true">
+              <Check />
+            </span>
+            <div className="sentence-record-track">
+              <span className="sentence-record-progress" style={{ width: `${Math.max(8, progress)}%` }} />
+              {mode === "recording" ? (
+                <span className="sentence-record-waveform" aria-hidden="true">
+                  {READ_RECORD_WAVEFORM.slice(0, 34).map((height, barIndex) => (
+                    <i key={`${height}:${barIndex}`} style={{ "--bar-height": `${height}%`, "--bar-index": barIndex } as CSSProperties} />
+                  ))}
+                </span>
+              ) : null}
+              <button
+                aria-label={controlLabel}
+                className={`sentence-record-main-control${isNativePlaying || isReviewPlaying ? " is-playing" : ""}`}
+                onClick={() => void handleMainControl()}
+                type="button"
+              >
+                {mode === "native" ? <ActivityListeningImage /> : null}
+                {mode === "record-ready" || mode === "recording" ? <Mic aria-hidden="true" /> : null}
+                {mode === "review" && isReviewPlaying ? <Pause aria-hidden="true" fill="currentColor" /> : null}
+                {mode === "review" && !isReviewPlaying ? <Play aria-hidden="true" fill="currentColor" /> : null}
+              </button>
+            </div>
+            {recorderError ? <p className="sentence-record-error" role="status">{recorderError}</p> : null}
+          </div>
+          {sentence.audioUrl ? (
+            <audio
+              onEnded={() => {
+                setIsNativePlaying(false);
+                setNativeProgress(100);
+                setPhase("record");
+              }}
+              onPause={() => setIsNativePlaying(false)}
+              onTimeUpdate={(event) => setNativeProgress(mediaProgress(event.currentTarget))}
+              preload="metadata"
+              ref={nativeAudioRef}
+              src={sentence.audioUrl}
+            />
+          ) : null}
+          {recorder.recordingUrl ? (
+            <audio
+              onEnded={() => {
+                setIsReviewPlaying(false);
+                setReviewProgress(100);
+              }}
+              onPause={() => setIsReviewPlaying(false)}
+              onTimeUpdate={(event) => setReviewProgress(mediaProgress(event.currentTarget))}
+              preload="metadata"
+              ref={recordingAudioRef}
+              src={recorder.recordingUrl}
+            />
+          ) : null}
+        </div>
       </div>
     </ActivityFrame>
+  );
+}
+
+function SentenceRecordPrompt({ sentence }: { sentence: LoadedSentence }) {
+  const promptRef = useRef<HTMLDivElement>(null);
+  const [isWrapped, setIsWrapped] = useState(false);
+  const parsed = useMemo(() => parseSentenceTokens(sentence), [sentence]);
+  const hasBlank = parsed.blankTokenIndex >= 0;
+  const prefix = hasBlank ? formatSentence(parsed.tokens.slice(0, parsed.blankTokenIndex)) : sentence.eng;
+  const suffix = hasBlank ? formatSentence(parsed.tokens.slice(parsed.blankTokenIndex + 1)) : "";
+
+  useLayoutEffect(() => {
+    const element = promptRef.current;
+    if (!element) return undefined;
+    let animationFrame = 0;
+    const updateWrappedState = () => {
+      const styles = window.getComputedStyle(element);
+      const lineHeight = Number.parseFloat(styles.lineHeight) || 52;
+      const minimumHeight = Number.parseFloat(styles.minHeight) || 0;
+      const blankHeight = element.querySelector<HTMLElement>(".sentence-record-blank")?.getBoundingClientRect().height || 0;
+      const singleLineHeight = Math.max(lineHeight, minimumHeight, blankHeight);
+      const wrapped = element.scrollHeight > singleLineHeight + 2;
+      setIsWrapped((current) => current === wrapped ? current : wrapped);
+    };
+    const scheduleUpdate = () => {
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = window.requestAnimationFrame(updateWrappedState);
+    };
+    updateWrappedState();
+    scheduleUpdate();
+    const resizeObserver = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(scheduleUpdate);
+    resizeObserver?.observe(element);
+    const panel = element.closest<HTMLElement>(".sentence-record-renewal-panel");
+    if (panel) resizeObserver?.observe(panel);
+    window.addEventListener("resize", scheduleUpdate);
+    void document.fonts?.ready.then(scheduleUpdate);
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", scheduleUpdate);
+    };
+  }, [prefix, suffix]);
+
+  return (
+    <div
+      className={`sentence-record-prompt${isWrapped ? " is-wrapped" : ""}`}
+      ref={promptRef}
+      style={{ "--sentence-record-blank-length": Math.max(3, parsed.blankToken.length) } as CSSProperties}
+    >
+      <span>{prefix}</span>
+      {hasBlank ? <>{" "}<span className="sentence-record-blank" aria-label="Missing word" /></> : null}
+      {suffix ? <>{/^[.,!?]/.test(suffix) ? null : " "}<span>{suffix}</span></> : null}
+    </div>
   );
 }
 
@@ -4206,38 +4615,39 @@ function WordCard({ word }: { word: LoadedWord }) {
   );
 }
 
-function RecordPanel({
+function useActivityRecording({
   context,
   eventItemType = "recording",
   eventItemIdx = null,
   eventItemLabel,
-  title,
-  detail,
-  mediaUrl,
   expectedText
 }: {
   context?: ActivityRendererContext;
   eventItemType?: LearnEventInput["item_type"];
   eventItemIdx?: number | null;
   eventItemLabel?: string;
-  title: string;
-  detail: string;
-  mediaUrl?: string;
   expectedText?: string;
 }) {
   const [status, setStatus] = useState("Ready");
   const [recordingUrl, setRecordingUrl] = useState<string>();
+  const [isRecording, setIsRecording] = useState(false);
   const recordingStartedAtRef = useRef<number>();
+  const recordingUrlRef = useRef<string>();
+  const isRecordingRef = useRef(false);
 
   async function toggleRecording() {
     try {
       if (browserRecorderPort.isRecording()) {
         const blob = await browserRecorderPort.stop();
+        isRecordingRef.current = false;
+        setIsRecording(false);
         const timeMs = recordingStartedAtRef.current ? Date.now() - recordingStartedAtRef.current : undefined;
         recordingStartedAtRef.current = undefined;
         if (blob) {
-          if (recordingUrl) URL.revokeObjectURL(recordingUrl);
-          setRecordingUrl(URL.createObjectURL(blob));
+          if (recordingUrlRef.current) URL.revokeObjectURL(recordingUrlRef.current);
+          const nextRecordingUrl = URL.createObjectURL(blob);
+          recordingUrlRef.current = nextRecordingUrl;
+          setRecordingUrl(nextRecordingUrl);
           setStatus("Recording saved locally");
           let recordingUpload: unknown;
           let recordingUploadError: string | undefined;
@@ -4247,7 +4657,7 @@ function RecordPanel({
               recordingUpload = await uploadLearnRecording({
                 log_idx: context.studyLogIdx,
                 item_type: recordingUploadItemType(eventItemType),
-                ...(eventItemIdx ? { item_idx: eventItemIdx } : {}),
+                ...(eventItemIdx != null ? { item_idx: eventItemIdx } : {}),
                 audio_base64: audioBase64,
                 content_type: blob.type || "audio/webm",
                 duration_ms: timeMs
@@ -4285,10 +4695,12 @@ function RecordPanel({
             });
           }
         }
-        return;
+        return "stopped" as const;
       }
 
       await browserRecorderPort.start();
+      isRecordingRef.current = true;
+      setIsRecording(true);
       recordingStartedAtRef.current = Date.now();
       setStatus("Recording...");
       if (context) {
@@ -4302,28 +4714,64 @@ function RecordPanel({
           }
         });
       }
+      return "started" as const;
     } catch (error) {
+      isRecordingRef.current = false;
+      setIsRecording(false);
       setStatus(error instanceof Error ? error.message : "Microphone permission failed");
+      return "failed" as const;
     }
   }
 
   useEffect(() => {
     return () => {
-      if (recordingUrl) URL.revokeObjectURL(recordingUrl);
+      if (recordingUrlRef.current) URL.revokeObjectURL(recordingUrlRef.current);
+      if (isRecordingRef.current && browserRecorderPort.isRecording()) {
+        void browserRecorderPort.stop().catch(() => undefined);
+      }
     };
-  }, [recordingUrl]);
+  }, []);
+
+  return { isRecording, recordingUrl, status, toggleRecording };
+}
+
+function mediaProgress(media: HTMLMediaElement): number {
+  if (!Number.isFinite(media.duration) || media.duration <= 0) return 0;
+  return Math.max(0, Math.min(100, (media.currentTime / media.duration) * 100));
+}
+
+function RecordPanel({
+  context,
+  eventItemType = "recording",
+  eventItemIdx = null,
+  eventItemLabel,
+  title,
+  detail,
+  mediaUrl,
+  expectedText
+}: {
+  context?: ActivityRendererContext;
+  eventItemType?: LearnEventInput["item_type"];
+  eventItemIdx?: number | null;
+  eventItemLabel?: string;
+  title: string;
+  detail: string;
+  mediaUrl?: string;
+  expectedText?: string;
+}) {
+  const recorder = useActivityRecording({ context, eventItemType, eventItemIdx, eventItemLabel, expectedText });
 
   return (
     <div className="record-shell package-record">
-      <button className="round-media-button record" onClick={toggleRecording} aria-label="Toggle recording" type="button">
+      <button className="round-media-button record" onClick={() => void recorder.toggleRecording()} aria-label="Toggle recording" type="button">
         <Mic size={36} />
       </button>
       <div>
         <h3>{title}</h3>
         <p>{detail}</p>
         {mediaUrl ? <audio src={mediaUrl} controls /> : null}
-        <p className="muted">{status}</p>
-        {recordingUrl ? <audio src={recordingUrl} controls /> : null}
+        <p className="muted">{recorder.status}</p>
+        {recorder.recordingUrl ? <audio src={recorder.recordingUrl} controls /> : null}
       </div>
     </div>
   );

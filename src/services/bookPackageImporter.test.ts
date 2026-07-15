@@ -108,4 +108,48 @@ describe("downloadAndCacheBookPackage", () => {
 
     await expect(getCachedPackage(book)).resolves.toBeUndefined();
   });
+
+  it("downloads MP3 assets referenced by cached npcqhk/script.json", async () => {
+    const manifest: BookResourceManifest = {
+      key: "book:6710",
+      book,
+      lessonDays: [],
+      generatedFiles: [],
+      resources: [
+        {
+          path: "Lessons/L1/D1/npcqhk/script.json",
+          sourcePath: "/11/160/591/6710/978/978/npcqhk/script.json",
+          url: "https://metaon.s3.ap-northeast-2.amazonaws.com/MetaOn3/BookData/11/160/591/6710/978/978/npcqhk/script.json",
+          mimeType: "application/json",
+          category: "npcqhk"
+        }
+      ]
+    };
+    vi.mocked(getBookResourceManifest).mockResolvedValue(manifest);
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith("/npcqhk/script.json")) {
+        return new Response(
+          JSON.stringify({
+            opening: { audio: "audio/opening.mp3" },
+            questions: [{ audio: "audio/q01_intro.mp3", fb_ok: { audio: "audio/q01_fb_ok.mp3" }, fb_no: { audio: "audio/q01_fb_no.mp3" } }],
+            closing: { audio: "audio/closing.mp3" }
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      return new Response("audio", { status: 200, headers: { "Content-Type": "audio/mpeg" } });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await downloadAndCacheBookPackage(book);
+
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/npcqhk/audio/opening.mp3"));
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/npcqhk/audio/q01_intro.mp3"));
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/npcqhk/audio/q01_fb_ok.mp3"));
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/npcqhk/audio/q01_fb_no.mp3"));
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/npcqhk/audio/closing.mp3"));
+    const savedFiles = vi.mocked(indexedDbStorage.savePackage).mock.calls[0][1].map((file) => file.path);
+    expect(savedFiles).toContain("Lessons/L1/D1/npcqhk/script.json");
+    expect(savedFiles).toContain("Lessons/L1/D1/npcqhk/audio/q01_intro.mp3");
+  });
 });
