@@ -74,13 +74,9 @@ export function HubHomePage() {
     return <HomeLoadingScreen backgroundImage={heroTheme.image} backgroundPosition={heroTheme.position} themeId={heroTheme.id} />;
   }
 
-  if (!selectedBook) {
-    const nextRoute = isAuthenticated ? "/study" : isAccountAuthenticated ? "/profiles" : "/login";
-    const actionLabel = isAuthenticated ? "스터디존 다시 열기" : isAccountAuthenticated ? "프로필 선택" : "로그인";
-    const title = isAuthenticated ? "Book catalog을 불러오지 못했습니다" : "프로필을 선택해 학습을 시작하세요";
-    const detail = isAuthenticated
-      ? error || "선택한 프로필의 Book 정보를 다시 불러와 주세요."
-      : "브랜드와 Book은 로그인 후 학습 프로필을 선택한 경우에만 표시됩니다.";
+  if (!selectedBook && !isAuthenticated) {
+    const nextRoute = isAccountAuthenticated ? "/profiles" : "/login";
+    const actionLabel = isAccountAuthenticated ? "프로필 선택" : "로그인";
     return (
       <HomeMotionRoot themeId={heroTheme.id}>
         <section className="hub-home-feature-stage hub-home-myzone-stage" data-hero-theme={heroTheme.id} style={heroThemeStyle}>
@@ -88,17 +84,69 @@ export function HubHomePage() {
           <header className="hub-myzone-header">
             <div className="hub-myzone-greeting">
               <span className="hub-myzone-eyebrow"><span>MY ZONE</span></span>
-              <h1>{title}</h1>
-              <p>{detail}</p>
+              <h1>프로필을 선택해 학습을 시작하세요</h1>
+              <p>브랜드와 Book은 로그인 후 학습 프로필을 선택한 경우에만 표시됩니다.</p>
             </div>
             <Link className="hub-primary-action" to={nextRoute}>
-              {isAuthenticated ? <BookOpen size={18} strokeWidth={2.3} /> : <LogIn size={18} strokeWidth={2.3} />}
+              <LogIn size={18} strokeWidth={2.3} />
               {actionLabel}
             </Link>
           </header>
         </section>
+
+        <Link className="hub-home-menu-card study" data-home-tilt="portal" to={nextRoute}>
+          <span className="hub-menu-art">
+            <SafeCoverImage fallbackIndex={0} />
+            <PortalGate />
+          </span>
+          <span className="hub-menu-copy">
+            <span className="hub-menu-badge">
+              <BookOpen size={15} strokeWidth={2.4} />
+              Book 학습
+            </span>
+            <strong>스터디존</strong>
+            <span>프로필을 선택하면 내 레벨의 브랜드와 Book을 불러옵니다.</span>
+          </span>
+          <span className="hub-menu-action">{actionLabel}</span>
+        </Link>
+
+        <Link className="hub-home-menu-card ai" data-home-tilt="portal" to={nextRoute}>
+          <span className="hub-menu-art">
+            <img src="/metaon-assets/ai-npc-preview.png" alt="" />
+            <PortalGate />
+          </span>
+          <span className="hub-menu-copy">
+            <span className="hub-menu-badge">
+              <MessageCircle size={15} strokeWidth={2.4} />
+              NPC 미션
+            </span>
+            <strong>AI Speaking</strong>
+            <span>Book 학습이 시작되면 캐릭터와 영어 대화를 이어갈 수 있습니다.</span>
+          </span>
+          <span className="hub-menu-action">{actionLabel}</span>
+        </Link>
+
+        <Link className="hub-home-menu-card meta" data-home-tilt="portal" to={nextRoute}>
+          <span className="hub-menu-art">
+            <img src="/metaon-assets/metaverse-preview.png" alt="" />
+            <PortalGate />
+          </span>
+          <span className="hub-menu-copy">
+            <span className="hub-menu-badge">
+              <MapIcon size={15} strokeWidth={2.4} />
+              월드 탐험
+            </span>
+            <strong>메타버스</strong>
+            <span>학습 프로필의 진행에 맞춰 영어 월드와 미션으로 연결됩니다.</span>
+          </span>
+          <span className="hub-menu-action">{actionLabel}</span>
+        </Link>
       </HomeMotionRoot>
     );
+  }
+
+  if (!selectedBook) {
+    return <EmptyState title="Book catalog을 불러오지 못했습니다" detail={error || "선택한 프로필의 Book 정보를 다시 불러와 주세요."} />;
   }
 
   return (
