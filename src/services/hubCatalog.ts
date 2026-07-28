@@ -63,6 +63,97 @@ export function getHubBooks(catalog?: BookCatalog): HubBook[] {
   );
 }
 
+/**
+ * Derives ~`limit` real catalog books to recommend from a completed Placement Test.
+ *
+ * The server's placement `recommendation.books` are synthetic placeholders (no real bookIdx /
+ * thumbnail), so we instead use the reliable `target` grade/level: find the Raz-Kids group/series
+ * that matches it and take a contiguous slice of real books from that anchor onward. Returns [] when
+ * there is no catalog or no target (the caller shows a "take the Placement Test" CTA instead).
+ */
+export function getRecommendedBooks(
+  catalog: BookCatalog | undefined,
+  target: { grade: string; level: string } | undefined,
+  limit = 7
+): HubBook[] {
+  if (!catalog) return [];
+  const brand = findRazKidsBrand(catalog) || (catalog.brands || []).find((candidate) => getBrandGroups(candidate).length > 0);
+  if (!brand) return [];
+
+  const groups = getBrandGroups(brand);
+  const flat: HubBook[] = groups.flatMap((group) =>
+    group.seriesList.flatMap((series) =>
+      series.books.map((book) => ({
+        book,
+        brand,
+        group,
+        id: String(book.bookIdx || `${book.seriesGroup}:${book.seriesIdx}:${book.bookId}`),
+        key: packageKeyFor(book),
+        series
+      }))
+    )
+  );
+  if (flat.length === 0) return [];
+
+  let anchor = 0;
+  if (target) {
+    const group = groups.find((candidate) => matchesRazGrade(candidate.groupName, target.grade)) || groups[0];
+    const series =
+      group?.seriesList.find((candidate) => candidate.books.length > 0 && matchesRazLevel(candidate.seriesName, target.level)) ||
+      group?.seriesList.find((candidate) => candidate.books.length > 0);
+    const anchorBook = getSeriesBooks(series)[0];
+    if (anchorBook) {
+      const index = flat.findIndex((item) => item.book === anchorBook);
+      if (index >= 0) anchor = index;
+    }
+  }
+
+  const slice = flat.slice(anchor, anchor + limit);
+  // Backfill from the catalog start if the anchor is near the end, so we still show ~limit books.
+  for (const item of flat) {
+    if (slice.length >= limit) break;
+    if (!slice.includes(item)) slice.push(item);
+  }
+  return slice;
+}
+
+/**
+ * Resolves an ordered list of book keys (most-recent first, e.g. recent-opens then progress
+ * fallback) into catalog books, de-duplicated and capped at `limit`.
+ */
+export function getRecentBooks(catalog: BookCatalog | undefined, orderedKeys: string[], limit = 8): HubBook[] {
+  if (!catalog) return [];
+  const byKey = new Map(getHubBooks(catalog).map((hubBook) => [hubBook.key, hubBook] as const));
+  const seen = new Set<string>();
+  const result: HubBook[] = [];
+  for (const key of orderedKeys) {
+    if (seen.has(key)) continue;
+    const hubBook = byKey.get(key);
+    if (!hubBook) continue;
+    seen.add(key);
+    result.push(hubBook);
+    if (result.length >= limit) break;
+  }
+  return result;
+}
+
+/**
+ * Finds the series (level) inside a brand that matches a completed Placement Test target,
+ * so library views can anchor on "my level". Returns undefined when nothing matches.
+ */
+export function findSeriesForPlacement(
+  brand: BrandData | undefined,
+  target: { grade: string; level: string } | undefined
+): SeriesData | undefined {
+  if (!brand || !target) return undefined;
+  const groups = getBrandGroups(brand);
+  const group = groups.find((candidate) => matchesRazGrade(candidate.groupName, target.grade)) || groups[0];
+  return (
+    group?.seriesList.find((candidate) => candidate.books.length > 0 && matchesRazLevel(candidate.seriesName, target.level)) ||
+    group?.seriesList.find((candidate) => candidate.books.length > 0)
+  );
+}
+
 export function getBrandGroups(brand?: BrandData): SeriesGroup[] {
   return (brand?.groups || []).filter((group) => group.seriesList.some((series) => series.books.length > 0));
 }

@@ -23,9 +23,6 @@ const labels = {
   }
 };
 
-const SESSION_ID_KEY = "metaon-session-id";
-const USER_IDX_KEY = "metaon-user-idx";
-
 export function ExternalStartPage({ kind }: { kind: ExternalExperienceKind }) {
   const navigate = useNavigate();
   const { catalog } = useCatalog();
@@ -316,10 +313,10 @@ function postRpcResult(event: MessageEvent, payload: { error?: string; id: strin
 }
 
 function buildFrameAuthPayload(launch: ExternalLaunch | undefined, user: { id: string; name: string }, selectedBook: { bookId?: string; bookIdx?: number } | undefined) {
-  const storedSessionId = window.localStorage.getItem(SESSION_ID_KEY) || "";
-  const storedUserIdx = Number(window.localStorage.getItem(USER_IDX_KEY) || 0);
-  const sessionId = launch?.auth?.session_id || storedSessionId;
-  const userIdx = launch?.auth?.user_idx || (Number.isFinite(storedUserIdx) ? storedUserIdx : 0);
+  // The BFF derives this context from the profile selected for the account session.
+  // Do not restore a previous browser-stored profile after a family switches learners.
+  const sessionId = launch?.auth?.session_id || "";
+  const userIdx = launch?.auth?.user_idx || 0;
 
   return {
     book_id: selectedBook?.bookId || "",

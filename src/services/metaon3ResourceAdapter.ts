@@ -52,6 +52,7 @@ export function normalizeBookResourceManifest(raw: unknown): BookResourceManifes
       collectListeningResources(day, virtualBase, resources);
       collectEbookResources(day, virtualBase, resources);
       collectNpcQuickCheckResources(day, virtualBase, resources);
+      collectNpcQuickCheck2Resources(day, virtualBase, resources);
 
       lessonDays.push({
         id: dayIdx ? String(dayIdx) : `${lessonNumber}:${dayNumber}`,
@@ -408,6 +409,25 @@ function collectNpcQuickCheckResources(day: UnknownRecord, virtualBase: string, 
 
 function npcQuickCheckRecord(day: UnknownRecord): UnknownRecord | undefined {
   const value = day.npcqhk ?? day.npc_qhk ?? day.npcQuickCheck ?? day.npc_quick_check;
+  if (typeof value === "string" && value.trim()) return { path: value.trim() };
+  if (Array.isArray(value)) return value.map(asRecord).find((item) => Object.keys(item).length > 0);
+  const record = asRecord(value);
+  return Object.keys(record).length > 0 ? record : undefined;
+}
+
+function collectNpcQuickCheck2Resources(day: UnknownRecord, virtualBase: string, resources: Map<string, BookResource>): void {
+  const npcqhk2 = npcQuickCheck2Record(day);
+  if (!npcqhk2) return;
+
+  const npcqhk2Base = `${virtualBase}/npcqhk2`;
+  const scriptPath = npcQuickCheckScriptPath(npcqhk2);
+  addResource(resources, `${npcqhk2Base}/script.json`, scriptPath, "npcqhk2");
+  // Audio (webm) is authored as relative paths inside script.json and is derived on the
+  // client from the cached script.json (see bookPackageImporter), so only script.json is emitted.
+}
+
+function npcQuickCheck2Record(day: UnknownRecord): UnknownRecord | undefined {
+  const value = day.npcqhk2 ?? day.npc_qhk2 ?? day.npc_qhk_2 ?? day.npcQuickCheck2 ?? day.npc_quick_check2;
   if (typeof value === "string" && value.trim()) return { path: value.trim() };
   if (Array.isArray(value)) return value.map(asRecord).find((item) => Object.keys(item).length > 0);
   const record = asRecord(value);

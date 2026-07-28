@@ -152,4 +152,121 @@ describe("downloadAndCacheBookPackage", () => {
     expect(savedFiles).toContain("Lessons/L1/D1/npcqhk/script.json");
     expect(savedFiles).toContain("Lessons/L1/D1/npcqhk/audio/q01_intro.mp3");
   });
+
+  it("downloads webm audio referenced by cached npcqhk2/script.json", async () => {
+    const manifest: BookResourceManifest = {
+      key: "book:6710",
+      book,
+      lessonDays: [],
+      generatedFiles: [],
+      resources: [
+        {
+          path: "Lessons/L1/D1/npcqhk2/script.json",
+          sourcePath: "/11/160/591/6710/978/978/npcqhk2/script.json",
+          url: "https://metaon.s3.ap-northeast-2.amazonaws.com/MetaOn3/BookData/11/160/591/6710/978/978/npcqhk2/script.json",
+          mimeType: "application/json",
+          category: "npcqhk2"
+        }
+      ]
+    };
+    vi.mocked(getBookResourceManifest).mockResolvedValue(manifest);
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith("/npcqhk2/script.json")) {
+        return new Response(
+          JSON.stringify({
+            opening: { audio: "audio/opening.webm" },
+            items: [
+              {
+                item_idx: 3027,
+                type: "word",
+                weak: { audio: "audio/w_bats_wk.webm", fb_ok: { audio: "audio/w_bats_wk_ok.webm" }, fb_no: { audio: "audio/w_bats_wk_no.webm" } },
+                relearn: { audio: "audio/w_bats_rl.webm", fb_ok: { audio: "audio/w_bats_rl_ok.webm" }, fb_no: { audio: "audio/w_bats_rl_no.webm" } }
+              }
+            ],
+            closing: { audio: "audio/closing.webm" }
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      return new Response("audio", { status: 200, headers: { "Content-Type": "audio/webm" } });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await downloadAndCacheBookPackage(book);
+
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/npcqhk2/audio/opening.webm"));
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/npcqhk2/audio/w_bats_wk.webm"));
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/npcqhk2/audio/w_bats_rl_no.webm"));
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/npcqhk2/audio/closing.webm"));
+    const savedFiles = vi.mocked(indexedDbStorage.savePackage).mock.calls[0][1].map((file) => file.path);
+    expect(savedFiles).toContain("Lessons/L1/D1/npcqhk2/script.json");
+    expect(savedFiles).toContain("Lessons/L1/D1/npcqhk2/audio/w_bats_wk.webm");
+  });
+
+  it("records cached npcqhk script paths on the package", async () => {
+    const manifest: BookResourceManifest = {
+      key: "book:6710",
+      book,
+      lessonDays: [],
+      generatedFiles: [],
+      resources: [
+        {
+          path: "Lessons/L1/D1/npcqhk/script.json",
+          sourcePath: "/x/npcqhk/script.json",
+          url: "https://metaon.s3.ap-northeast-2.amazonaws.com/MetaOn3/BookData/x/npcqhk/script.json",
+          mimeType: "application/json",
+          category: "npcqhk"
+        }
+      ]
+    };
+    vi.mocked(getBookResourceManifest).mockResolvedValue(manifest);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ questions: [] }), { status: 200, headers: { "Content-Type": "application/json" } }))
+    );
+
+    await downloadAndCacheBookPackage(book);
+
+    const savedPackage = vi.mocked(indexedDbStorage.savePackage).mock.calls[0][0];
+    expect(savedPackage.npcScriptPaths).toEqual(["Lessons/L1/D1/npcqhk/script.json"]);
+  });
+
+  it("skips missing NPC resources instead of failing the whole book import", async () => {
+    const manifest: BookResourceManifest = {
+      key: "book:6710",
+      book,
+      lessonDays: [],
+      generatedFiles: [],
+      resources: [
+        {
+          path: "Lessons/L1/D1/word/snd/snd_word_01.mp3",
+          sourcePath: "/x/word/snd/snd_word_01.mp3",
+          url: "https://metaon.s3.ap-northeast-2.amazonaws.com/MetaOn3/BookData/x/word/snd/snd_word_01.mp3",
+          mimeType: "audio/mpeg",
+          category: "word"
+        },
+        {
+          path: "Lessons/L1/D1/npcqhk/script.json",
+          sourcePath: "/x/npcqhk/script.json",
+          url: "https://metaon.s3.ap-northeast-2.amazonaws.com/MetaOn3/BookData/x/npcqhk/script.json",
+          mimeType: "application/json",
+          category: "npcqhk"
+        }
+      ]
+    };
+    vi.mocked(getBookResourceManifest).mockResolvedValue(manifest);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) =>
+        url.includes("/npcqhk/") ? new Response("nope", { status: 404 }) : new Response("audio", { status: 200 })
+      )
+    );
+
+    // The 404 on the NPC resource must not throw.
+    const pkg = await downloadAndCacheBookPackage(book);
+    expect(pkg.npcScriptPaths).toEqual([]);
+    const savedFiles = vi.mocked(indexedDbStorage.savePackage).mock.calls[0][1].map((file) => file.path);
+    expect(savedFiles).toContain("Lessons/L1/D1/word/snd/snd_word_01.mp3");
+    expect(savedFiles).not.toContain("Lessons/L1/D1/npcqhk/script.json");
+  });
 });

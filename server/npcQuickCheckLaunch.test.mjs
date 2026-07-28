@@ -5,8 +5,8 @@ import {
 } from "./npcQuickCheckLaunch.mjs";
 
 const auth = {
-  userIdx: 42,
-  user: { userId: "smlee" }
+  account: { userId: "family01" },
+  profile: { userIdx: 42 }
 };
 
 const body = {
@@ -32,7 +32,7 @@ describe("NPC Quick Check launch", () => {
 
     expect(claims).toMatchObject({
       kind: "npc-quick-check",
-      userId: "smlee",
+      userId: "family01",
       userIdx: 42,
       bookIdx: 7228,
       attemptId: "qc_test",

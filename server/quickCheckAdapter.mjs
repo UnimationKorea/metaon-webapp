@@ -35,10 +35,9 @@ export function buildCurrentQuickCheckRequest(body) {
   };
 }
 
-export function buildLegacyQuickCheckRequest(body, userIdx) {
+export function buildLegacyQuickCheckRequest(body) {
   const source = recordValue(body);
   return {
-    userIdx: numberValue(userIdx ?? source.user_idx ?? source.userIdx),
     bookIdx: numberValue(source.book_idx ?? source.bookIdx),
     lessonNum: numberValue(source.lesson_num ?? source.lessonNum),
     dayNum: numberValue(source.day_num ?? source.dayNum)
@@ -90,7 +89,6 @@ export function buildCurrentQuickCheckSubmission(logIdx, questions, answersByQue
 }
 
 export function buildLegacyQuickCheckSubmission({
-  userIdx,
   context,
   questions,
   answersByQuestionId,
@@ -100,7 +98,6 @@ export function buildLegacyQuickCheckSubmission({
   const source = recordValue(context);
   return {
     payload: {
-      userIdx: numberValue(userIdx),
       bookIdx: numberValue(source.book_idx ?? source.bookIdx),
       bookDataVer: stringValue(source.book_data_ver ?? source.bookDataVer),
       lessonNum: numberValue(source.lesson_num ?? source.lessonNum),

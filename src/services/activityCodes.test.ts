@@ -45,4 +45,11 @@ describe("MetaOn activity code mapping", () => {
     expect(resolveActTypeFromActivityCode(MetaOnActivityCode.LegacyNpcQuickCheck)).toBe(ActType.QuickCheck);
     expect(activityTitleForCode(MetaOnActivityCode.LegacyNpcQuickCheck, "Fallback")).toBe("NPC Quick Check");
   });
+
+  it("maps NPCQHK02 (personalized NPC Quick Check) to the NPC Quick Check renderer", () => {
+    expect(resolveActTypeFromActivityCode(MetaOnActivityCode.NpcQuickCheck2)).toBe(ActType.QuickCheck);
+    expect(canonicalActivityCodeForActType(ActType.QuickCheck, MetaOnActivityCode.NpcQuickCheck2))
+      .toBe(MetaOnActivityCode.NpcQuickCheck2);
+    expect(activityTitleForCode(MetaOnActivityCode.NpcQuickCheck2, "Fallback")).toBe("NPC Quick Check");
+  });
 });

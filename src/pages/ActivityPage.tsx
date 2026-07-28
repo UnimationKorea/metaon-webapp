@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { useNavigate, useParams } from "react-router-dom";
 import { endStudy, startStudy } from "../api/uniplanetApi";
 import { activityControlAssets } from "../components/ActivityImageControls";
+import { ActivityCompletionCelebration } from "../components/ActivityCompletionCelebration";
 import { ActivityTopBar } from "../components/ActivityTopBar";
 import { EmptyState } from "../components/EmptyState";
 import { useBookPackage } from "../hooks/useBookPackage";
@@ -25,6 +26,7 @@ export function ActivityPage() {
   const [isFullscreen, setIsFullscreen] = useState(isDocumentFullscreen);
   const [studyLogIdx, setStudyLogIdx] = useState<number>();
   const [studyError, setStudyError] = useState<string>();
+  const [celebration, setCelebration] = useState<{ firstStudy: boolean; points?: number } | null>(null);
   const params = useParams();
   const bookIdx = Number(params.bookIdx || 0);
   const routeDayIdx = Number(params.dayIdx || 0);
@@ -35,7 +37,7 @@ export function ActivityPage() {
   const dayId = params.dayId || "1:1";
   const actNum = Number(params.actNum || 0);
   const { catalog, isLoading } = useCatalog();
-  const { completeActivity, createNotification, getBookProgress } = useHubState();
+  const { completeActivity, createNotification, getBookProgress, recordRecentBook } = useHubState();
   const book = useMemo(
     () => (bookIdx ? findBookByIdx(catalog, bookIdx) : findBook(catalog, seriesGroup, seriesIdx, bookId)),
     [bookId, bookIdx, catalog, seriesGroup, seriesIdx]
@@ -57,7 +59,8 @@ export function ActivityPage() {
   const normalizedActivityCode = normalizeActivityCode(activity?.activityCode);
   const isNpcQuickCheck =
     normalizedActivityCode === MetaOnActivityCode.NpcQuickCheck ||
-    normalizedActivityCode === MetaOnActivityCode.LegacyNpcQuickCheck;
+    normalizedActivityCode === MetaOnActivityCode.LegacyNpcQuickCheck ||
+    normalizedActivityCode === MetaOnActivityCode.NpcQuickCheck2;
   const activityLayoutStyle = {
     "--unity-activity-bg": `url("${getActivityBackgroundUrl(activity?.actType)}")`
   } as CSSProperties;
@@ -76,6 +79,7 @@ export function ActivityPage() {
     let cancelled = false;
     setStudyLogIdx(undefined);
     setStudyError(undefined);
+    setCelebration(null);
     completionLockRef.current = false;
     learnEventRecorderRef.current.reset();
     if (!activity?.actIdx) return undefined;
@@ -97,6 +101,10 @@ export function ActivityPage() {
       cancelled = true;
     };
   }, [activity?.actIdx]);
+
+  useEffect(() => {
+    if (book) recordRecentBook(packageKeyFor(book));
+  }, [book, recordRecentBook]);
 
   if (isLoading) {
     return <EmptyState title="Loading activity" detail="Resolving book and package metadata." />;
@@ -139,41 +147,62 @@ export function ActivityPage() {
     }
   }
 
-  async function markComplete(result?: ActivityCompletionResult) {
-    if (!book || !activity || isComplete || completionLockRef.current) return;
-    completionLockRef.current = true;
-    if (isNpcQuickCheck) {
-      learnEventRecorderRef.current.record({
-        action: "activity_complete",
-        item_type: "activity",
-        item_idx: activity.actIdx ?? null,
-        score: result?.score,
-        extra: {
-          source: "npc_quick_check",
-          correct_count: result?.correctCount,
-          new_points: result?.newPoints,
-          total: result?.total
+  async function finishActivity(result?: ActivityCompletionResult) {
+    if (!book || !activity) return;
+    // Points are only awarded on the first study by the existing server flow. The star-dust
+    // celebration is shown on every completion regardless; the points number appears only when a
+    // positive value is available and it is the first study.
+    const firstStudy = !isComplete;
+    let awardedPoints = firstStudy ? positivePoints(result?.newPoints) : undefined;
+
+    if (firstStudy && !completionLockRef.current) {
+      completionLockRef.current = true;
+      if (isNpcQuickCheck) {
+        learnEventRecorderRef.current.record({
+          action: "activity_complete",
+          item_type: "activity",
+          item_idx: activity.actIdx ?? null,
+          score: result?.score,
+          extra: {
+            source: "npc_quick_check",
+            correct_count: result?.correctCount,
+            new_points: result?.newPoints,
+            total: result?.total
+          }
+        });
+      }
+      if (studyLogIdx) {
+        try {
+          const endResult = await endStudy({ log_idx: studyLogIdx });
+          const endPoints = positivePoints(pointsFromStudyEnd(endResult));
+          if (endPoints != null) awardedPoints = endPoints;
+        } catch (caught) {
+          setStudyError(caught instanceof Error ? caught.message : String(caught));
         }
+        try {
+          await learnEventRecorderRef.current.flush(studyLogIdx);
+        } catch (caught) {
+          setStudyError(caught instanceof Error ? `LearnEvent 저장 실패: ${caught.message}` : `LearnEvent 저장 실패: ${String(caught)}`);
+        }
+      }
+      completeActivity(packageKeyFor(book), activity.id);
+      createNotification({
+        title: "Activity 완료",
+        body: `${book.bookName} / ${activity.title} 진행 상태가 저장되었습니다.`,
+        tone: "success"
       });
     }
-    if (studyLogIdx) {
-      try {
-        await endStudy({ log_idx: studyLogIdx });
-      } catch (caught) {
-        setStudyError(caught instanceof Error ? caught.message : String(caught));
-      }
-      try {
-        await learnEventRecorderRef.current.flush(studyLogIdx);
-      } catch (caught) {
-        setStudyError(caught instanceof Error ? `LearnEvent 저장 실패: ${caught.message}` : `LearnEvent 저장 실패: ${String(caught)}`);
-      }
+
+    setCelebration({ firstStudy, points: awardedPoints });
+  }
+
+  function handleCelebrationDone() {
+    setCelebration(null);
+    if (isLastActivity) {
+      void returnToBook();
+    } else {
+      goToActivity(currentActivityIndex + 1);
     }
-    completeActivity(packageKeyFor(book), activity.id);
-    createNotification({
-      title: "Activity 완료",
-      body: `${book.bookName} / ${activity.title} 진행 상태가 저장되었습니다.`,
-      tone: "success"
-    });
   }
 
   return (
@@ -193,7 +222,7 @@ export function ActivityPage() {
         activity,
         learnEventRecorder: learnEventRecorderRef.current,
         studyLogIdx,
-        onComplete: markComplete,
+        onComplete: finishActivity,
         onExit: returnToBook
       })}
       {studyError ? <p className="activity-study-error">{studyError}</p> : null}
@@ -204,11 +233,38 @@ export function ActivityPage() {
           className={`hub-activity-complete-button${isComplete ? " is-complete" : ""}`}
           title="완료"
           type="button"
-          onClick={() => void markComplete()}
+          onClick={() => void finishActivity()}
         >
           <img aria-hidden="true" draggable={false} src={activityControlAssets.check} alt="" />
         </button>
       ) : null}
+      {celebration ? (
+        <ActivityCompletionCelebration
+          firstStudy={celebration.firstStudy}
+          points={celebration.points}
+          onDone={handleCelebrationDone}
+        />
+      ) : null}
     </div>
+  );
+}
+
+function positivePoints(value: unknown): number | undefined {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function pointsFromStudyEnd(value: unknown): unknown {
+  if (!value || typeof value !== "object") return undefined;
+  const record = value as Record<string, unknown>;
+  return (
+    record.new_point ??
+    record.newPoint ??
+    record.add_point ??
+    record.addPoint ??
+    record.get_point ??
+    record.reward_point ??
+    record.new_points ??
+    record.point
   );
 }

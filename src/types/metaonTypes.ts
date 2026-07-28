@@ -162,6 +162,11 @@ export type BookPackage = {
   totalFiles: number;
   totalBytes: number;
   lessonDays: LessonDay[];
+  // Virtual paths of NPC Quick Check script.json files that were actually cached. NPC resources
+  // are only prepared for some books, so this lets the Book page hide NPC activities whose
+  // resources are missing. Undefined on packages cached before this was tracked (treat as "all
+  // present" — those imports only succeeded because every resource downloaded).
+  npcScriptPaths?: string[];
   manifest?: unknown;
 };
 

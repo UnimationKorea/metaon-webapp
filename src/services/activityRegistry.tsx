@@ -369,12 +369,15 @@ const npcQuickCheckRenderer: ActivityRenderer = {
   render: (context) => <NpcQuickCheckActivity context={context} />
 };
 
+const NPC_QUICK_CHECK_CODES = new Set<string>([
+  MetaOnActivityCode.NpcQuickCheck,
+  MetaOnActivityCode.LegacyNpcQuickCheck,
+  MetaOnActivityCode.NpcQuickCheck2
+]);
+
 export function getActivityRenderer(actType?: ActType, activityCode?: string): ActivityRenderer {
   const normalizedActivityCode = normalizeActivityCode(activityCode);
-  if (
-    normalizedActivityCode === MetaOnActivityCode.NpcQuickCheck ||
-    normalizedActivityCode === MetaOnActivityCode.LegacyNpcQuickCheck
-  ) {
+  if (NPC_QUICK_CHECK_CODES.has(normalizedActivityCode)) {
     return npcQuickCheckRenderer;
   }
 

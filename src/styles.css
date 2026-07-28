@@ -3364,14 +3364,16 @@ button.image-page-control:hover:not(:disabled) {
   max-width: 100%;
   color: #141414;
   font-size: 100px;
-  line-height: 1;
+  /* Pretendard 900 sits low in its line box (ink descender ~0.24em), so line-height:1 + overflow:hidden
+     sheared the bottoms off g/y/p. Auto-fit already guarantees the word fits the width, and the card
+     face clips any overflow, so let the descenders paint instead of clipping them here. */
+  line-height: 1.2;
   font-weight: 900;
   letter-spacing: 0;
   white-space: nowrap;
-  overflow: hidden;
+  overflow: visible;
   overflow-wrap: normal;
   word-break: normal;
-  text-overflow: clip;
   text-align: center;
 }
 
@@ -3381,7 +3383,7 @@ button.image-page-control:hover:not(:disabled) {
 
 .wdca-card-copy.has-more-info .wdca-card-word {
   font-size: 80px;
-  line-height: 1.1;
+  line-height: 1.2;
 }
 
 .wdca-card-more-info {

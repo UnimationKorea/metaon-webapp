@@ -6,6 +6,7 @@ const MIME_BY_EXTENSION: Record<string, string> = {
   webp: "image/webp",
   mp3: "audio/mpeg",
   wav: "audio/wav",
+  webm: "audio/webm",
   mp4: "video/mp4",
   m3u8: "application/vnd.apple.mpegurl",
   json: "application/json",

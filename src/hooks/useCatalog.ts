@@ -1,35 +1,51 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getBookCatalog } from "../api/uniplanetApi";
-import { sampleCatalog } from "../data/sampleCatalog";
 import { useAuth } from "./useAuth";
 import type { BookCatalog, SeriesData, SeriesGroup } from "../types/metaonTypes";
 
 export function useCatalog() {
-  const { authVersion } = useAuth();
+  const { authVersion, isAuthenticated, isLoading: isAuthLoading, profile } = useAuth();
   const [catalog, setCatalog] = useState<BookCatalog>();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [usingSample, setUsingSample] = useState(false);
+  const requestIdRef = useRef(0);
+  const selectedProfileId = isAuthenticated && profile?.userIdx ? profile.userIdx : 0;
 
   const reload = useCallback(async (options: { refresh?: boolean } = {}) => {
+    const requestId = ++requestIdRef.current;
     setIsLoading(true);
     setError(undefined);
+    // A catalog is scoped to the selected learner, not merely to the account session.
+    // Do not show stale/sample brands while the learner selection is incomplete.
+    if (!selectedProfileId) {
+      setCatalog(undefined);
+      setUsingSample(false);
+      setIsLoading(false);
+      return;
+    }
     try {
       const remoteCatalog = await getBookCatalog({ refresh: options.refresh });
+      if (requestId !== requestIdRef.current) return;
       setCatalog(remoteCatalog);
       setUsingSample(false);
     } catch (caught) {
-      setCatalog(sampleCatalog);
-      setUsingSample(true);
+      if (requestId !== requestIdRef.current) return;
+      setCatalog(undefined);
+      setUsingSample(false);
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
-      setIsLoading(false);
+      if (requestId === requestIdRef.current) setIsLoading(false);
     }
-  }, []);
+  }, [selectedProfileId]);
 
   useEffect(() => {
+    if (isAuthLoading) return;
     reload();
-  }, [authVersion, reload]);
+    return () => {
+      requestIdRef.current += 1;
+    };
+  }, [authVersion, isAuthLoading, reload]);
 
   const totals = useMemo(() => {
     const brands = catalog?.brands.length || 0;

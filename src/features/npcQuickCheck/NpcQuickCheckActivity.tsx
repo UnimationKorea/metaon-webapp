@@ -18,6 +18,8 @@ import {
   sanitizeQuickCheckQuestions
 } from "./npcQuickCheckProtocol";
 import { loadNpcQuickCheckResource, type NpcQuickCheckResourceBundle } from "./npcQuickCheckResourceAdapter";
+import { loadNpcQuickCheck2Resource } from "./npcQuickCheck2ResourceAdapter";
+import { MetaOnActivityCode, normalizeActivityCode } from "../../services/activityCodes";
 import {
   npcScenarioNode,
   npcScenarioQuestionNode,
@@ -82,7 +84,10 @@ export function NpcQuickCheckActivity({ context }: { context: ActivityRendererCo
     scenarioRef.current = null;
 
     async function prepare() {
-      const nextBundle = await loadNpcQuickCheckResource(sourceContext);
+      const isNpcQuickCheck2 =
+        normalizeActivityCode(sourceContext.activity?.activityCode) === MetaOnActivityCode.NpcQuickCheck2;
+      const loadResource = isNpcQuickCheck2 ? loadNpcQuickCheck2Resource : loadNpcQuickCheckResource;
+      const nextBundle = await loadResource(sourceContext);
       const initialAnswers = Object.fromEntries(
         nextBundle.questions.map((question) => [question.id, createEmptyQuickCheckAnswer(question)])
       );
@@ -141,8 +146,7 @@ export function NpcQuickCheckActivity({ context }: { context: ActivityRendererCo
           item_type: "activity",
           item_idx: context.activity?.actIdx ?? null,
           extra: eventExtra(activeBundle.attemptId, "activity", "npc_intro", {
-            protocol_version: NPC_QUICK_CHECK_PROTOCOL_VERSION,
-            source: "npcqhk_resource"
+            protocol_version: NPC_QUICK_CHECK_PROTOCOL_VERSION
           })
         });
         recordScenarioEvent(context, activeBundle.attemptId, scenario, "scenario_start", scenario.startNodeId, {
@@ -290,8 +294,7 @@ export function NpcQuickCheckActivity({ context }: { context: ActivityRendererCo
           score: result.total > 0 ? Math.round((result.correctCount / result.total) * 100) : 0,
           extra: eventExtra(activeBundle.attemptId, "activity", "activity_submit", {
             correct_count: result.correctCount,
-            total: result.total,
-            source: "npcqhk_resource"
+            total: result.total
           })
         });
         recordScenarioEvent(context, activeBundle.attemptId, scenario, "scenario_complete", endingNode.id, {
@@ -392,8 +395,7 @@ function recordContentMasteryEvents(
       time_ms: timeMs,
       extra: eventExtra(attemptId, question.id, `mastery:${ref.itemType}:${ref.itemIdx}`, {
         q_idx: question.qIdx,
-        sub_item_index: ref.subItemIndex,
-        source: "npcqhk_resource"
+        sub_item_index: ref.subItemIndex
       })
     });
   });
@@ -435,15 +437,18 @@ function recordScenarioEvent(
       scenario_id: scenario.scenarioId,
       scenario_version: scenario.version,
       node_id: nodeId,
-      source: "npcqhk_resource",
       ...detail
     })
   });
 }
 
+function sourceTag(attemptId: string): string {
+  return attemptId.startsWith("npcqhk2:") ? "npcqhk2_resource" : "npcqhk_resource";
+}
+
 function eventExtra(attemptId: string, itemId: string, action: string, detail: Record<string, unknown> = {}) {
   return {
-    source: "npcqhk_resource",
+    source: sourceTag(attemptId),
     client_event_id: npcQuickCheckClientEventId(attemptId, itemId, action),
     ...detail
   };

@@ -1,6 +1,78 @@
 import { describe, expect, it } from "vitest";
-import { getHubBooks, getHubBrands, percent, routeForActivity, routeForPlacementRecommendation } from "./hubCatalog";
+import {
+  getHubBooks,
+  getHubBrands,
+  getRecentBooks,
+  getRecommendedBooks,
+  percent,
+  routeForActivity,
+  routeForPlacementRecommendation
+} from "./hubCatalog";
 import type { BookCatalog } from "../types/metaonTypes";
+
+function razKidsBook(seriesGroup: number, seriesIdx: number, bookIdx: number, bookId: string, bookName: string) {
+  return {
+    seriesGroup,
+    seriesIdx,
+    bookIdx,
+    bookId,
+    bookName,
+    bookNumber: 1,
+    lexile: "",
+    bUrl: `MetaOn/BookData/${seriesGroup}/${seriesIdx}/`,
+    thumbnailUrl: "",
+    themeId: 0,
+    appVersion: "1"
+  };
+}
+
+const razKidsCatalog: BookCatalog = {
+  resultCode: 1,
+  resultMessage: "ok",
+  fetchedAt: "2026-06-26T00:00:00.000Z",
+  brands: [
+    {
+      brandId: 21,
+      brandName: "Raz-Kids(RHK)",
+      mainImageUrl: "",
+      groups: [
+        {
+          groupId: 7,
+          groupName: "Raz-Kids Grade 2",
+          groupNumber: 70,
+          appVersion: "2.2.25",
+          brandId: 21,
+          brandName: "Raz-Kids(RHK)",
+          seriesList: [
+            {
+              seriesGroup: 7,
+              seriesIdx: 600,
+              seriesName: "Level H",
+              seriesNumber: 1,
+              mainImageUrl: "",
+              icon1Url: "",
+              icon2Url: "",
+              appVersion: "2.2.25",
+              books: [razKidsBook(7, 600, 9001, "G2LH01", "Level H Book")]
+            },
+            {
+              seriesGroup: 7,
+              seriesIdx: 601,
+              seriesName: "Level I",
+              seriesNumber: 2,
+              mainImageUrl: "",
+              icon1Url: "",
+              icon2Url: "",
+              appVersion: "2.2.25",
+              books: [razKidsBook(7, 601, 9002, "G2LI01", "Level I Book"), razKidsBook(7, 601, 9003, "G2LI02", "Level I Book 2")]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  groups: []
+};
 
 const catalog: BookCatalog = {
   resultCode: 1,
@@ -162,5 +234,21 @@ describe("hubCatalog", () => {
     expect(routeForPlacementRecommendation(razCatalog, { grade: "2", level: "I" })).toBe(
       "/study?brand=21&group=7&series=601&book=9002&menu=1"
     );
+  });
+
+  it("derives recommended books from the placement target level, anchored at the matched series", () => {
+    const recommended = getRecommendedBooks(razKidsCatalog, { grade: "2", level: "I" }, 7);
+    // Anchor at Level I, then backfill remaining books so the row still fills up.
+    expect(recommended.map((item) => item.book.bookIdx)).toEqual([9002, 9003, 9001]);
+  });
+
+  it("returns no recommended books when there is no placement target", () => {
+    expect(getRecommendedBooks(razKidsCatalog, undefined, 7)).toHaveLength(3);
+    expect(getRecommendedBooks(undefined, { grade: "2", level: "I" }, 7)).toEqual([]);
+  });
+
+  it("resolves recent book keys in order, de-duplicated and capped", () => {
+    const recent = getRecentBooks(razKidsCatalog, ["book:9003", "book:unknown", "book:9001", "book:9003"], 8);
+    expect(recent.map((item) => item.book.bookIdx)).toEqual([9003, 9001]);
   });
 });

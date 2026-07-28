@@ -1,7 +1,6 @@
 export type ExternalExperienceKind = "ai-chat" | "metaverse";
 
 const SESSION_ID_KEY = "metaon-session-id";
-const USER_IDX_KEY = "metaon-user-idx";
 
 export type ExternalLaunchRequest = {
   bookId?: string;
@@ -47,7 +46,6 @@ export async function createExternalLaunch(payload: ExternalLaunchRequest): Prom
 
 function externalSessionHeaders(): HeadersInit {
   return {
-    "X-MetaOn-Session-Id": window.localStorage.getItem(SESSION_ID_KEY) || "",
-    "X-MetaOn-User-Idx": window.localStorage.getItem(USER_IDX_KEY) || ""
+    "X-MetaOn-Session-Id": window.localStorage.getItem(SESSION_ID_KEY) || ""
   };
 }

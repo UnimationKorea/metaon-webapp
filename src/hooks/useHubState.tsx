@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useAuth } from "./useAuth";
 import type { RazResult } from "../placementTest/src/types";
 
@@ -27,6 +27,11 @@ export type HubProgress = {
   bookKey: string;
   completedActivityIds: string[];
   updatedAt: string;
+};
+
+export type HubRecentBook = {
+  bookKey: string;
+  openedAt: string;
 };
 
 export type PlacementStatus = "not-started" | "in-progress" | "completed";
@@ -76,6 +81,8 @@ type HubStateValue = {
   notifications: HubNotification[];
   placement: HubPlacementState;
   progress: HubProgress[];
+  recentBooks: HubRecentBook[];
+  recordRecentBook: (bookKey: string) => void;
   resetPlacement: () => void;
   savePlacementAnswer: (answer: HubPlacementAnswer, nextQuestionIndex: number) => void;
   setApplication: (application: InstitutionApplication | null) => void;
@@ -91,6 +98,8 @@ const NOTIFICATIONS_KEY = "metaon.hub.notifications";
 const PROGRESS_KEY = "metaon.hub.progress";
 const APPLICATION_KEY = "metaon.hub.institutionApplication";
 const PLACEMENT_KEY = "metaon.hub.placement";
+const RECENT_BOOKS_KEY = "metaon.hub.recentBooks";
+const RECENT_BOOKS_LIMIT = 12;
 
 const seedNotifications: HubNotification[] = [
   {
@@ -119,16 +128,18 @@ const defaultPlacement: HubPlacementState = {
 const HubStateContext = createContext<HubStateValue | null>(null);
 
 export function HubStateProvider({ children }: { children: ReactNode }) {
-  const { isAuthenticated, user: authUser } = useAuth();
-  const [profile, setProfile] = useLocalStorageState<HubProfile>(PROFILE_KEY, defaultProfile);
-  const [notifications, setNotifications] = useLocalStorageState<HubNotification[]>(NOTIFICATIONS_KEY, seedNotifications);
-  const [progress, setProgress] = useLocalStorageState<HubProgress[]>(PROGRESS_KEY, []);
-  const [application, setStoredApplication] = useLocalStorageState<InstitutionApplication | null>(APPLICATION_KEY, null);
-  const [placement, setPlacement] = useLocalStorageState<HubPlacementState>(PLACEMENT_KEY, defaultPlacement);
+  const { isAuthenticated, profile: selectedProfile } = useAuth();
+  const storageScope = isAuthenticated && selectedProfile?.userIdx ? `profile.${selectedProfile.userIdx}` : "guest";
+  const [profile, setProfile] = useLocalStorageState<HubProfile>(scopedKey(PROFILE_KEY, storageScope), defaultProfile);
+  const [notifications, setNotifications] = useLocalStorageState<HubNotification[]>(scopedKey(NOTIFICATIONS_KEY, storageScope), seedNotifications);
+  const [progress, setProgress] = useLocalStorageState<HubProgress[]>(scopedKey(PROGRESS_KEY, storageScope), []);
+  const [application, setStoredApplication] = useLocalStorageState<InstitutionApplication | null>(scopedKey(APPLICATION_KEY, storageScope), null);
+  const [placement, setPlacement] = useLocalStorageState<HubPlacementState>(scopedKey(PLACEMENT_KEY, storageScope), defaultPlacement);
+  const [recentBooks, setRecentBooks] = useLocalStorageState<HubRecentBook[]>(scopedKey(RECENT_BOOKS_KEY, storageScope), []);
 
   const user = useMemo<HubUser>(() => {
-    const userId = authUser?.userId || (authUser?.userIdx ? `user-${authUser.userIdx}` : "guest");
-    const name = profile.name || authUser?.username || authUser?.userId || (isAuthenticated ? "MetaOn Learner" : "Guest");
+    const userId = selectedProfile?.userIdx ? `profile-${selectedProfile.userIdx}` : "guest";
+    const name = isAuthenticated ? selectedProfile?.username || "MetaOn Learner" : profile.name || "Guest";
     return {
       id: userId,
       name,
@@ -136,7 +147,7 @@ export function HubStateProvider({ children }: { children: ReactNode }) {
       role: profile.role,
       entitlementStatus: isAuthenticated ? profile.entitlementStatus : "none"
     };
-  }, [authUser, isAuthenticated, profile]);
+  }, [isAuthenticated, profile, selectedProfile]);
 
   const updateUser = useCallback(
     (next: Partial<HubProfile>) => {
@@ -169,6 +180,18 @@ export function HubStateProvider({ children }: { children: ReactNode }) {
       });
     },
     [setProgress]
+  );
+
+  const recordRecentBook = useCallback(
+    (bookKey: string) => {
+      if (!bookKey) return;
+      setRecentBooks((items) => {
+        const openedAt = new Date().toISOString();
+        const withoutCurrent = items.filter((item) => item.bookKey !== bookKey);
+        return [{ bookKey, openedAt }, ...withoutCurrent].slice(0, RECENT_BOOKS_LIMIT);
+      });
+    },
+    [setRecentBooks]
   );
 
   const createNotification = useCallback(
@@ -277,6 +300,8 @@ export function HubStateProvider({ children }: { children: ReactNode }) {
       notifications,
       placement,
       progress,
+      recentBooks,
+      recordRecentBook,
       resetPlacement,
       savePlacementAnswer,
       setApplication,
@@ -296,6 +321,8 @@ export function HubStateProvider({ children }: { children: ReactNode }) {
       notifications,
       placement,
       progress,
+      recentBooks,
+      recordRecentBook,
       resetPlacement,
       savePlacementAnswer,
       setApplication,
@@ -320,6 +347,13 @@ export function useHubState() {
 function useLocalStorageState<T>(key: string, fallback: T) {
   const [value, setValue] = useState<T>(() => readStoredValue(key, fallback));
 
+  useEffect(() => {
+    setValue(readStoredValue(key, fallback));
+    // The fallback values for scoped stores may be inline arrays. The key is the
+    // intentional state boundary when the selected profile changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
   const setAndStore = useCallback(
     (nextValue: T | ((current: T) => T)) => {
       setValue((current) => {
@@ -336,6 +370,10 @@ function useLocalStorageState<T>(key: string, fallback: T) {
   );
 
   return [value, setAndStore] as const;
+}
+
+function scopedKey(key: string, scope: string): string {
+  return `${key}.${scope}`;
 }
 
 function readStoredValue<T>(key: string, fallback: T): T {

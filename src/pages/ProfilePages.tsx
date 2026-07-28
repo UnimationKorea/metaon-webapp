@@ -1,8 +1,10 @@
-import { AlertTriangle, ArrowLeft, BookOpen, Building2, CheckCircle2, Edit3, LockKeyhole, UserRound } from "lucide-react";
+import { AlertTriangle, ArrowLeft, BookOpen, Building2, CheckCircle2, Edit3, KeyRound, LockKeyhole, Plus, Save, Trash2, UserCheck, UserRound, UserX } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCatalog } from "../hooks/useCatalog";
+import { useAuth } from "../hooks/useAuth";
 import { useHubState, type HubEntitlementStatus, type HubNotification } from "../hooks/useHubState";
+import { MetaOnApiError } from "../api/uniplanetApi";
 import { fallbackCoverFor, getHubBooks, percent } from "../services/hubCatalog";
 import { packageKeyFor } from "../services/packageKeys";
 
@@ -15,6 +17,9 @@ const institutions = [
 export function ProfilePage() {
   const navigate = useNavigate();
   const { updateUser, user } = useHubState();
+  const { account, profile, releaseProfile } = useAuth();
+  const canManageProfiles = account?.canManageProfiles !== false;
+  const canChangePassword = account?.canChangePassword !== false;
   return (
     <section className="hub-profile-screen">
       <div className="hub-profile-header">
@@ -23,10 +28,25 @@ export function ProfilePage() {
           <h1>{user.name}</h1>
           <p>{user.role === "institution" ? "기관회원" : "일반회원"} · {entitlementLabel(user.entitlementStatus)}</p>
         </div>
-        <button className="hub-secondary-action" type="button" onClick={() => navigate("/profile/edit")}>
-          <Edit3 size={17} strokeWidth={2.2} />
-          편집
-        </button>
+        <div className="hub-button-row">
+          {canManageProfiles ? (
+            <button className="hub-secondary-action" type="button" onClick={() => navigate("/profile/edit")}>
+              <Edit3 size={17} strokeWidth={2.2} />
+              편집
+            </button>
+          ) : null}
+          <button
+            className="hub-secondary-action"
+            type="button"
+            onClick={() => {
+              void releaseProfile().finally(() => navigate("/profiles"));
+            }}
+          >
+            프로필 전환
+          </button>
+          {canManageProfiles ? <Link className="hub-secondary-action" to="/profiles/manage">프로필 관리</Link> : null}
+          {canChangePassword ? <Link className="hub-secondary-action" to="/account/password">비밀번호 변경</Link> : null}
+        </div>
       </div>
 
       <div className="hub-profile-grid">
@@ -69,8 +89,12 @@ export function ProfilePage() {
 export function ProfileEditPage() {
   const navigate = useNavigate();
   const { updateUser, user } = useHubState();
-  const [name, setName] = useState(user.name);
+  const { account, profile, renameProfile } = useAuth();
+  const canManageProfiles = account?.canManageProfiles !== false;
+  const [name, setName] = useState(profile?.username || user.name);
   const [avatar, setAvatar] = useState(user.avatar);
+  const [error, setError] = useState<string>();
+  const [isSaving, setIsSaving] = useState(false);
 
   return (
     <section className="hub-form-screen">
@@ -81,7 +105,7 @@ export function ProfileEditPage() {
       <div className="hub-section-heading">
         <div>
           <h1>프로필 편집</h1>
-          <p>학생 이름과 아바타 이니셜을 저장합니다.</p>
+          <p>프로필 이름은 MetaOn 계정에 저장하고, 아바타 이니셜은 이 기기에 저장합니다.</p>
         </div>
       </div>
       <label className="hub-field">
@@ -95,13 +119,256 @@ export function ProfileEditPage() {
       <button
         className="hub-primary-action"
         type="button"
+        disabled={isSaving || !name.trim() || !profile || !canManageProfiles}
         onClick={() => {
-          updateUser({ avatar, name });
-          navigate("/profile");
+          if (!profile) return;
+          setError(undefined);
+          setIsSaving(true);
+          void renameProfile(profile.userIdx, name)
+            .then(() => {
+              updateUser({ avatar });
+              navigate("/profile");
+            })
+            .catch((caught) => setError(caught instanceof Error ? caught.message : String(caught)))
+            .finally(() => setIsSaving(false));
         }}
       >
-        저장
+        {isSaving ? "저장 중" : "저장"}
       </button>
+      {!canManageProfiles ? <p className="hub-warning-copy">학원 소속 계정의 프로필 편집은 학원 관리자만 할 수 있습니다.</p> : null}
+      {error ? <p className="hub-error-copy">{error}</p> : null}
+    </section>
+  );
+}
+
+export function ProfileManagePage() {
+  const navigate = useNavigate();
+  const {
+    account,
+    createProfile,
+    deleteProfile,
+    error: authError,
+    isAccountAuthenticated,
+    isLoading,
+    managedProfiles,
+    refreshManagedProfiles,
+    renameProfile,
+    setProfileActive
+  } = useAuth();
+  const [newProfileName, setNewProfileName] = useState("");
+  const [draftNames, setDraftNames] = useState<Record<number, string>>({});
+  const [message, setMessage] = useState<string>();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const canManageProfiles = account?.canManageProfiles !== false;
+  const activeCount = managedProfiles.filter((profile) => profile.isActive).length;
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (!isAccountAuthenticated) {
+      navigate("/login", { replace: true });
+      return;
+    }
+    if (!canManageProfiles) return;
+    void refreshManagedProfiles().catch(() => undefined);
+  }, [canManageProfiles, isAccountAuthenticated, isLoading, navigate, refreshManagedProfiles]);
+
+  async function run(action: () => Promise<void>) {
+    setMessage(undefined);
+    setIsSubmitting(true);
+    try {
+      await action();
+    } catch (caught) {
+      setMessage(profileManagementErrorMessage(caught));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  if (isLoading || !isAccountAuthenticated) return null;
+
+  return (
+    <section className="hub-form-screen hub-profile-manager">
+      <Link className="hub-back-link" to="/profile">
+        <ArrowLeft size={17} />
+        프로필로
+      </Link>
+      <div className="hub-section-heading">
+        <div>
+          <h1>프로필 관리</h1>
+          <p>비활성 프로필은 학습 선택 화면에 보이지 않으며, 삭제된 프로필은 관리자만 복구할 수 있습니다.</p>
+        </div>
+      </div>
+
+      {!canManageProfiles ? (
+        <div className="hub-empty-state">
+          <LockKeyhole size={34} />
+          <strong>학원 관리자 관리 계정</strong>
+          <span>이 계정의 프로필 생성, 이름 변경, 비활성화와 삭제는 학원 관리자 화면에서 처리합니다.</span>
+        </div>
+      ) : (
+        <>
+          <form
+            className="hub-profile-create-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const username = newProfileName.trim();
+              if (!username) return;
+              void run(async () => {
+                await createProfile(username);
+                await refreshManagedProfiles();
+                setNewProfileName("");
+                setMessage("프로필을 추가했습니다.");
+              });
+            }}
+          >
+            <label className="hub-field">
+              <span>새 프로필 이름</span>
+              <input value={newProfileName} maxLength={30} onChange={(event) => setNewProfileName(event.target.value)} placeholder="예: 둘째" disabled={isSubmitting} />
+            </label>
+            <button className="hub-primary-action" type="submit" disabled={isSubmitting || !newProfileName.trim()}>
+              <Plus size={17} />
+              프로필 추가
+            </button>
+          </form>
+
+          <div className="hub-profile-manage-list" aria-live="polite">
+            {managedProfiles.map((managedProfile) => {
+              const draftName = draftNames[managedProfile.userIdx] ?? managedProfile.username;
+              const isLastActive = managedProfile.isActive && activeCount <= 1;
+              const isCurrent = managedProfile.isCurrent;
+              return (
+                <article className={`hub-profile-manage-row${managedProfile.isActive ? "" : " is-inactive"}`} key={managedProfile.userIdx}>
+                  <span className="hub-profile-choice-avatar">{managedProfile.username.slice(0, 2).toUpperCase()}</span>
+                  <div className="hub-profile-manage-main">
+                    <label className="hub-field compact">
+                      <span className="sr-only">{managedProfile.username} 프로필 이름</span>
+                      <input
+                        value={draftName}
+                        maxLength={30}
+                        disabled={isSubmitting}
+                        onChange={(event) => setDraftNames((current) => ({ ...current, [managedProfile.userIdx]: event.target.value }))}
+                      />
+                    </label>
+                    <small>{managedProfile.isActive ? "활성 프로필" : "비활성 프로필"}{isCurrent ? " · 현재 선택됨" : ""}</small>
+                  </div>
+                  <div className="hub-button-row compact">
+                    <button
+                      className="hub-secondary-action"
+                      type="button"
+                      disabled={isSubmitting || !draftName.trim() || draftName.trim() === managedProfile.username}
+                      onClick={() => void run(async () => {
+                        await renameProfile(managedProfile.userIdx, draftName.trim());
+                        await refreshManagedProfiles();
+                        setMessage("프로필 이름을 변경했습니다.");
+                      })}
+                    >
+                      <Save size={15} />
+                      저장
+                    </button>
+                    <button
+                      className="hub-secondary-action"
+                      type="button"
+                      disabled={isSubmitting || isCurrent || isLastActive}
+                      title={isCurrent ? "현재 선택된 프로필은 다른 프로필로 전환한 뒤 변경할 수 있습니다." : isLastActive ? "마지막 활성 프로필은 비활성화할 수 없습니다." : undefined}
+                      onClick={() => void run(async () => {
+                        await setProfileActive(managedProfile.userIdx, !managedProfile.isActive);
+                        setMessage(managedProfile.isActive ? "프로필을 비활성화했습니다." : "프로필을 다시 활성화했습니다.");
+                      })}
+                    >
+                      {managedProfile.isActive ? <UserX size={15} /> : <UserCheck size={15} />}
+                      {managedProfile.isActive ? "비활성화" : "활성화"}
+                    </button>
+                    <button
+                      className="hub-danger-action"
+                      type="button"
+                      disabled={isSubmitting || isCurrent || isLastActive}
+                      title={isCurrent ? "현재 선택된 프로필은 다른 프로필로 전환한 뒤 삭제할 수 있습니다." : isLastActive ? "마지막 활성 프로필은 삭제할 수 없습니다." : undefined}
+                      onClick={() => {
+                        if (!window.confirm(`${managedProfile.username} 프로필을 삭제하시겠습니까? 학습 데이터는 보존되지만 사용자가 직접 복구할 수 없습니다.`)) return;
+                        void run(async () => {
+                          await deleteProfile(managedProfile.userIdx);
+                          setMessage("프로필을 삭제했습니다.");
+                        });
+                      }}
+                    >
+                      <Trash2 size={15} />
+                      삭제
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </>
+      )}
+      {message || authError ? <p className="hub-profile-select-message">{message || authError}</p> : null}
+    </section>
+  );
+}
+
+export function PasswordChangePage() {
+  const navigate = useNavigate();
+  const { account, changePassword, error: authError, isAccountAuthenticated, isLoading } = useAuth();
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [message, setMessage] = useState<string>();
+  const [isSaving, setIsSaving] = useState(false);
+  const canChangePassword = account?.canChangePassword !== false;
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (!isAccountAuthenticated) navigate("/login", { replace: true });
+  }, [isAccountAuthenticated, isLoading, navigate]);
+
+  if (isLoading || !isAccountAuthenticated) return null;
+
+  return (
+    <section className="hub-form-screen hub-password-change-screen">
+      <Link className="hub-back-link" to="/profile">
+        <ArrowLeft size={17} />
+        프로필로
+      </Link>
+      <div className="hub-section-heading">
+        <div>
+          <h1>비밀번호 변경</h1>
+          <p>계정 비밀번호를 변경합니다. 현재 학습 프로필 선택 상태와는 별개로 처리됩니다.</p>
+        </div>
+      </div>
+      {!canChangePassword ? (
+        <p className="hub-warning-copy">학원 소속 계정의 비밀번호는 학원 관리자에게 변경을 요청해 주세요.</p>
+      ) : (
+        <form
+          className="hub-password-change-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (newPassword !== confirmPassword) {
+              setMessage("새 비밀번호와 확인 비밀번호가 일치하지 않습니다.");
+              return;
+            }
+            setMessage(undefined);
+            setIsSaving(true);
+            void changePassword(currentPassword, newPassword)
+              .then(() => {
+                setCurrentPassword("");
+                setNewPassword("");
+                setConfirmPassword("");
+                setMessage("비밀번호를 변경했습니다.");
+              })
+              .catch((caught) => setMessage(profileManagementErrorMessage(caught)))
+              .finally(() => setIsSaving(false));
+          }}
+        >
+          <label className="hub-field"><span>현재 비밀번호</span><input type="password" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} disabled={isSaving} /></label>
+          <label className="hub-field"><span>새 비밀번호</span><input type="password" autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} disabled={isSaving} /></label>
+          <label className="hub-field"><span>새 비밀번호 확인</span><input type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} disabled={isSaving} /></label>
+          <button className="hub-primary-action" type="submit" disabled={isSaving || !currentPassword || !newPassword || !confirmPassword}>
+            <KeyRound size={17} />
+            {isSaving ? "변경 중" : "비밀번호 변경"}
+          </button>
+        </form>
+      )}
+      {message || authError ? <p className="hub-profile-select-message">{message || authError}</p> : null}
     </section>
   );
 }
@@ -318,6 +585,21 @@ function statusLabel(status: "pending" | "approved" | "rejected"): string {
     approved: "승인",
     rejected: "반려"
   }[status];
+}
+
+function profileManagementErrorMessage(caught: unknown): string {
+  const resultCode = caught instanceof MetaOnApiError ? caught.resultCode : 0;
+  const fallback = caught instanceof Error ? caught.message : String(caught);
+  return {
+    310: "필수 입력값을 확인해 주세요.",
+    316: "현재 비밀번호가 일치하지 않습니다.",
+    340: "로그인 세션이 만료되었습니다. 다시 로그인해 주세요.",
+    341: "학원 소속 계정의 비밀번호는 학원 관리자만 변경할 수 있습니다.",
+    345: "선택한 프로필을 다시 확인해 주세요. 목록을 새로고침합니다.",
+    347: "이 계정의 프로필 관리는 학원 관리자 화면에서 처리합니다.",
+    348: "마지막 활성 프로필은 비활성화하거나 삭제할 수 없습니다. 새 프로필을 먼저 추가해 주세요.",
+    349: "같은 이름의 활성 프로필이 이미 있습니다. 다른 이름을 입력해 주세요."
+  }[resultCode] || fallback;
 }
 
 function notificationIcon(item: HubNotification) {

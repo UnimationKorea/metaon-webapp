@@ -1,8 +1,9 @@
 # MetaOn Webapp Codex Handoff
 
-> 작성일: 2026-07-15 KST
+> 작성일: 2026-07-21 KST
 > 주 작업 폴더: `D:\Codex\MetaOn\webapp`
 > 연동 Viewer 폴더: `D:\Codex\metaonlivechat`
+> 최근 구현 로그: [implementation_0721.md](implementation_0721.md) — NPCQHK02·징검다리 트레일·거인의 책장·MyZone 홈·별가루 연출
 > 이 문서는 다른 Codex 계정이 현재 구현을 이어받기 위한 운영·개발 인계 문서다. 비밀값, 로그인 비밀번호, service account 키 내용은 기록하지 않는다.
 
 ## 1. 프로젝트 목적
@@ -24,8 +25,8 @@ Unity 원본 프로젝트는 `D:\Codex\MetaOn`에 있다. Webapp은 Unity 프로
 
 | 구분 | 서비스 | GCP 프로젝트 | 현재 리비전 | URL |
 |---|---|---|---|---|
-| MetaOn 메인 Webapp + BFF | `metaon-webapp` | `gen-lang-client-0309121556` | `metaon-webapp-00076-j6s` | `https://metaon-webapp-geaypbs2uq-du.a.run.app` |
-| AI Speaking / NPC Activity Viewer | `metaon-web` | `meta-on-project-230224` | `metaon-web-00126-ngs` | `https://metaon-web-qvfybxizya-du.a.run.app` |
+| MetaOn 메인 Webapp + BFF | `metaon-webapp` | `gen-lang-client-0309121556` | `metaon-webapp-00094-75b` | `https://metaon-webapp-geaypbs2uq-du.a.run.app` |
+| AI Speaking / NPC Activity Viewer | `metaon-web` | `meta-on-project-230224` | `metaon-web-00127-jcf` | `https://metaon-web-qvfybxizya-du.a.run.app` |
 
 두 서비스는 별도 프로젝트다. `metaon-webapp`은 React + Express BFF이며, `metaon-web`은 `D:\Codex\metaonlivechat`의 Viewer/AI 경험을 제공한다. 서로 다른 폴더에서 잘못된 서비스 이름으로 배포하면 한쪽 기능을 덮어쓸 수 있으므로 반드시 구분한다.
 
@@ -33,7 +34,7 @@ Unity 원본 프로젝트는 `D:\Codex\MetaOn`에 있다. Webapp은 Unity 프로
 
 | 대상 | 명령 | 최근 결과 |
 |---|---|---|
-| MetaOn Webapp | `npm test` | 28 files, 127 tests 통과 |
+| MetaOn Webapp | `npm test` | 32 files, 178 tests 통과 |
 | MetaOn Webapp | `npm run build` | 통과 |
 | NPC/AI Viewer | `npm test` | 통과 |
 | NPC/AI Viewer | `npm run build:test` | 통과 |
@@ -47,16 +48,17 @@ Unity 원본 프로젝트는 `D:\Codex\MetaOn`에 있다. Webapp은 Unity 프로
 - 실제 MetaOn3 로그인과 HttpOnly 인증 cookie 기반 BFF를 구현했다.
 - MetaOn3 `getMyBrands`, `getBookInfo` 응답을 웹 카탈로그/Book manifest로 정규화했다.
 - ZIP 다운로드 방식은 기본 흐름에서 제거했다. S3 리소스를 직접 내려받아 IndexedDB `metaon-web-cache`에 저장한다.
-- Book 진입 시 리소스를 자동 다운로드하고, 다운로드 완료 후 Activity 큐브 흐름을 표시한다.
-- Home, Study Zone, 브랜드/Grade/Level 메뉴, Book 상세, 모바일 sidebar drawer, 배치고사, 프로필/알림/기관 화면을 구현했다.
-- Home에는 Placement Test, 이어서 학습, 오늘의 맞춤 학습, 추천 학습 UI 미리보기가 있다. 실제 추천 엔진은 아직 연결 전이다.
+- Book 진입 시 리소스를 자동 다운로드하고, 다운로드 완료 후 Activity 목록을 "징검다리 원정대" 트레일(순차 진행형, 폭에 따라 S자 줄바꿈 + U자 회전, 가로 스크롤 없음)로 표시한다. 리소스가 준비되지 않은 NPC Activity는 목록에서 숨긴다.
+- Home(MyZone), Study Zone, Book 상세, 배치고사, 프로필/알림/기관 화면을 구현했다. Study Zone은 좌측 sidebar를 제거하고 전체 폭 "거인의 책장" shelf wall + 상단바 검색 + 하단 Grade NAV(minimap) + 책장 테마 5종으로 재설계했다.
+- Home(MyZone) hero는 배치 결과에서 파생한 추천 Book(7개)과 최근 학습 Book을 실제 썸네일로 보여준다(배치 전에는 배치고사 CTA). 실제 mastery 기반 추천 엔진은 아직 연결 전이다.
 - AI Speaking과 메타버스는 HMAC launch token 기반 iframe 경험으로 연동한다.
 - Activity 화면은 1280x720 기준 전체 학습 화면을 우선하며, 상단 UI는 콘텐츠 간섭을 줄이는 방향으로 조정됐다.
 - Listen & Read는 E-book viewer/resource discovery를 우선 사용하고 기존 media fallback을 유지한다.
 - 주요 Word/Sentence/Reading/Listening/Quick Check Activity renderer와 Figma 기반 Activity UI가 구현되어 있다.
 - `learn_event` 수집, 녹음 업로드 경계, Activity 완료 시 study end/이벤트 flush 흐름을 추가했다.
+- Activity 완료 시 "별가루" 포인트 연출을 표시하고 다음 Activity로 자동 이동한다(마지막이면 Book 복귀). 포인트는 기존 서버 흐름대로 최초 학습만 적립하고, 연출은 완료 시 항상 노출한다.
 
-### 3.2 Quick Check와 NPCQHK01
+### 3.2 Quick Check와 NPC (NPCQHK01 / NPCQHK02)
 
 - 기존 `QCHK01` Quick Check는 유지한다.
 - `NPCQHK01`과 이전 코드 `QCNP01`은 Activity code 기준으로 NPC renderer를 선택한다.
@@ -65,6 +67,8 @@ Unity 원본 프로젝트는 `D:\Codex\MetaOn`에 있다. Webapp은 Unity 프로
 - NPC 대화, 자동 음성 재생, 선택 즉시 답안 제출, 정답/오답 분기, 결과 화면, 중복 제출 방지를 구현했다.
 - 최근 수정으로 NPC 입은 CSS로 만든 별도 입 도형을 제거하고, Jade 본체 TALK Lottie와 전용 mouth Lottie viseme 프레임을 음원 재생 상태에 연결했다.
 - 현재 리소스 기반 `NPCQHK01`은 결과를 `quizaccept`로 제출하지 않고 Activity 완료 및 LearnEvent를 기록한다. 과거 문서의 `QCNP01 + Quick Check API 제출` 설명은 이전 설계이므로 현재 소스를 우선한다.
+- **`NPCQHK02` 개인화 NPC Quick Check를 구현했다.** 입장 시 BFF `POST /api/learn/wrong-items`(book_idx)로 오답을 받아, 오답 item은 `weak` 변형·비오답 item은 `relearn` 변형으로 전체 item을 출제한다. `npcqhk2/script.json` + webm 오디오(비디오가 아닌 오디오이므로 `audio/webm`으로 강제)를 사용하고, NPCQHK01의 Viewer/RPC/scoring/LearnEvent 인프라를 그대로 재사용한다. 세션은 입장 시 wrong-items 스냅샷으로 1회 고정하며, 결과는 `contentRefs:[{itemType,itemIdx}]`를 실어 `answer_result`로 전송해 오답 mastery를 갱신한다. 오답이 하나도 없으면 전체가 `relearn`으로 출제된다.
+- NPC Viewer 화면을 태블릿 기준으로 정리했다: 문제수 칩 좌측 70px 이동, NPC 바닥 고정, 시작/결과 버튼 중앙 배치, Hint 버튼 제거.
 
 ### 3.3 연동 Viewer
 
@@ -77,10 +81,10 @@ Unity 원본 프로젝트는 `D:\Codex\MetaOn`에 있다. Webapp은 Unity 프로
 
 ### 우선 미완료
 
-1. **NPCQHK02 개인화 NPC Activity**
-   - 아직 구현되지 않았다. 학습자의 word/sentence 학습 결과를 받아 동적으로 복습하는 별도 Activity code다.
-   - UI는 NPCQHK01 Viewer를 재사용하되, Book `script.json`이 아니라 서버가 생성한 사용자별 고정 세션을 사용해야 한다.
-   - 상세 계획은 최근 대화의 `NPCQHK02 적용 계획`을 따른다.
+1. **NPCQHK02 upstream 계약 확정 및 등록**
+   - client 구현과 BFF `POST /api/learn/wrong-items` 라우트는 완료됐다(오답=weak·비오답=relearn 변형, `npcqhk2` 리소스, LearnEvent 결과 전송).
+   - 남은 것은 upstream `/learn/wrong-items` 계약(경로·요청 파라미터·응답 필드)과 `day.npcqhk2` 필드 형태를 실제 응답으로 최종 확정하는 일이다.
+   - CMS/Book data에 `NPCQHK02` Activity를 등록해야 실제 Book에서 노출된다(등록 전에는 기존 렌더러 사용).
 
 2. **실제 개인화 추천 엔진**
    - Home의 개인화 카드는 현재 UI/예시 중심이다.
@@ -96,7 +100,7 @@ Unity 원본 프로젝트는 `D:\Codex\MetaOn`에 있다. Webapp은 Unity 프로
 
 5. **인증/인식/개인화 API 운영 확정**
    - 필기·음성 인식 API는 보류 상태다.
-   - Learning Zone의 개인화 세션 생성·답안 채점·완료 API 계약이 확정되어야 NPCQHK02를 안전하게 구현할 수 있다.
+   - `/learn/wrong-items`를 포함한 개인화 관련 upstream API 계약을 운영 기준으로 확정한다.
 
 ### 확인이 필요한 품질 항목
 
@@ -116,7 +120,7 @@ Book 단위 리소스는 S3에서 다운로드하고 IndexedDB에 Blob으로 저
 
 ### Activity code 우선 renderer 선택
 
-같은 Unity `ActType`도 신규 문자열 code에 따라 UI/데이터 원천이 다를 수 있다. 예를 들어 `QCHK01`, `NPCQHK01`, 향후 `NPCQHK02`는 모두 Quick Check 계열이지만 renderer와 데이터 계약이 다르다. 따라서 `activity_code`가 renderer 선택의 우선 기준이다.
+같은 Unity `ActType`도 신규 문자열 code에 따라 UI/데이터 원천이 다를 수 있다. 예를 들어 `QCHK01`, `NPCQHK01`, `NPCQHK02`는 모두 Quick Check 계열(ActType 65)이지만 renderer와 데이터 계약이 다르다. 따라서 `activity_code`가 renderer 선택의 우선 기준이다.
 
 ### Parent가 채점·권한을 보유
 
@@ -124,7 +128,7 @@ Book 단위 리소스는 S3에서 다운로드하고 IndexedDB에 Blob으로 저
 
 ### 사용자별 세션은 immutable snapshot
 
-향후 NPCQHK02에서는 시작 시 선택된 word/sentence 목록과 순서를 `session_id`로 고정한다. 활동 중 새 LearnEvent가 들어와도 현재 Activity의 문제·정답·분기는 변하지 않아야 한다.
+NPCQHK02는 입장 시 `/learn/wrong-items` 스냅샷으로 문제 집합(오답=weak·비오답=relearn 변형)을 그 자리에서 1회 고정한다. 활동 중 새 LearnEvent가 들어와도 현재 Activity의 문제·정답·분기는 변하지 않는다.
 
 ## 6. 폴더 구조
 
@@ -137,7 +141,7 @@ D:\Codex\MetaOn\
    │  ├─ components\                # 공통 UI, Activity controls, Activity renderers
    │  ├─ components\activities\     # PackageActivities.tsx 등 다수 Activity 구현
    │  ├─ features\quickCheck\       # QCHK01 DTO, 채점/화면
-   │  ├─ features\npcQuickCheck\    # NPCQHK01 Parent host, resource adapter, RPC protocol
+   │  ├─ features\npcQuickCheck\    # NPCQHK01/02 Parent host, resource adapter, RPC protocol
    │  ├─ pages\                     # Hub, Study, Book, Activity, Placement 화면
    │  ├─ services\                  # catalog, IndexedDB, resource importer, activity registry
    │  ├─ placementTest\              # Placement Test 하위 앱/데이터
@@ -150,6 +154,8 @@ D:\Codex\MetaOn\
    ├─ implementation_0701.md         # 초기 API/S3 전환 이력
    ├─ implementation_0710.md         # Quick Check 중심 구현 이력
    ├─ implementation_0713.md         # NPC 구현 이력. 일부 과거 설계 표기 주의
+   ├─ implementation_0721.md         # NPCQHK02·징검다리 트레일·거인의 책장·MyZone·별가루 이력
+   ├─ Project_context.md             # 프로젝트 컨텍스트 요약(현재 상태 기준)
    └─ CODEX_HANDOFF.md               # 이 문서
 
 D:\Codex\metaonlivechat\            # AI Speaking + NPC Viewer / Cloud Run metaon-web
@@ -178,7 +184,12 @@ D:\Codex\metaonlivechat\            # AI Speaking + NPC Viewer / Cloud Run metao
 | `src/features/quickCheck/QuickCheckActivity.tsx` | 일반 `QCHK01` Quick Check 화면과 제출 흐름 |
 | `src/features/npcQuickCheck/NpcQuickCheckActivity.tsx` | NPCQHK01 Parent host, RPC 처리, LearnEvent, 완료 처리 |
 | `src/features/npcQuickCheck/npcQuickCheckResourceAdapter.ts` | cached `npcqhk/script.json`과 음성 Blob을 Viewer bootstrap 형태로 변환 |
-| `server/index.mjs` | Express BFF, 인증, catalog, resource manifest, study, LearnEvent, iframe launch API |
+| `src/features/npcQuickCheck/npcQuickCheck2ResourceAdapter.ts` | wrong-items + cached `npcqhk2` -> weak/relearn 변형 Viewer bootstrap |
+| `src/components/ActivityCompletionCelebration.tsx` | Activity 완료 별가루 포인트 연출과 자동 이동 |
+| `src/pages/HubBookPage.tsx` | Book 상세 Activity 목록. 징검다리 트레일(반응형 줄바꿈·상태 표현·U자 회전) |
+| `src/pages/HubHomePage.tsx` | Home(MyZone). 추천/최근 Book hero |
+| `src/pages/StudyZonePage.tsx` | Study Zone 거인의 책장 shelf wall, Grade NAV, 검색, 테마 |
+| `server/index.mjs` | Express BFF, 인증, catalog, resource manifest, study, LearnEvent, iframe launch, `/api/learn/wrong-items` API |
 | `server/npcQuickCheckLaunch.mjs` | 30분 HMAC NPC launch token 생성·검증 |
 | `server/npcQuickCheckScenarioSource.mjs` | 선택적 원격 scenario API 조회/검증 |
 | `shared/quickCheckScoring.mjs` | Quick Check 공통 정답·복합형 채점 규칙 |
@@ -276,10 +287,9 @@ gcloud run services describe metaon-web --region asia-northeast3 --project meta-
 
 ## 11. 다음 우선순위
 
-1. **NPCQHK02 설계 확정 및 구현**
-   - 개인화 서버가 `session_id`, word/sentence `item_idx`, 선택 사유, 미디어 URL, 문제 유형을 고정 snapshot으로 반환하도록 계약한다.
-   - server-authoritative answer API를 추가하고, 기존 NPC Viewer UI/RPC를 공통화한다.
-   - 동적 미디어는 `personalized:<type>:<item_idx>:<hash>` 키로 IndexedDB에 캐시한다.
+1. **NPCQHK02 운영 확정**
+   - client 구현·BFF 라우트는 완료. upstream `/learn/wrong-items` 계약과 `day.npcqhk2` 필드 형태를 실제 응답으로 확정한다.
+   - CMS/Book data에 `NPCQHK02`를 등록하고, 실제 Book으로 오답=weak·비오답=relearn 출제와 결과 mastery 갱신을 E2E 확인한다.
 
 2. **개인화 데이터 파이프라인 연결**
    - LearnEvent -> word/sentence mastery -> skill mastery -> 추천 세션 생성 흐름을 서버에 구현한다.
@@ -297,8 +307,8 @@ gcloud run services describe metaon-web --region asia-northeast3 --project meta-
 
 ## 12. 다음 담당자의 첫 점검 순서
 
-1. 이 문서와 `package.json`, `.env.example`, 최근 `implementation_0713.md`를 읽는다.
+1. 이 문서와 `Project_context.md`, `package.json`, `.env.example`, 최근 `implementation_0721.md`를 읽는다.
 2. Main Webapp과 Viewer 각각에서 `npm test`와 build를 실행한다.
 3. Cloud Run 현재 revision/traffic과 `/api/health`를 확인한다.
-4. 테스트 계정으로 로그인 후 Book 리소스 다운로드, 일반 Activity, NPCQHK01을 한 번씩 실행한다.
+4. 테스트 계정으로 로그인 후 Book 리소스 다운로드, 일반 Activity, NPCQHK01/NPCQHK02를 한 번씩 실행하고, MyZone 홈·거인의 책장·징검다리 트레일을 확인한다.
 5. 새 기능은 `activity_code`, resource/API adapter, renderer, LearnEvent, tests, deployment까지 한 단위로 변경한다.

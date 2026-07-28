@@ -14,8 +14,8 @@ export function createNpcQuickCheckLaunch({
   if (!secret) throw badRequest("NPC Quick Check launch secret is not configured.", 503);
   if (!viewerUrl) throw badRequest("NPC Quick Check viewer URL is not configured.", 503);
 
-  const userId = text(auth?.user?.userId ?? auth?.user?.user_id);
-  const userIdx = positiveNumber(auth?.userIdx);
+  const userId = text(auth?.account?.userId ?? auth?.account?.user_id ?? auth?.user?.userId ?? auth?.user?.user_id);
+  const userIdx = positiveNumber(auth?.profile?.userIdx ?? auth?.userIdx);
   const bookIdx = positiveNumber(body?.bookIdx ?? body?.book_idx);
   const dayIdx = positiveNumber(body?.dayIdx ?? body?.day_idx);
   const actIdx = positiveNumber(body?.actIdx ?? body?.act_idx);

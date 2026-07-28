@@ -9,6 +9,13 @@ import { discoverEbookResources } from "./ebookResourceDiscovery.mjs";
 import { createNpcQuickCheckLaunch } from "./npcQuickCheckLaunch.mjs";
 import { loadNpcQuickCheckScenario } from "./npcQuickCheckScenarioSource.mjs";
 import {
+  PROFILE_RESULT,
+  normalizeAccount,
+  normalizeProfile,
+  normalizeProfiles,
+  profileForSession
+} from "./profileSession.mjs";
+import {
   QUICK_CHECK_CURRENT_CONTRACT,
   QUICK_CHECK_UNITY_CONTRACT,
   buildCurrentQuickCheckRequest,
@@ -39,7 +46,6 @@ const BOOKDATA_BASE =
 const APP_IDX = process.env.METAON_APP_IDX || process.env.UNIPLANET_APP_IDX || "2";
 const APP_VERSION = process.env.METAON_APP_VERSION || process.env.UNIPLANET_APP_VERSION || "2.2.25";
 const PLATFORM = process.env.METAON_PLATFORM || process.env.UNIPLANET_PLATFORM || "Android";
-const DEFAULT_USER_IDX = Number(process.env.METAON_USER_IDX || 0);
 const DEFAULT_SESSION_ID = process.env.METAON_SESSION_ID || "";
 const DEFAULT_COOKIE = process.env.METAON_COOKIE || (DEFAULT_SESSION_ID ? `JSESSIONID=${DEFAULT_SESSION_ID}` : "");
 const AUTH_COOKIE_NAME = "metaon_auth";
@@ -88,7 +94,6 @@ app.get("/api/health", (_req, res) => {
     appIdx: APP_IDX,
     appVersion: APP_VERSION,
     platform: PLATFORM,
-    defaultUserIdx: DEFAULT_USER_IDX,
     hasDefaultSession: Boolean(DEFAULT_SESSION_ID),
     hasDefaultCookie: Boolean(DEFAULT_COOKIE),
     authCookie: {
@@ -102,51 +107,36 @@ app.get("/api/health", (_req, res) => {
 app.get("/api/auth/me", async (req, res) => {
   const auth = getRequestAuth(req);
   if (!auth) {
-    res.json({
-      authenticated: false,
-      user: null,
-      userIdx: DEFAULT_USER_IDX
-    });
+    res.json(buildAuthResponse(null, []));
     return;
   }
 
   try {
-    const upstream = await postUpstream("/content/getMyBrands", {}, req);
-    assertMetaOnSuccess(upstream.data, "/content/getMyBrands");
+    const upstream = await postUpstream("/account/profiles", {}, req);
+    assertMetaOnSuccess(upstream.data, "/account/profiles");
+    const profiles = normalizeProfiles(upstream.data?.profiles);
 
     const verifiedAuth = {
       ...auth,
       sessionId: upstream.sessionId || auth.sessionId,
-      cookie: upstream.cookie || auth.cookie
+      cookie: upstream.cookie || auth.cookie,
+      profile: profileForSession(profiles, auth.profile)
     };
     setAuthCookie(res, verifiedAuth);
     if (verifiedAuth.sessionId) {
       res.setHeader("X-MetaOn-Session-Id", verifiedAuth.sessionId);
     }
-    res.json({
-      authenticated: true,
-      user: verifiedAuth.user,
-      userIdx: verifiedAuth.userIdx
-    });
+    res.json(buildAuthResponse(verifiedAuth, profiles));
   } catch (error) {
-    if (isConfirmedAuthenticationFailure(error)) {
+    if (isConfirmedAuthenticationFailure(error) || numberValue(error?.resultCode) === PROFILE_RESULT.SESSION_EXPIRED) {
       clearAuthCookie(res);
       catalogCache.clear();
-      res.json({
-        authenticated: false,
-        user: null,
-        userIdx: DEFAULT_USER_IDX
-      });
+      res.json(buildAuthResponse(null, []));
       return;
     }
 
     // The signed cookie remains the source of truth during temporary upstream outages.
-    res.json({
-      authenticated: true,
-      user: auth.user,
-      userIdx: auth.userIdx,
-      verification: "deferred"
-    });
+    res.json({ ...buildAuthResponse(auth, []), verification: "deferred" });
   }
 });
 
@@ -164,7 +154,7 @@ app.post("/api/auth/login", async (req, res) => {
     }
 
     const upstream = await postUpstream(
-      "/user/login",
+      "/account/login",
       { user_id: userId, password },
       req,
       { sessionId: "", cookie: "", ignoreRequestAuth: true }
@@ -179,80 +169,353 @@ app.post("/api/auth/login", async (req, res) => {
       return;
     }
 
-    const auth = createAuthSession(upstream.data, upstream);
+    const auth = createAccountAuthSession(upstream.data, upstream);
+    const profiles = normalizeProfiles(upstream.data?.profiles);
     setAuthCookie(res, auth);
     if (auth.sessionId) {
       res.setHeader("X-MetaOn-Session-Id", auth.sessionId);
     }
-    res.json({
-      authenticated: true,
-      user: auth.user,
-      userIdx: auth.userIdx
-    });
+    res.json(buildAuthResponse(auth, profiles));
   } catch (error) {
     sendError(res, error, "Failed to login to MetaOn");
   }
 });
 
-app.post("/api/auth/session", async (req, res) => {
+app.post("/api/auth/profiles", async (req, res) => {
+  const auth = getRequestAuth(req);
+  if (!auth) {
+    res.status(401).json({ resultCode: PROFILE_RESULT.SESSION_EXPIRED, resultMessage: "MetaOn account session is required." });
+    return;
+  }
+
   try {
-    const userIdx = numberValue(req.body?.userIdx);
-    const manualSession = normalizeManualSession(req.body?.sessionId);
-
-    if (!userIdx || (!manualSession.sessionId && !manualSession.cookie)) {
-      res.status(400).json({
-        resultCode: 400,
-        resultMessage: "userIdx and Session-Id/JSESSIONID are required."
-      });
-      return;
-    }
-
-    const upstream = await postUpstream(
-      "/content/getMyBrands",
-      {},
-      req,
-      {
-        sessionId: manualSession.sessionId,
-        cookie: manualSession.cookie,
-        ignoreRequestAuth: true
-      }
-    );
-    assertMetaOnSuccess(upstream.data, "/content/getMyBrands");
-
-    const auth = {
-      userIdx,
-      sessionId: upstream.sessionId || manualSession.sessionId,
-      cookie: upstream.cookie || manualSession.cookie,
-      user: {
-        userIdx,
-        userId: "",
-        username: `User ${userIdx}`,
-        email: "",
-        joinstep: 0
-      }
+    const upstream = await postUpstream("/account/profiles", {}, req);
+    assertMetaOnSuccess(upstream.data, "/account/profiles");
+    const profiles = normalizeProfiles(upstream.data?.profiles);
+    const refreshedAuth = {
+      ...auth,
+      sessionId: upstream.sessionId || auth.sessionId,
+      cookie: upstream.cookie || auth.cookie,
+      profile: profileForSession(profiles, auth.profile)
     };
-
-    setAuthCookie(res, auth);
-    if (auth.sessionId) {
-      res.setHeader("X-MetaOn-Session-Id", auth.sessionId);
-    }
-    res.json({
-      authenticated: true,
-      user: auth.user,
-      userIdx: auth.userIdx
-    });
+    setAuthCookie(res, refreshedAuth);
+    if (refreshedAuth.sessionId) res.setHeader("X-MetaOn-Session-Id", refreshedAuth.sessionId);
+    res.json(buildAuthResponse(refreshedAuth, profiles));
   } catch (error) {
-    sendError(res, error, "Failed to verify MetaOn session");
+    sendError(res, error, "Failed to fetch MetaOn profiles");
   }
 });
 
-app.post("/api/auth/logout", (_req, res) => {
-  clearAuthCookie(res);
-  catalogCache.clear();
-  res.json({
-    authenticated: false
-  });
+app.post("/api/auth/profile/select", async (req, res) => {
+  const auth = getRequestAuth(req);
+  if (!auth) {
+    res.status(401).json({ resultCode: PROFILE_RESULT.SESSION_EXPIRED, resultMessage: "MetaOn account session is required." });
+    return;
+  }
+
+  const userIdx = numberValue(req.body?.user_idx ?? req.body?.userIdx);
+  const force = numberValue(req.body?.force) === 1 ? 1 : 0;
+  if (!userIdx) {
+    res.status(400).json({ resultCode: 310, resultMessage: "user_idx is required." });
+    return;
+  }
+
+  try {
+    const upstream = await postUpstream("/account/profile/select", { user_idx: userIdx, force }, req);
+    const resultCode = numberValue(upstream.data?.resultCode);
+    if (resultCode !== 1) {
+      if (resultCode === PROFILE_RESULT.SESSION_EXPIRED) {
+        clearAuthCookie(res);
+        catalogCache.clear();
+      }
+      if (upstream.sessionId) res.setHeader("X-MetaOn-Session-Id", upstream.sessionId);
+      res.status(upstream.status).json(upstream.data);
+      return;
+    }
+
+    const selectedProfile = { ...normalizeProfile(upstream.data), isCurrent: true };
+    const selectedAuth = {
+      ...auth,
+      sessionId: upstream.sessionId || auth.sessionId,
+      cookie: upstream.cookie || auth.cookie,
+      profile: selectedProfile
+    };
+    let profiles = [selectedProfile];
+    try {
+      const profilesUpstream = await postUpstream("/account/profiles", {}, req, {
+        sessionId: selectedAuth.sessionId,
+        cookie: selectedAuth.cookie,
+        ignoreRequestAuth: true
+      });
+      if (numberValue(profilesUpstream.data?.resultCode) === 1) {
+        profiles = normalizeProfiles(profilesUpstream.data?.profiles);
+        selectedAuth.sessionId = profilesUpstream.sessionId || selectedAuth.sessionId;
+        selectedAuth.cookie = profilesUpstream.cookie || selectedAuth.cookie;
+      }
+    } catch {
+      // Profile selection already succeeded. The client can refresh its list later.
+    }
+
+    setAuthCookie(res, selectedAuth);
+    catalogCache.clear();
+    if (selectedAuth.sessionId) res.setHeader("X-MetaOn-Session-Id", selectedAuth.sessionId);
+    res.json({ ...upstream.data, ...buildAuthResponse(selectedAuth, profiles) });
+  } catch (error) {
+    sendError(res, error, "Failed to select MetaOn profile");
+  }
 });
+
+app.post("/api/auth/profile/create", async (req, res) => {
+  const auth = getRequestAuth(req);
+  if (!auth) {
+    res.status(401).json({ resultCode: PROFILE_RESULT.SESSION_EXPIRED, resultMessage: "MetaOn account session is required." });
+    return;
+  }
+
+  const username = stringValue(req.body?.username);
+  if (!username) {
+    res.status(400).json({ resultCode: 310, resultMessage: "username is required." });
+    return;
+  }
+
+  try {
+    const upstream = await postUpstream("/account/profile/create", { username }, req);
+    const resultCode = numberValue(upstream.data?.resultCode);
+    if (resultCode !== 1) {
+      if (resultCode === PROFILE_RESULT.SESSION_EXPIRED) {
+        clearAuthCookie(res);
+        catalogCache.clear();
+      }
+      res.status(upstream.status).json(upstream.data);
+      return;
+    }
+
+    const profilesUpstream = await postUpstream("/account/profiles", {}, req, {
+      sessionId: upstream.sessionId || auth.sessionId,
+      cookie: upstream.cookie || auth.cookie,
+      ignoreRequestAuth: true
+    });
+    const profiles = numberValue(profilesUpstream.data?.resultCode) === 1
+      ? normalizeProfiles(profilesUpstream.data?.profiles)
+      : [];
+    const refreshedAuth = {
+      ...auth,
+      sessionId: profilesUpstream.sessionId || upstream.sessionId || auth.sessionId,
+      cookie: profilesUpstream.cookie || upstream.cookie || auth.cookie
+    };
+    setAuthCookie(res, refreshedAuth);
+    if (refreshedAuth.sessionId) res.setHeader("X-MetaOn-Session-Id", refreshedAuth.sessionId);
+    res.json({ ...upstream.data, ...buildAuthResponse(refreshedAuth, profiles) });
+  } catch (error) {
+    sendError(res, error, "Failed to create MetaOn profile");
+  }
+});
+
+app.post("/api/auth/profile/rename", async (req, res) => {
+  const auth = getRequestAuth(req);
+  if (!auth) {
+    res.status(401).json({ resultCode: PROFILE_RESULT.SESSION_EXPIRED, resultMessage: "MetaOn account session is required." });
+    return;
+  }
+
+  const userIdx = numberValue(req.body?.user_idx ?? req.body?.userIdx);
+  const username = stringValue(req.body?.username);
+  if (!userIdx || !username) {
+    res.status(400).json({ resultCode: 310, resultMessage: "user_idx and username are required." });
+    return;
+  }
+
+  try {
+    const upstream = await postUpstream("/account/profile/rename", { user_idx: userIdx, username }, req);
+    if (numberValue(upstream.data?.resultCode) !== 1) {
+      res.status(upstream.status).json(upstream.data);
+      return;
+    }
+    const profilesUpstream = await postUpstream("/account/profiles", {}, req, {
+      sessionId: upstream.sessionId || auth.sessionId,
+      cookie: upstream.cookie || auth.cookie,
+      ignoreRequestAuth: true
+    });
+    const profiles = numberValue(profilesUpstream.data?.resultCode) === 1
+      ? normalizeProfiles(profilesUpstream.data?.profiles)
+      : [];
+    const refreshedAuth = {
+      ...auth,
+      sessionId: profilesUpstream.sessionId || upstream.sessionId || auth.sessionId,
+      cookie: profilesUpstream.cookie || upstream.cookie || auth.cookie,
+      profile: profileForSession(profiles, auth.profile)
+    };
+    setAuthCookie(res, refreshedAuth);
+    if (refreshedAuth.sessionId) res.setHeader("X-MetaOn-Session-Id", refreshedAuth.sessionId);
+    res.json({ ...upstream.data, ...buildAuthResponse(refreshedAuth, profiles) });
+  } catch (error) {
+    sendError(res, error, "Failed to rename MetaOn profile");
+  }
+});
+
+app.post("/api/auth/profiles/manage", async (req, res) => {
+  const auth = getRequestAuth(req);
+  if (!auth) {
+    res.status(401).json({ resultCode: PROFILE_RESULT.SESSION_EXPIRED, resultMessage: "MetaOn account session is required." });
+    return;
+  }
+
+  try {
+    res.json(await buildProfileManagementResponse(req, res, auth));
+  } catch (error) {
+    sendError(res, error, "Failed to fetch MetaOn profile management data");
+  }
+});
+
+app.post("/api/auth/profile/set-active", async (req, res) => {
+  const auth = getRequestAuth(req);
+  if (!auth) {
+    res.status(401).json({ resultCode: PROFILE_RESULT.SESSION_EXPIRED, resultMessage: "MetaOn account session is required." });
+    return;
+  }
+
+  const userIdx = numberValue(req.body?.user_idx ?? req.body?.userIdx);
+  const active = booleanRequestValue(req.body?.active);
+  if (!userIdx || active == null) {
+    res.status(400).json({ resultCode: 310, resultMessage: "user_idx and active are required." });
+    return;
+  }
+
+  try {
+    const upstream = await postUpstream("/account/profile/set-active", { user_idx: userIdx, active }, req);
+    if (!respondAccountApiFailure(res, upstream)) return;
+    catalogCache.clear();
+    res.json(await buildProfileManagementResponse(req, res, auth, upstream));
+  } catch (error) {
+    sendError(res, error, "Failed to update MetaOn profile status");
+  }
+});
+
+app.post("/api/auth/profile/delete", async (req, res) => {
+  const auth = getRequestAuth(req);
+  if (!auth) {
+    res.status(401).json({ resultCode: PROFILE_RESULT.SESSION_EXPIRED, resultMessage: "MetaOn account session is required." });
+    return;
+  }
+
+  const userIdx = numberValue(req.body?.user_idx ?? req.body?.userIdx);
+  if (!userIdx) {
+    res.status(400).json({ resultCode: 310, resultMessage: "user_idx is required." });
+    return;
+  }
+
+  try {
+    const upstream = await postUpstream("/account/profile/delete", { user_idx: userIdx }, req);
+    if (!respondAccountApiFailure(res, upstream)) return;
+    catalogCache.clear();
+    res.json(await buildProfileManagementResponse(req, res, auth, upstream));
+  } catch (error) {
+    sendError(res, error, "Failed to delete MetaOn profile");
+  }
+});
+
+app.post("/api/auth/password/change", async (req, res) => {
+  const auth = getRequestAuth(req);
+  if (!auth) {
+    res.status(401).json({ resultCode: PROFILE_RESULT.SESSION_EXPIRED, resultMessage: "MetaOn account session is required." });
+    return;
+  }
+
+  const currentPassword = stringValue(req.body?.current_password ?? req.body?.currentPassword);
+  const newPassword = stringValue(req.body?.new_password ?? req.body?.newPassword);
+  if (!currentPassword || !newPassword) {
+    res.status(400).json({ resultCode: 310, resultMessage: "current_password and new_password are required." });
+    return;
+  }
+
+  try {
+    const upstream = await postUpstream(
+      "/account/changePassword",
+      { current_password: currentPassword, new_password: newPassword },
+      req
+    );
+    if (!respondAccountApiFailure(res, upstream)) return;
+
+    const refreshedAuth = {
+      ...auth,
+      sessionId: upstream.sessionId || auth.sessionId,
+      cookie: upstream.cookie || auth.cookie
+    };
+    setAuthCookie(res, refreshedAuth);
+    if (refreshedAuth.sessionId) res.setHeader("X-MetaOn-Session-Id", refreshedAuth.sessionId);
+    res.json({ ...upstream.data, ...buildAuthResponse(refreshedAuth, []) });
+  } catch (error) {
+    sendError(res, error, "Failed to change MetaOn password");
+  }
+});
+
+app.post("/api/auth/profile/release", async (req, res) => {
+  const auth = getRequestAuth(req);
+  try {
+    const upstream = await postUpstream("/account/profile/release", {}, req);
+    const resultCode = numberValue(upstream.data?.resultCode);
+    if (resultCode === PROFILE_RESULT.SESSION_EXPIRED) {
+      clearAuthCookie(res);
+      catalogCache.clear();
+      res.status(upstream.status).json(upstream.data);
+      return;
+    }
+    const releasedAuth = auth
+      ? {
+          ...auth,
+          sessionId: upstream.sessionId || auth.sessionId,
+          cookie: upstream.cookie || auth.cookie,
+          profile: null
+        }
+      : null;
+    if (releasedAuth) setAuthCookie(res, releasedAuth);
+    catalogCache.clear();
+    if (releasedAuth?.sessionId) res.setHeader("X-MetaOn-Session-Id", releasedAuth.sessionId);
+    res.status(upstream.status).json({ ...upstream.data, ...buildAuthResponse(releasedAuth, []) });
+  } catch (error) {
+    sendError(res, error, "Failed to release MetaOn profile");
+  }
+});
+
+app.post("/api/auth/startup-release", async (req, res) => {
+  const storedSession = normalizeManualSession(req.get("x-metaon-session-id"));
+  try {
+    const upstream = storedSession.sessionId || storedSession.cookie
+      ? await postUpstream("/account/profile/release", {}, req, {
+          sessionId: storedSession.sessionId,
+          cookie: storedSession.cookie,
+          ignoreRequestAuth: true
+        })
+      : { status: 200, data: { resultCode: 1, resultMessage: "No saved profile session." } };
+    clearAuthCookie(res);
+    catalogCache.clear();
+    res.status(upstream.status).json({ ...upstream.data, ...buildAuthResponse(null, []) });
+  } catch (error) {
+    // Startup release is best effort. The client must still discard the old token and show login.
+    clearAuthCookie(res);
+    catalogCache.clear();
+    res.json({ resultCode: 1, resultMessage: "Startup profile release deferred.", ...buildAuthResponse(null, []) });
+  }
+});
+
+app.post("/api/auth/logout", async (req, res) => {
+  try {
+    const auth = getRequestAuth(req);
+    if (auth?.profile) {
+      await postUpstream("/account/profile/release", {}, req);
+    }
+  } catch {
+    // Local logout must complete even when the upstream is unavailable.
+  } finally {
+    clearAuthCookie(res);
+    catalogCache.clear();
+  }
+  res.json(buildAuthResponse(null, []));
+});
+
+// All content and learning requests run in the profile selected for this account session.
+// Do not fall back to METAON_USER_IDX: the profile-selection API owns that identity.
+app.use(["/api/books", "/api/study", "/api/learn", "/api/activities", "/api/external"], requireSelectedProfile);
 
 app.get("/api/books", async (req, res) => {
   try {
@@ -548,6 +811,45 @@ app.post("/api/learn/recording", async (req, res) => {
   proxyStudyEndpoint(req, res, "/learn/recording");
 });
 
+app.post("/api/learn/wrong-items", async (req, res) => {
+  try {
+    const bookIdx = numberValue(req.body?.book_idx ?? req.body?.bookIdx);
+    if (!bookIdx) {
+      res.status(400).json({
+        resultCode: 310,
+        resultMessage: "book_idx is required."
+      });
+      return;
+    }
+    const upstream = await postUpstream("/learn/wrong-items", { book_idx: bookIdx }, req);
+    assertMetaOnSuccess(upstream.data, "/learn/wrong-items");
+    res.json(normalizeWrongItems(upstream.data));
+  } catch (error) {
+    sendError(res, error, "Failed to fetch MetaOn wrong-items");
+  }
+});
+
+function normalizeWrongItems(data) {
+  const source = recordValue(data);
+  return {
+    resultCode: 1,
+    resultMessage: "success",
+    words: normalizeWrongItemList(source.words ?? source.word ?? source.wrong_words),
+    sentences: normalizeWrongItemList(source.sentences ?? source.sentence ?? source.wrong_sentences)
+  };
+}
+
+function normalizeWrongItemList(value) {
+  return firstArray(value)
+    .map((rawItem) => {
+      const item = recordValue(rawItem);
+      const itemIdx = numberValue(item.item_idx ?? item.itemIdx ?? item.idx);
+      const text = stringValue(item.text ?? item.en ?? item.eng ?? item.word ?? item.sentence);
+      return { item_idx: itemIdx, text };
+    })
+    .filter((item) => item.item_idx > 0);
+}
+
 app.post("/api/external/launch", (req, res) => {
   try {
     const kind = stringValue(req.body?.kind);
@@ -560,13 +862,8 @@ app.post("/api/external/launch", (req, res) => {
     }
 
     const auth = getRequestAuth(req);
-    const userIdx = auth?.userIdx || getRequestUserIdx(req);
-    const sessionId =
-      auth?.sessionId ||
-      req.get("x-metaon-session-id") ||
-      req.get("x-uniplanet-session-id") ||
-      DEFAULT_SESSION_ID ||
-      "";
+    const userIdx = auth?.profile?.userIdx || 0;
+    const sessionId = auth?.sessionId || "";
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
     const tokenPayload = {
       kind,
@@ -597,8 +894,8 @@ app.post("/api/external/launch", (req, res) => {
       auth: {
         session_id: sessionId,
         user_idx: userIdx,
-        user_id: stringValue(auth?.user?.userId ?? auth?.user?.user_id),
-        username: stringValue(auth?.user?.username ?? auth?.user?.userName)
+        user_id: stringValue(auth?.account?.userId ?? auth?.account?.user_id),
+        username: stringValue(auth?.profile?.username ?? auth?.profile?.userName)
       },
       iframeUrl,
       launchToken,
@@ -870,6 +1167,14 @@ function sampleBookTitle(unit, number) {
 async function proxyStudyEndpoint(req, res, endpoint) {
   try {
     const upstream = await postUpstream(endpoint, req.body || {}, req);
+    const resultCode = numberValue(upstream.data?.resultCode);
+    if ([PROFILE_RESULT.PROFILE_REQUIRED, PROFILE_RESULT.PROFILE_REVOKED].includes(resultCode)) {
+      clearSelectedProfileCookie(req, res);
+      catalogCache.clear();
+    } else if (resultCode === PROFILE_RESULT.SESSION_EXPIRED) {
+      clearAuthCookie(res);
+      catalogCache.clear();
+    }
     if (upstream.sessionId) {
       res.setHeader("X-MetaOn-Session-Id", upstream.sessionId);
     }
@@ -891,7 +1196,7 @@ async function loadQuickCheckWithFallback(req) {
 
   const legacy = await postUpstream(
     "/study/getnewquickcheckquiz",
-    buildLegacyQuickCheckRequest(req.body, getRequestUserIdx(req)),
+    buildLegacyQuickCheckRequest(req.body),
     req
   );
   if (isSuccessfulQuickCheckResponse(legacy, "qlist")) {
@@ -931,7 +1236,6 @@ async function submitQuickCheckAttempt(req, attempt) {
     submitted.metadataByQuestionId
   );
   const legacySubmission = buildLegacyQuickCheckSubmission({
-    userIdx: getRequestUserIdx(req),
     context,
     questions: attempt.questions,
     answersByQuestionId: submitted.answersByQuestionId,
@@ -1144,15 +1448,15 @@ function assertMetaOnSuccess(data, endpoint) {
   if (resultCode === 1) return;
 
   const error = new Error(`${endpoint} returned resultCode ${resultCode}: ${stringValue(data?.resultMessage)}`);
-  error.status = 502;
+  error.status = [PROFILE_RESULT.PROFILE_REQUIRED, PROFILE_RESULT.PROFILE_REVOKED].includes(resultCode) ? 409 : 502;
   error.resultCode = resultCode;
   throw error;
 }
 
-function createAuthSession(loginData, upstream) {
-  const userIdx = numberValue(loginData?.userIdx ?? loginData?.user_idx);
-  if (!userIdx) {
-    const error = new Error("MetaOn login response did not include userIdx.");
+function createAccountAuthSession(loginData, upstream) {
+  const account = normalizeAccount(loginData);
+  if (!account.accountIdx && !account.userId) {
+    const error = new Error("MetaOn account login response did not include account information.");
     error.status = 502;
     throw error;
   }
@@ -1166,30 +1470,81 @@ function createAuthSession(loginData, upstream) {
   }
 
   return {
-    userIdx,
+    account,
+    profile: null,
     sessionId,
-    cookie,
-    user: {
-      userIdx,
-      userId: stringValue(loginData?.userId ?? loginData?.user_id),
-      username: stringValue(loginData?.username) || stringValue(loginData?.userName) || `User ${userIdx}`,
-      email: stringValue(loginData?.email),
-      joinstep: numberValue(loginData?.joinstep),
-      role: numberValue(loginData?.role),
-      hqIdx: numberValue(loginData?.hq_idx),
-      acadIdx: numberValue(loginData?.acad_idx)
+    cookie
+  };
+}
+
+async function buildProfileManagementResponse(req, res, auth, sourceUpstream) {
+  const options = sourceUpstream
+    ? {
+        sessionId: sourceUpstream.sessionId || auth.sessionId,
+        cookie: sourceUpstream.cookie || auth.cookie,
+        ignoreRequestAuth: true
+      }
+    : {};
+  const upstream = await postUpstream("/account/profiles/manage", {}, req, options);
+  if (numberValue(upstream.data?.resultCode) !== 1) {
+    if (numberValue(upstream.data?.resultCode) === PROFILE_RESULT.SESSION_EXPIRED) {
+      clearAuthCookie(res);
+      catalogCache.clear();
     }
+    const error = new Error(stringValue(upstream.data?.resultMessage) || "Profile management request failed.");
+    error.status = upstream.status;
+    error.resultCode = numberValue(upstream.data?.resultCode);
+    throw error;
+  }
+
+  const managedProfiles = normalizeProfiles(upstream.data?.profiles).filter((profile) => !profile.isDeleted);
+  const profiles = managedProfiles.filter((profile) => profile.isActive);
+  const priorProfileStillActive = !auth.profile || profiles.some((profile) => profile.userIdx === auth.profile.userIdx);
+  const refreshedAuth = {
+    ...auth,
+    sessionId: upstream.sessionId || sourceUpstream?.sessionId || auth.sessionId,
+    cookie: upstream.cookie || sourceUpstream?.cookie || auth.cookie,
+    profile: priorProfileStillActive ? profileForSession(profiles, auth.profile) : null
+  };
+  setAuthCookie(res, refreshedAuth);
+  if (refreshedAuth.sessionId) res.setHeader("X-MetaOn-Session-Id", refreshedAuth.sessionId);
+  return {
+    ...buildAuthResponse(refreshedAuth, profiles),
+    managedProfiles
+  };
+}
+
+function respondAccountApiFailure(res, upstream) {
+  const resultCode = numberValue(upstream.data?.resultCode);
+  if (resultCode === 1) return true;
+  if (resultCode === PROFILE_RESULT.SESSION_EXPIRED) {
+    clearAuthCookie(res);
+    catalogCache.clear();
+  }
+  if (upstream.sessionId) res.setHeader("X-MetaOn-Session-Id", upstream.sessionId);
+  res.status(upstream.status).json(upstream.data);
+  return false;
+}
+
+function buildAuthResponse(auth, profiles) {
+  const normalizedProfiles = Array.isArray(profiles) ? profiles : [];
+  const profile = auth?.profile ? normalizeProfile(auth.profile) : null;
+  return {
+    accountAuthenticated: Boolean(auth?.account),
+    authenticated: Boolean(profile),
+    profileSelected: Boolean(profile),
+    account: auth?.account || null,
+    profiles: normalizedProfiles,
+    profile,
+    // Legacy aliases are retained for existing pages while they move to the explicit profile field.
+    user: profile,
+    userIdx: profile?.userIdx || 0
   };
 }
 
 function getRequestUserIdx(req) {
   const auth = getRequestAuth(req);
-  if (auth?.userIdx) return auth.userIdx;
-
-  const headerUserIdx = numberValue(req.get("x-metaon-user-idx"));
-  if (headerUserIdx) return headerUserIdx;
-
-  return DEFAULT_USER_IDX;
+  return auth?.profile?.userIdx || 0;
 }
 
 function getCatalogCacheKey(req) {
@@ -1211,24 +1566,70 @@ function getRequestAuth(req) {
   try {
     const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
     if (!parsed || typeof parsed !== "object") return null;
+    const legacyProfile = parsed.profile || parsed.user;
+    const profile = legacyProfile && numberValue(legacyProfile.userIdx ?? legacyProfile.user_idx ?? parsed.userIdx)
+      ? normalizeProfile(legacyProfile)
+      : null;
+    const accountSource = parsed.account || {
+      account_idx: parsed.accountIdx,
+      user_id: parsed.user?.userId ?? parsed.user?.user_id,
+      username: parsed.user?.username ?? parsed.user?.userName
+    };
+    const normalizedAccount = normalizeAccount(accountSource);
+    const account = normalizedAccount.accountIdx || normalizedAccount.userId ? normalizedAccount : null;
+    if (!account) return null;
     return {
-      userIdx: numberValue(parsed.userIdx),
+      account,
+      profile,
       sessionId: stringValue(parsed.sessionId),
       cookie: stringValue(parsed.cookie),
-      user: parsed.user && typeof parsed.user === "object" ? parsed.user : null
+      // Legacy aliases keep downstream routes compatible during the account/profile migration.
+      userIdx: profile?.userIdx || 0,
+      user: profile
     };
   } catch {
     return null;
   }
 }
 
+function requireSelectedProfile(req, res, next) {
+  const auth = getRequestAuth(req);
+  if (!auth?.account) {
+    res.status(401).json({
+      resultCode: PROFILE_RESULT.SESSION_EXPIRED,
+      resultMessage: "MetaOn account session is required."
+    });
+    return;
+  }
+
+  if (!auth.profile?.userIdx) {
+    res.status(409).json({
+      resultCode: PROFILE_RESULT.PROFILE_REQUIRED,
+      resultMessage: "Select a learning profile before calling this API."
+    });
+    return;
+  }
+
+  next();
+}
+
+function clearSelectedProfileCookie(req, res) {
+  const auth = getRequestAuth(req);
+  if (!auth) return;
+  setAuthCookie(res, { ...auth, profile: null });
+}
+
 function setAuthCookie(res, auth) {
+  const profile = auth?.profile ? normalizeProfile(auth.profile) : null;
   const payload = Buffer.from(
     JSON.stringify({
-      userIdx: auth.userIdx,
+      account: auth.account || null,
+      profile,
       sessionId: auth.sessionId || "",
       cookie: auth.cookie || "",
-      user: auth.user
+      // Legacy values are intentionally mirrored for older BFF consumers only.
+      userIdx: profile?.userIdx || 0,
+      user: profile
     })
   ).toString("base64url");
   const signature = signValue(payload);
@@ -1434,7 +1835,8 @@ const METAON_ACTIVITY_CODE = {
   unscramble: "STSC01",
   sentenceRecord: "STRC01",
   quickCheck: "QCHK01",
-  npcQuickCheck: "QCNP01"
+  npcQuickCheck: "QCNP01",
+  npcQuickCheck2: "NPCQHK02"
 };
 
 const actTypeByActivityCode = new Map([
@@ -1447,7 +1849,8 @@ const actTypeByActivityCode = new Map([
   [METAON_ACTIVITY_CODE.unscramble, 1007],
   [METAON_ACTIVITY_CODE.sentenceRecord, 1009],
   [METAON_ACTIVITY_CODE.quickCheck, 65],
-  [METAON_ACTIVITY_CODE.npcQuickCheck, 65]
+  [METAON_ACTIVITY_CODE.npcQuickCheck, 65],
+  [METAON_ACTIVITY_CODE.npcQuickCheck2, 65]
 ]);
 
 const activityCodeByActType = new Map([
@@ -1484,7 +1887,8 @@ const titleByActivityCode = new Map([
   [METAON_ACTIVITY_CODE.unscramble, "Unscramble"],
   [METAON_ACTIVITY_CODE.sentenceRecord, "Sentence Record"],
   [METAON_ACTIVITY_CODE.quickCheck, "Quick Check"],
-  [METAON_ACTIVITY_CODE.npcQuickCheck, "NPC Quick Check"]
+  [METAON_ACTIVITY_CODE.npcQuickCheck, "NPC Quick Check"],
+  [METAON_ACTIVITY_CODE.npcQuickCheck2, "NPC Quick Check"]
 ]);
 
 function normalizeActivityCodeValue(value) {
@@ -1570,6 +1974,7 @@ function collectBookInfoResources(day, virtualBase, resources) {
   });
   collectEbookBookInfoResources(day, virtualBase, resources);
   collectNpcQuickCheckBookInfoResources(day, virtualBase, resources);
+  collectNpcQuickCheck2BookInfoResources(day, virtualBase, resources);
 }
 
 function collectNpcQuickCheckBookInfoResources(day, virtualBase, resources) {
@@ -1592,6 +1997,25 @@ function collectNpcQuickCheckBookInfoResources(day, virtualBase, resources) {
 
 function npcQuickCheckBookInfoRecord(day) {
   const value = day.npcqhk ?? day.npc_qhk ?? day.npcQuickCheck ?? day.npc_quick_check;
+  if (typeof value === "string" && value.trim()) return { path: value.trim() };
+  if (Array.isArray(value)) return value.map(recordValue).find((item) => Object.keys(item).length > 0);
+  const record = recordValue(value);
+  return Object.keys(record).length > 0 ? record : undefined;
+}
+
+function collectNpcQuickCheck2BookInfoResources(day, virtualBase, resources) {
+  const npcqhk2 = npcQuickCheck2BookInfoRecord(day);
+  if (!npcqhk2) return;
+
+  const npcqhk2Base = `${virtualBase}/npcqhk2`;
+  const scriptPath = npcQuickCheckBookInfoScriptPath(npcqhk2);
+  addBookInfoResource(resources, `${npcqhk2Base}/script.json`, scriptPath, "npcqhk2");
+  // Audio (webm) is authored as relative paths inside script.json and is derived/downloaded
+  // on the client from the cached script.json, so only the script.json resource is emitted here.
+}
+
+function npcQuickCheck2BookInfoRecord(day) {
+  const value = day.npcqhk2 ?? day.npc_qhk2 ?? day.npc_qhk_2 ?? day.npcQuickCheck2 ?? day.npc_quick_check2;
   if (typeof value === "string" && value.trim()) return { path: value.trim() };
   if (Array.isArray(value)) return value.map(recordValue).find((item) => Object.keys(item).length > 0);
   const record = recordValue(value);
@@ -2431,6 +2855,13 @@ function numberValue(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function booleanRequestValue(value) {
+  if (typeof value === "boolean") return value;
+  if (value === 1 || value === "1" || value === "true") return true;
+  if (value === 0 || value === "0" || value === "false") return false;
+  return null;
+}
+
 function sentenceBlankIndex(sentence) {
   const value = sentence.blank_index ?? sentence.blank_idx ?? sentence.blankIndex ?? sentence.Blank_Index;
   if (value == null || value === "") return -1;
@@ -2441,6 +2872,7 @@ function sentenceBlankIndex(sentence) {
 function sendError(res, error, message) {
   const status = Number(error.status || 502);
   res.status(status).json({
+    resultCode: numberValue(error?.resultCode) || status,
     message,
     detail: error instanceof Error ? error.message : String(error)
   });

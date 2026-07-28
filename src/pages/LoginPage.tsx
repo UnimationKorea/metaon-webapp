@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { ArrowLeft, KeyRound, LogIn, ShieldCheck } from "lucide-react";
+import { ArrowLeft, LogIn, ShieldCheck } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
@@ -37,13 +37,11 @@ function clearSavedLogin() {
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { error: authError, isAuthenticated, isLoading, login, logout, setManualSession, user } = useAuth();
+  const { account, error: authError, isAccountAuthenticated, isAuthenticated, isLoading, login, logout, user } = useAuth();
   const [savedLogin] = useState(() => readSavedLogin());
   const [userId, setUserId] = useState(() => savedLogin?.userId || "");
   const [password, setPassword] = useState(() => savedLogin?.password || "");
   const [shouldSaveLogin, setShouldSaveLogin] = useState(() => Boolean(savedLogin?.userId || savedLogin?.password));
-  const [manualUserIdx, setManualUserIdx] = useState("");
-  const [manualSessionId, setManualSessionId] = useState("");
   const [error, setError] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -58,21 +56,7 @@ export function LoginPage() {
       } else {
         clearSavedLogin();
       }
-      navigate("/");
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const submitManualSession = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setError(undefined);
-    setIsSubmitting(true);
-    try {
-      await setManualSession(Number(manualUserIdx), manualSessionId);
-      navigate("/");
+      navigate("/profiles", { replace: true });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
@@ -112,17 +96,17 @@ export function LoginPage() {
           <ShieldCheck size={34} />
           <div>
             <h1>MetaOn Login</h1>
-            <p>{isAuthenticated ? `${user?.username || user?.userIdx} session is active.` : "Connect a MetaOn session."}</p>
+            <p>{isAuthenticated ? `${user?.username || user?.userIdx} 프로필로 학습 중입니다.` : "계정 로그인 후 학습할 프로필을 선택합니다."}</p>
           </div>
         </div>
 
-        {isAuthenticated ? (
+        {isAccountAuthenticated ? (
           <div className="hub-active-session">
-            <strong>{user?.username || `User ${user?.userIdx}`}</strong>
-            <span>User IDX {user?.userIdx}</span>
+            <strong>{isAuthenticated ? user?.username || `Profile ${user?.userIdx}` : account?.username || "MetaOn Account"}</strong>
+            <span>{isAuthenticated ? `프로필 IDX ${user?.userIdx}` : "프로필을 선택해 학습을 시작하세요."}</span>
             <div className="hub-button-row">
-              <Link className="hub-primary-action" to="/">
-                홈
+              <Link className="hub-primary-action" to={isAuthenticated ? "/" : "/profiles"}>
+                {isAuthenticated ? "홈" : "프로필 선택"}
               </Link>
               <button className="hub-secondary-action" type="button" onClick={() => void logout()}>
                 Logout
@@ -131,7 +115,7 @@ export function LoginPage() {
           </div>
         ) : null}
 
-        <div className="hub-login-columns">
+        <div className="hub-login-columns hub-login-columns-single">
           <form className="hub-login-form" onSubmit={submitLogin}>
             <h2>
               <LogIn size={20} />
@@ -175,38 +159,6 @@ export function LoginPage() {
             </button>
           </form>
 
-          <form className="hub-login-form" onSubmit={submitManualSession}>
-            <h2>
-              <KeyRound size={20} />
-              Session
-            </h2>
-            <label className="hub-field">
-              User IDX
-              <input
-                disabled={isSubmitting}
-                inputMode="numeric"
-                onChange={(event) => setManualUserIdx(event.target.value)}
-                value={manualUserIdx}
-              />
-            </label>
-            <label className="hub-field">
-              Session-Id / JSESSIONID
-              <input
-                autoComplete="off"
-                disabled={isSubmitting}
-                onChange={(event) => setManualSessionId(event.target.value)}
-                type="password"
-                value={manualSessionId}
-              />
-            </label>
-            <button
-              className="hub-secondary-action"
-              disabled={isSubmitting || !Number(manualUserIdx) || !manualSessionId.trim() || isLoading}
-              type="submit"
-            >
-              Verify
-            </button>
-          </form>
         </div>
 
         {error || authError ? <p className="hub-error-copy">{error || authError}</p> : null}

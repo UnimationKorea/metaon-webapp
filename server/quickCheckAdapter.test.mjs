@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildLegacyQuickCheckRequest,
   buildCurrentQuickCheckSubmission,
   buildLegacyQuickCheckSubmission,
   normalizeQuickCheckPayload,
@@ -58,7 +59,6 @@ describe("Quick Check BFF adapter", () => {
       { q_idx: 20, answer: { mode: "text", value: "and/or ^ exact" } }
     ]);
     const built = buildLegacyQuickCheckSubmission({
-      userIdx: 28,
       context: { book_idx: 7405, lesson_num: 1, day_num: 1, act_code: 65 },
       questions: legacyPayload.questions,
       answersByQuestionId: submitted.answersByQuestionId,
@@ -68,6 +68,19 @@ describe("Quick Check BFF adapter", () => {
     expect(built.payload.useranswer).toMatch(/^json:/);
     expect(built.payload.useranswer).not.toContain("and/or");
     expect(built.payload.useranswer).not.toContain("^");
+    expect(built.payload).not.toHaveProperty("userIdx");
+  });
+
+  it("does not include a learner index in the legacy query request", () => {
+    const request = buildLegacyQuickCheckRequest({
+      user_idx: 28,
+      book_idx: 7405,
+      lesson_num: 1,
+      day_num: 2
+    });
+
+    expect(request).toEqual({ bookIdx: 7405, lessonNum: 1, dayNum: 2 });
+    expect(request).not.toHaveProperty("userIdx");
   });
 
   it("keeps explicit content PK references for mastery events", () => {

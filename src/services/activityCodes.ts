@@ -12,7 +12,8 @@ export const MetaOnActivityCode = {
   SentenceRecord: "STRC01",
   QuickCheck: "QCHK01",
   NpcQuickCheck: "NPCQHK01",
-  LegacyNpcQuickCheck: "QCNP01"
+  LegacyNpcQuickCheck: "QCNP01",
+  NpcQuickCheck2: "NPCQHK02"
 } as const;
 
 export type MetaOnActivityCode = (typeof MetaOnActivityCode)[keyof typeof MetaOnActivityCode];
@@ -28,7 +29,8 @@ const actTypeByActivityCode = new Map<string, ActType>([
   [MetaOnActivityCode.SentenceRecord, ActType.SentenceShadowingSpace],
   [MetaOnActivityCode.QuickCheck, ActType.QuickCheck],
   [MetaOnActivityCode.NpcQuickCheck, ActType.QuickCheck],
-  [MetaOnActivityCode.LegacyNpcQuickCheck, ActType.QuickCheck]
+  [MetaOnActivityCode.LegacyNpcQuickCheck, ActType.QuickCheck],
+  [MetaOnActivityCode.NpcQuickCheck2, ActType.QuickCheck]
 ]);
 
 const activityCodeByActType = new Map<ActType, MetaOnActivityCode>([
@@ -66,7 +68,8 @@ const titleByActivityCode = new Map<MetaOnActivityCode, string>([
   [MetaOnActivityCode.SentenceRecord, "Sentence Record"],
   [MetaOnActivityCode.QuickCheck, "Quick Check"],
   [MetaOnActivityCode.NpcQuickCheck, "NPC Quick Check"],
-  [MetaOnActivityCode.LegacyNpcQuickCheck, "NPC Quick Check"]
+  [MetaOnActivityCode.LegacyNpcQuickCheck, "NPC Quick Check"],
+  [MetaOnActivityCode.NpcQuickCheck2, "NPC Quick Check"]
 ]);
 
 export function normalizeActivityCode(value: unknown): string {

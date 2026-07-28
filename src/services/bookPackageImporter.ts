@@ -57,8 +57,17 @@ export async function downloadAndCacheBookPackage(
       return;
     }
 
-    const response = await fetch(resource.url);
+    let response: Response;
+    try {
+      response = await fetch(resource.url);
+    } catch (caught) {
+      // NPC Quick Check resources are only prepared for some books — a missing one must not fail
+      // the whole book import. Skip it; the Book page hides NPC activities without resources.
+      if (isNpcResource(resource)) return skipOptionalResource(path);
+      throw caught;
+    }
     if (!response.ok) {
+      if (isNpcResource(resource)) return skipOptionalResource(path);
       throw new Error(`Failed to download ${resource.sourcePath}: ${response.status} ${response.statusText}`);
     }
     const blob = await response.blob();
@@ -78,6 +87,18 @@ export async function downloadAndCacheBookPackage(
       loadedBytes,
       totalBytes: totalFiles,
       currentFile: path
+    });
+  }
+
+  function skipOptionalResource(path: string): void {
+    loadedFiles += 1;
+    onProgress?.({
+      phase: "downloading",
+      ratio: totalFiles > 0 ? loadedFiles / totalFiles : 1,
+      loadedBytes,
+      totalBytes: totalFiles,
+      currentFile: path,
+      message: "Optional resource not prepared — skipping"
     });
   }
 
@@ -102,6 +123,10 @@ export async function downloadAndCacheBookPackage(
     }
   }
 
+  const npcScriptPaths = Array.from(new Set([...downloadedFileMap.keys(), ...cachedBlobMap.keys()])).filter((path) =>
+    /\/npcqhk2?\/script\.json$/i.test(path)
+  );
+
   const packageMeta: BookPackage = {
     key,
     cacheVersion: BOOK_PACKAGE_CACHE_VERSION,
@@ -114,6 +139,7 @@ export async function downloadAndCacheBookPackage(
     totalFiles: generatedFiles.length + totalFiles,
     totalBytes: loadedBytes,
     lessonDays: manifest.lessonDays,
+    npcScriptPaths,
     manifest
   };
 
@@ -131,6 +157,10 @@ export async function getCachedPackage(book: Pick<BookData, "bookIdx" | "seriesG
 
 function normalizePath(path: string): string {
   return path.replace(/\\/g, "/").replace(/^\/+/, "");
+}
+
+function isNpcResource(resource: BookResource): boolean {
+  return resource.category === "npcqhk" || resource.category === "npcqhk2";
 }
 
 async function collectEbookAssetResources(
@@ -167,7 +197,7 @@ async function collectNpcQuickCheckAssetResources(
 
   for (const resource of resources) {
     const scriptPath = normalizePath(resource.path);
-    if (!/\/npcqhk\/script\.json$/i.test(scriptPath)) continue;
+    if (!/\/npcqhk2?\/script\.json$/i.test(scriptPath)) continue;
 
     const blob = downloadedFileMap.get(scriptPath)?.blob || cachedBlobMap.get(scriptPath) || (await indexedDbStorage.getFileBlob(key, scriptPath));
     if (!blob) continue;
@@ -244,7 +274,7 @@ function resolveRelativeSourcePath(bookJsonSourcePath: string, relativePath: str
   if (/^https?:\/\//i.test(relativePath)) return relativePath;
   if (/^https?:\/\//i.test(bookJsonSourcePath)) return new URL(relativePath, bookJsonSourcePath).href;
   const normalizedBookPath = bookJsonSourcePath.replace(/\\/g, "/");
-  const sourceBase = normalizedBookPath.replace(/\/book\.json(?:\?.*)?$/i, "");
+  const sourceBase = normalizedBookPath.replace(/\/(?:book|script)\.json(?:\?.*)?$/i, "");
   return `${sourceBase}/${relativePath}`.replace(/\/{2,}/g, "/");
 }
 
