@@ -11,6 +11,7 @@ import {
   SentenceUnscrambleActivity,
   VocaQuizActivity,
   WordBlankActivity,
+  WordSearchActivity,
   type PrototypeActivityData
 } from "../components/activities/PackageActivities";
 import { ActType, type ActivityRendererContext } from "../types/metaonTypes";
@@ -139,6 +140,9 @@ export function ActivityRenewalPreviewPage() {
       break;
     case "word-blank":
       activity = <WordBlankActivity context={previewContext(ActType.VocaCheckSpace, "WDBL01")} prototypeData={{ words: previewWords }} />;
+      break;
+    case "word-search":
+      activity = <WordSearchActivity context={previewContext(ActType.WordSearch, "WDQU02")} prototypeData={{ words: previewWords }} />;
       break;
     case "matching":
       activity = <MatchingGameActivity context={previewContext(ActType.MatchingGame, "WDPL01")} prototypeData={{ words: previewWords }} />;

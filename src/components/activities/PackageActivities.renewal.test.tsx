@@ -8,7 +8,8 @@ import {
   SentenceBlankActivity,
   SentenceUnscrambleActivity,
   VocaQuizActivity,
-  WordBlankActivity
+  WordBlankActivity,
+  WordSearchActivity
 } from "./PackageActivities";
 
 vi.mock("../../services/indexedDbStorage", () => ({
@@ -197,6 +198,26 @@ describe("Figma renewal activities", () => {
     fireEvent.click(nextQuestion);
     expect(await screen.findByLabelText("Question 2 of 6")).toBeInTheDocument();
     expect(await screen.findByRole("img", { name: "river" })).toBeInTheDocument();
+  });
+
+  it("renders WDQU02 as the Figma Word Search image-to-word quiz", async () => {
+    const { container } = render(
+      <WordSearchActivity context={activityContext(ActType.WordSearch, "WDQU02")} />
+    );
+
+    await waitFor(() => expect(container.querySelectorAll(".word-search-options button")).toHaveLength(3));
+    expect(container.querySelector(".word-search-renewal-shell")).toBeInTheDocument();
+    expect(screen.getByLabelText("Question 1 of 6")).toHaveTextContent(/^1\/6$/);
+    expect(screen.getByRole("button", { name: "Play bridge" }).querySelector("img")).toHaveAttribute(
+      "src",
+      "/metaon-assets/activity/figma-renewal/word-search-sound.png"
+    );
+    expect(container.querySelector(".word-search-prompt img")).toHaveAttribute("alt", "bridge");
+    expect(container.querySelector(".word-search-answer-slot")).toHaveTextContent("Choose the word");
+
+    fireEvent.click(screen.getByRole("button", { name: "Answer bridge" }));
+    expect(container.querySelector(".word-search-answer-slot")).toHaveTextContent("bridge");
+    expect(screen.getByRole("button", { name: "Answer bridge" })).toHaveClass("is-correct");
   });
 
   it("renders Voca Quiz with a text prompt and image choices", async () => {

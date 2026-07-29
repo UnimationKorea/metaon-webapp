@@ -365,12 +365,14 @@ function RenewalSoundButton({
   label,
   className = "",
   icon = "listening",
+  assetSrc,
   onPlay
 }: {
   src?: string;
   label: string;
   className?: string;
   icon?: "listening" | "sound";
+  assetSrc?: string;
   onPlay?: () => void;
 }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -395,7 +397,7 @@ function RenewalSoundButton({
         onClick={replay}
         type="button"
       >
-        {icon === "sound" ? <ActivitySoundImage /> : <ActivityListeningImage />}
+        {assetSrc ? <img aria-hidden="true" className="renewal-sound-asset" draggable={false} src={assetSrc} alt="" /> : icon === "sound" ? <ActivitySoundImage /> : <ActivityListeningImage />}
       </button>
       {src ? <audio ref={audioRef} src={src} preload="auto" onEnded={() => setIsPlaying(false)} /> : null}
     </>
@@ -2727,89 +2729,170 @@ export function WordPuzzleActivity({ context, label = "Word Puzzle" }: { context
   );
 }
 
-export function WordSearchActivity({ context, label = "Word Search" }: { context: ActivityRendererContext; label?: string }) {
-  const words = useWords(context);
-  const gameWords = words.slice(0, 6);
-  const wordsSignature = gameWords.map((word) => `${word.index}:${word.eng}`).join("|");
-  const grid = useMemo(() => buildWordSearchGrid(gameWords.map((word) => word.eng)), [wordsSignature]);
-  const [selectedCells, setSelectedCells] = useState<string[]>([]);
-  const [foundWords, setFoundWords] = useState<Set<string>>(() => new Set());
-  const [message, setMessage] = useState("");
-  const selectedText = selectedCells.map((cellId) => {
-    const [row, col] = cellId.split(":").map(Number);
-    return grid[row]?.[col] || "";
-  }).join("");
+export function WordSearchActivity({
+  context,
+  label = "Word Search",
+  prototypeData
+}: {
+  context: ActivityRendererContext;
+  label?: string;
+  prototypeData?: PrototypeActivityData;
+}) {
+  const loadedWords = useWords(context);
+  const words = prototypeData?.words ?? loadedWords;
+  const [shuffleSeed] = useState(createShuffleSeed);
+  const [current, setCurrent] = useState(0);
+  const [selected, setSelected] = useState<string>();
+  const feedbackTimerRef = useRef<number | undefined>(undefined);
+  const target = words[current];
+  const wordsSignature = buildWordsSignature(words);
+  const answers = useMemo(
+    () => buildWordSearchOptions(words, current, mixSeed(shuffleSeed, `word-search:${wordsSignature}:${current}`)),
+    [current, shuffleSeed, words, wordsSignature]
+  );
+  const answersSignature = answers.map(wordOptionKey).join("|");
+  const questionViewKeyRef = useRef("");
 
   useEffect(() => {
-    setSelectedCells([]);
-    setFoundWords(new Set());
-    setMessage("");
-  }, [wordsSignature]);
+    if (feedbackTimerRef.current !== undefined) window.clearTimeout(feedbackTimerRef.current);
+    setSelected(undefined);
+    if (current >= words.length) setCurrent(0);
+  }, [current, words.length]);
 
-  function checkSelection() {
-    const normalized = selectedText.toLowerCase();
-    const match = gameWords.find((word) => normalizeWord(word.eng) === normalized);
-    if (match) {
-      setFoundWords((current) => new Set(current).add(normalizeWord(match.eng)));
-      setSelectedCells([]);
-      setMessage("Correct");
-    } else {
-      setMessage("Try again");
-    }
+  useEffect(
+    () => () => {
+      if (feedbackTimerRef.current !== undefined) window.clearTimeout(feedbackTimerRef.current);
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!target) return;
+    const viewKey = `${wordItemIdx(target) ?? target.index}:${current}:${answersSignature}`;
+    if (questionViewKeyRef.current === viewKey) return;
+    questionViewKeyRef.current = viewKey;
+    recordLearnEvent(context, {
+      action: "question_view",
+      item_type: "word",
+      item_idx: wordItemIdx(target),
+      extra: {
+        question_index: current + 1,
+        quiz_mode: "image-text",
+        option_order: wordOptionOrder(answers)
+      }
+    });
+  }, [answersSignature, current, target]);
+
+  function chooseAnswer(answer: LoadedWord) {
+    if (!target || selected !== undefined) return;
+    const correct = normalizeToken(answer.eng) === normalizeToken(target.eng);
+    setSelected(answer.eng);
+    recordLearnEvent(context, {
+      action: "option_select",
+      item_type: "word",
+      item_idx: wordItemIdx(target),
+      extra: {
+        selected_word_idx: wordItemIdx(answer),
+        selected_text: answer.eng,
+        question_index: current + 1
+      }
+    });
+    recordLearnEvent(context, {
+      action: "submit",
+      item_type: "word",
+      item_idx: wordItemIdx(target),
+      correct: boolCorrect(correct),
+      attempts: 1,
+      extra: {
+        answer_word_idx: wordItemIdx(target),
+        selected_word_idx: wordItemIdx(answer),
+        selected_text: answer.eng,
+        option_order: wordOptionOrder(answers)
+      }
+    });
+
+    if (feedbackTimerRef.current !== undefined) window.clearTimeout(feedbackTimerRef.current);
+    feedbackTimerRef.current = window.setTimeout(() => {
+      if (correct && current < words.length - 1) {
+        setCurrent((value) => Math.min(words.length - 1, value + 1));
+      } else if (!correct) {
+        setSelected(undefined);
+      }
+    }, correct ? 850 : 700);
   }
 
   return (
-    <ActivityFrame context={context} actionLabel={label}>
-      <div className="word-search-shell">
-        {grid.length > 0 ? (
-          <>
-            <div className="word-search-grid" style={{ gridTemplateColumns: `repeat(${grid.length}, minmax(0, 1fr))` }}>
-              {grid.flatMap((row, rowIndex) =>
-                row.map((letter, colIndex) => {
-                  const cellId = `${rowIndex}:${colIndex}`;
-                  return (
-                    <button
-                      className={selectedCells.includes(cellId) ? "selected" : ""}
-                      key={cellId}
-                      onClick={() => {
-                        setSelectedCells((current) => current.includes(cellId) ? current.filter((id) => id !== cellId) : [...current, cellId]);
-                        setMessage("");
-                      }}
-                      type="button"
-                    >
-                      {letter}
-                    </button>
-                  );
-                })
-              )}
+    <ActivityFrame context={context} actionLabel={label} className="figma-renewal-frame">
+      <div className="figma-renewal-shell word-search-renewal-shell">
+        <RenewalCounter current={words.length === 0 ? 0 : current + 1} total={words.length} className="word-search-counter" />
+        <ActivityQuestionNavigation current={current} total={words.length} onChange={setCurrent} />
+        <RenewalSoundButton
+          src={target?.audioUrl}
+          label={`Play ${target?.eng || "word"}`}
+          className="word-search-sound-button"
+          icon="sound"
+          assetSrc={`${FIGMA_RENEWAL_ASSET_BASE}/word-search-sound.png`}
+          onPlay={() =>
+            recordLearnEvent(context, {
+              action: "audio_play",
+              item_type: "word",
+              item_idx: wordItemIdx(target),
+              audio_replays: 1,
+              extra: { word: target?.eng, question_index: current + 1 }
+            })
+          }
+        />
+        <section className="word-search-machine" aria-label="Word Search game">
+          <div className="word-search-machine-core">
+            <div className="word-search-prompt">
+              <img
+                className={target?.imageUrl ? "is-book-image" : "is-figma-illustration"}
+                src={target?.imageUrl || `${FIGMA_RENEWAL_ASSET_BASE}/word-search-bunny.png`}
+                alt={target?.eng || "Word prompt"}
+              />
             </div>
-            <div className="word-search-side">
-              <strong>Find words</strong>
-              <div className="search-word-list">
-                {gameWords.map((word) => {
-                  const normalized = normalizeWord(word.eng);
-                  return (
-                    <span className={foundWords.has(normalized) ? "found" : ""} key={`${word.index}:${word.eng}`}>
-                      {word.eng}
-                    </span>
-                  );
-                })}
-              </div>
-              <p>{selectedText || "Tap letters in order."}</p>
-              {message ? <p className={message === "Correct" ? "success-text" : "error-text"}>{message}</p> : null}
-              <div className="inline-actions">
-                <button type="button" onClick={() => setSelectedCells([])} disabled={selectedCells.length === 0}>
-                  Reset
-                </button>
-                <button type="button" onClick={checkSelection} disabled={selectedCells.length === 0}>
-                  Check
-                </button>
-              </div>
+            <div className="word-search-answer-slot" aria-live="polite">
+              <UniformAutoFitText text={selected || "Choose the word"} />
             </div>
-          </>
+            <div className="word-search-conveyor" aria-hidden="true">
+              <span className="word-search-conveyor-light" />
+              <span className="word-search-conveyor-light" />
+              <span className="word-search-conveyor-light" />
+            </div>
+          </div>
+        </section>
+        {words.length > 0 ? (
+          <UniformAutoFitTextGroup className="word-search-options" maximumSize={32} minimumSize={5}>
+            {answers.map((answer) => {
+              const isSelected = selected === answer.eng;
+              const isCorrect = isSelected && normalizeToken(answer.eng) === normalizeToken(target?.eng || "");
+              return (
+                <button
+                  aria-label={`Answer ${answer.eng}`}
+                  className={[
+                    "renewal-option-button",
+                    isSelected ? "is-selected" : "",
+                    isCorrect ? "is-correct" : "",
+                    isSelected && !isCorrect ? "is-wrong" : ""
+                  ].filter(Boolean).join(" ")}
+                  disabled={selected !== undefined}
+                  key={wordOptionKey(answer)}
+                  onClick={() => chooseAnswer(answer)}
+                  type="button"
+                >
+                  <UniformAutoFitText text={answer.eng} />
+                </button>
+              );
+            })}
+          </UniformAutoFitTextGroup>
         ) : (
           <ResourceMissing label="word list" />
         )}
+        {selected ? (
+          <p className={normalizeToken(selected) === normalizeToken(target?.eng || "") ? "renewal-feedback is-correct" : "renewal-feedback is-wrong"} role="status">
+            {normalizeToken(selected) === normalizeToken(target?.eng || "") ? "Correct" : `Answer: ${target?.eng}`}
+          </p>
+        ) : null}
       </div>
     </ActivityFrame>
   );
@@ -6167,6 +6250,23 @@ function buildWordOptions(words: LoadedWord[], current: number, seed = 0): Loade
   return shuffleAvoidingSameOrder(options, seed, wordOptionKey);
 }
 
+function buildWordSearchOptions(words: LoadedWord[], current: number, seed = 0): LoadedWord[] {
+  const target = words[current];
+  if (!target) return [];
+
+  const seen = new Set([normalizeToken(target.eng)]);
+  const options = [target];
+  for (let offset = 1; offset < words.length && options.length < 3; offset += 1) {
+    const candidate = words[(current + offset) % words.length];
+    const key = normalizeToken(candidate.eng);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    options.push(candidate);
+  }
+
+  return shuffleAvoidingSameOrder(options, seed, wordOptionKey);
+}
+
 function buildWordBlankQuestion(word?: LoadedWord, seed = 0): WordBlankQuestion {
   const letters = Array.from(word?.eng || "");
   const candidates = letters
@@ -6415,30 +6515,6 @@ function scrambleWord(value: string): string[] {
     .map((item) => item.letter);
 
   return scrambled.join("").toLowerCase() === value.toLowerCase() ? letters.reverse() : scrambled;
-}
-
-function buildWordSearchGrid(words: string[]): string[][] {
-  const normalizedWords = words.map(normalizeWord).filter(Boolean);
-  if (normalizedWords.length === 0) return [];
-
-  const longest = Math.max(...normalizedWords.map((word) => word.length));
-  const size = Math.min(12, Math.max(8, longest + 1, normalizedWords.length + 2));
-  const filler = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  const grid = Array.from({ length: size }, (_, row) =>
-    Array.from({ length: size }, (_, col) => filler[(row * size + col * 5 + 11) % filler.length])
-  );
-
-  normalizedWords.slice(0, Math.min(6, size)).forEach((word, index) => {
-    const row = index % size;
-    const clipped = word.slice(0, size).toUpperCase();
-    const maxStart = Math.max(0, size - clipped.length);
-    const start = maxStart === 0 ? 0 : (index * 2) % (maxStart + 1);
-    clipped.split("").forEach((letter, offset) => {
-      grid[row][start + offset] = letter;
-    });
-  });
-
-  return grid;
 }
 
 function normalizeWord(value: string): string {

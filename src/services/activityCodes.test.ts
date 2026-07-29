@@ -12,6 +12,7 @@ describe("MetaOn activity code mapping", () => {
     [MetaOnActivityCode.ListenRead, ActType.Listening, "Listen & Read"],
     [MetaOnActivityCode.WordCard, ActType.FlashCardSpace, "Word Card"],
     [MetaOnActivityCode.WordQuiz, ActType.VocaQuizSpace, "Word Quiz"],
+    [MetaOnActivityCode.WordSearch, ActType.WordSearch, "Word Search"],
     [MetaOnActivityCode.WordBlank, ActType.VocaCheckSpace, "Word Blank"],
     [MetaOnActivityCode.MatchingGame, ActType.MatchingGame, "Matching Game"],
     [MetaOnActivityCode.MemoryCard, ActType.MemoryGame, "Memory Card"],
