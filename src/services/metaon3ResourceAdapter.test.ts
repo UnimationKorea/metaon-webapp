@@ -42,6 +42,14 @@ describe("normalizeBookResourceManifest", () => {
                     act_name: "Word Quiz",
                     category: "word",
                     background_video: "/11/160/591/6710/978/978/wdqu03/video/quiz-loop.mp4"
+                  },
+                  {
+                    act_idx: 12886,
+                    num: 6,
+                    act_code: "WDBL02",
+                    act_name: "Word Blank",
+                    category: "word",
+                    background_video: "/11/160/591/6710/978/978/wdbl02/video/blank-loop.mp4"
                   }
                 ],
                 word: [
@@ -106,7 +114,8 @@ describe("normalizeBookResourceManifest", () => {
       { actIdx: 12881, activityCode: "EBOOK01", actType: 67, category: "listening", title: "Listen & Read" },
       { actIdx: 12883, activityCode: "WDCA01", actType: 1017, category: "word", title: "Word Card" },
       { actIdx: 12884, activityCode: "WDCA02", actType: 1017, category: "word", title: "Word Card" },
-      { actIdx: 12885, activityCode: "WDQU03", actType: 1004, category: "word", title: "Word Quiz" }
+      { actIdx: 12885, activityCode: "WDQU03", actType: 1004, category: "word", title: "Word Quiz" },
+      { actIdx: 12886, activityCode: "WDBL02", actType: 1005, category: "word", title: "Word Blank" }
     ]);
     expect(manifest.generatedFiles.map((file) => file.path)).toEqual([
       "Lessons/L1/D1/word/info_word.json",
@@ -135,6 +144,7 @@ describe("normalizeBookResourceManifest", () => {
     expect(manifest.resources.map((resource) => resource.path)).toContain("Lessons/L1/D1/ebook/assets/audio/page_001_01.mp3");
     expect(manifest.resources.map((resource) => resource.path)).toContain("Lessons/L1/D1/wdca02/video/night-loop.mp4");
     expect(manifest.resources.map((resource) => resource.path)).toContain("Lessons/L1/D1/wdqu03/video/quiz-loop.mp4");
+    expect(manifest.resources.map((resource) => resource.path)).toContain("Lessons/L1/D1/wdbl02/video/blank-loop.mp4");
     expect(manifest.resources[0].url).toMatch(/^https:\/\/metaon\.s3\.ap-northeast-2\.amazonaws\.com\/MetaOn3\/BookData\//);
   });
 

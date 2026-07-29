@@ -5,7 +5,7 @@ import { packageKeyFor } from "./packageKeys";
 import type { StoredPackageFile } from "../types/ports";
 import type { BookData, BookPackage, BookResource, DownloadProgress } from "../types/metaonTypes";
 
-export const BOOK_PACKAGE_CACHE_VERSION = 5;
+export const BOOK_PACKAGE_CACHE_VERSION = 6;
 
 export async function downloadAndCacheBookPackage(
   book: BookData,

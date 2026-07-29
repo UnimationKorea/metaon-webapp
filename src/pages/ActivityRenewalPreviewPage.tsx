@@ -124,7 +124,7 @@ export function ActivityRenewalPreviewPage() {
   const navigate = useNavigate();
   const { kind } = useParams();
   const [previewComplete, setPreviewComplete] = useState(false);
-  const isVideoActivity = kind === "video-flashcard" || kind === "video-voca-quiz";
+  const isVideoActivity = kind === "video-flashcard" || kind === "video-voca-quiz" || kind === "video-word-blank";
 
   if (!import.meta.env.DEV) return <Navigate replace to="/" />;
 
@@ -147,6 +147,9 @@ export function ActivityRenewalPreviewPage() {
       break;
     case "word-blank":
       activity = <WordBlankActivity context={previewContext(ActType.VocaCheckSpace, "WDBL01")} prototypeData={{ words: previewWords }} />;
+      break;
+    case "video-word-blank":
+      activity = <WordBlankActivity context={previewContext(ActType.VocaCheckSpace, "WDBL02")} prototypeData={{ words: previewWords }} />;
       break;
     case "word-search":
       activity = <WordSearchActivity context={previewContext(ActType.WordSearch, "WDQU02")} prototypeData={{ words: previewWords }} />;

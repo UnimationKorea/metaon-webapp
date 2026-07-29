@@ -315,6 +315,68 @@ describe("Figma renewal activities", () => {
     expect(container.querySelectorAll(".word-blank-renewal-options [data-uniform-fit-text='true']")).toHaveLength(4);
   });
 
+  it("renders WDBL02 in the shared video frame with its cached background video", async () => {
+    const backgroundVideoPath = `${basePath}/wdbl02/video/blank-loop.mp4`;
+    mockRenewalPackage(sentences, [backgroundVideoPath]);
+
+    const { container } = render(
+      <WordBlankActivity context={activityContext(ActType.VocaCheckSpace, "WDBL02")} />
+    );
+
+    const video = await waitFor(() => {
+      const element = container.querySelector<HTMLVideoElement>(".wdbl02-background-video");
+      expect(element).toBeInTheDocument();
+      return element;
+    });
+    expect(video).toHaveAttribute("loop");
+    expect(video?.muted).toBe(true);
+    expect(video).toHaveAttribute("playsinline");
+    expect(container.querySelector(".wdbl02-video-word-blank-shell")).toBeInTheDocument();
+    await waitFor(() => expect(container.querySelectorAll(".word-blank-renewal-options button")).toHaveLength(4));
+    expect(screen.getByRole("status", { name: "Page 1 of 6" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Previous question" }).querySelector(".video-activity-page-arrow")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Play bridge" }).querySelector("img")).toHaveAttribute(
+      "src",
+      "/metaon-assets/activity/common-controls/sound.png"
+    );
+  });
+
+  it("keeps WDBL02 character slots fixed while a selected letter fills its blank", async () => {
+    const { container } = render(
+      <WordBlankActivity
+        context={activityContext(ActType.VocaCheckSpace, "WDBL02")}
+        prototypeData={{
+          words: [{ index: 0, wordIdx: 700, eng: "a", mean: "에이", sentence: "A letter.", wordClass: "noun", imageUrl: "/word.png", audioUrl: "" }]
+        }}
+      />
+    );
+
+    await waitFor(() => expect(container.querySelectorAll(".word-blank-renewal-options button")).toHaveLength(4));
+    const answer = screen.getByRole("button", { name: "a" });
+    fireEvent.click(answer);
+
+    const word = container.querySelector(".wdbl02-video-word-blank-shell .word-blank-renewal-word");
+    expect(word?.children).toHaveLength(1);
+    expect(word).toHaveStyle({ "--wdbl02-word-font-size": "40px" });
+    expect(word?.querySelector(".renewal-blank")).toHaveTextContent("a");
+    expect(word?.querySelector(".renewal-blank")).toHaveClass("is-correct");
+  });
+
+  it("scales a long WDBL02 word to keep every character inside the question column", async () => {
+    const { container } = render(
+      <WordBlankActivity
+        context={activityContext(ActType.VocaCheckSpace, "WDBL02")}
+        prototypeData={{
+          words: [{ index: 0, wordIdx: 701, eng: "extraordinary", mean: "특별한", sentence: "An extraordinary day.", wordClass: "adjective", imageUrl: "/word.png", audioUrl: "" }]
+        }}
+      />
+    );
+
+    await waitFor(() => expect(container.querySelectorAll(".word-blank-renewal-options button")).toHaveLength(4));
+    expect(container.querySelector(".wdbl02-video-word-blank-shell .word-blank-renewal-word"))
+      .toHaveStyle({ "--wdbl02-word-font-size": "29px" });
+  });
+
   it("aligns five English words with five Korean meaning choices", async () => {
     const { container } = render(
       <MatchingGameActivity context={activityContext(ActType.MatchingGame, "WDPL01")} />

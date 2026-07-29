@@ -63,7 +63,8 @@ export function ActivityPage() {
     normalizedActivityCode === MetaOnActivityCode.NpcQuickCheck2;
   const isVideoActivity =
     normalizedActivityCode === MetaOnActivityCode.VideoWordCard ||
-    normalizedActivityCode === MetaOnActivityCode.VideoWordQuiz;
+    normalizedActivityCode === MetaOnActivityCode.VideoWordQuiz ||
+    normalizedActivityCode === MetaOnActivityCode.VideoWordBlank;
   const activityLayoutStyle = {
     "--unity-activity-bg": `url("${getActivityBackgroundUrl(activity?.actType)}")`
   } as CSSProperties;

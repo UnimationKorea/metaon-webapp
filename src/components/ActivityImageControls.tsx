@@ -15,7 +15,7 @@ export const videoActivityControlAssets = {
   backBackground: "/metaon-assets/activity/video-controls/back-background.png",
   backArrow: "/metaon-assets/activity/video-controls/back-arrow.svg",
   checkBackground: "/metaon-assets/activity/video-controls/check-background.png",
-  checkIcon: "/metaon-assets/activity/video-controls/check.svg",
+  checkForeground: "/metaon-assets/activity/video-controls/check-foreground.png",
   mapAccent: "/metaon-assets/activity/video-controls/map-accent.svg",
   mapPin: "/metaon-assets/activity/video-controls/map-pin.svg",
   mapPlanet: "/metaon-assets/activity/video-controls/map-planet.svg",
@@ -60,8 +60,7 @@ export function VideoActivityCheckControl() {
   return (
     <span aria-hidden="true" className="video-activity-check-control">
       <img className="video-activity-check-background" draggable={false} src={videoActivityControlAssets.checkBackground} alt="" />
-      <img className="video-activity-check-mark" draggable={false} src={videoActivityControlAssets.checkIcon} alt="" />
-      <strong>Check</strong>
+      <img className="video-activity-check-foreground" draggable={false} src={videoActivityControlAssets.checkForeground} alt="" />
     </span>
   );
 }

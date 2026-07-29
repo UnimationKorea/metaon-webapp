@@ -382,7 +382,10 @@ function collectVideoWordActivityResources(day: UnknownRecord, virtualBase: stri
   arrayValue(day.activities).forEach((rawActivity, index) => {
     const activity = asRecord(rawActivity);
     const activityCode = normalizeActivityCode(activity.act_code ?? activity.actCode ?? activity.activity_code ?? activity.activityCode);
-    const videoFolder = activityCode === MetaOnActivityCode.VideoWordCard ? "wdca02" : activityCode === MetaOnActivityCode.VideoWordQuiz ? "wdqu03" : "";
+    const videoFolder =
+      activityCode === MetaOnActivityCode.VideoWordCard ? "wdca02" :
+      activityCode === MetaOnActivityCode.VideoWordQuiz ? "wdqu03" :
+      activityCode === MetaOnActivityCode.VideoWordBlank ? "wdbl02" : "";
     if (!videoFolder) return;
 
     const sourcePath = firstResourcePath(

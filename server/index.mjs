@@ -1831,6 +1831,7 @@ const METAON_ACTIVITY_CODE = {
   wordQuiz: "WDQU01",
   videoWordQuiz: "WDQU03",
   wordBlank: "WDBL01",
+  videoWordBlank: "WDBL02",
   matchingGame: "WDPL01",
   memoryCard: "WDPL02",
   sentenceBlank: "STBL01",
@@ -1847,6 +1848,7 @@ const actTypeByActivityCode = new Map([
   [METAON_ACTIVITY_CODE.wordQuiz, 1004],
   [METAON_ACTIVITY_CODE.videoWordQuiz, 1004],
   [METAON_ACTIVITY_CODE.wordBlank, 1005],
+  [METAON_ACTIVITY_CODE.videoWordBlank, 1005],
   [METAON_ACTIVITY_CODE.matchingGame, 8],
   [METAON_ACTIVITY_CODE.memoryCard, 15],
   [METAON_ACTIVITY_CODE.sentenceBlank, 1006],
@@ -1887,6 +1889,7 @@ const titleByActivityCode = new Map([
   [METAON_ACTIVITY_CODE.wordQuiz, "Word Quiz"],
   [METAON_ACTIVITY_CODE.videoWordQuiz, "Word Quiz"],
   [METAON_ACTIVITY_CODE.wordBlank, "Word Blank"],
+  [METAON_ACTIVITY_CODE.videoWordBlank, "Word Blank"],
   [METAON_ACTIVITY_CODE.matchingGame, "Matching Game"],
   [METAON_ACTIVITY_CODE.memoryCard, "Memory Card"],
   [METAON_ACTIVITY_CODE.sentenceBlank, "Sentence Blank"],
@@ -1988,7 +1991,10 @@ function collectVideoWordActivityBookInfoResources(day, virtualBase, resources) 
   firstArray(day.activities).forEach((rawActivity, index) => {
     const activity = recordValue(rawActivity);
     const activityCode = normalizeActivityCodeValue(activity.act_code ?? activity.actCode ?? activity.activity_code ?? activity.activityCode);
-    const videoFolder = activityCode === METAON_ACTIVITY_CODE.videoWordCard ? "wdca02" : activityCode === METAON_ACTIVITY_CODE.videoWordQuiz ? "wdqu03" : "";
+    const videoFolder =
+      activityCode === METAON_ACTIVITY_CODE.videoWordCard ? "wdca02" :
+      activityCode === METAON_ACTIVITY_CODE.videoWordQuiz ? "wdqu03" :
+      activityCode === METAON_ACTIVITY_CODE.videoWordBlank ? "wdbl02" : "";
     if (!videoFolder) return;
 
     const sourcePath = firstBookInfoResourcePath(

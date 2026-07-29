@@ -45,6 +45,13 @@ describe("MetaOn activity code mapping", () => {
     expect(activityTitleForCode(MetaOnActivityCode.VideoWordQuiz, "Fallback")).toBe("Word Quiz");
   });
 
+  it("maps WDBL02 to the existing Word Blank renderer while preserving the video-blank code from Book data", () => {
+    expect(resolveActTypeFromActivityCode(MetaOnActivityCode.VideoWordBlank)).toBe(ActType.VocaCheckSpace);
+    expect(canonicalActivityCodeForActType(ActType.VocaCheckSpace, MetaOnActivityCode.VideoWordBlank))
+      .toBe(MetaOnActivityCode.VideoWordBlank);
+    expect(activityTitleForCode(MetaOnActivityCode.VideoWordBlank, "Fallback")).toBe("Word Blank");
+  });
+
   it("can route EBOOK01 to the old Reading renderer when the API marks it as reading-only", () => {
     expect(resolveActTypeFromActivityCode(MetaOnActivityCode.ListenRead, { category: "reading", title: "Read" })).toBe(ActType.Reading);
   });

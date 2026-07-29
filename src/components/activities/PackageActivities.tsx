@@ -2095,6 +2095,14 @@ export function WordBlankActivity({
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<string>();
   const feedbackTimerRef = useRef<number | undefined>(undefined);
+  const activityCode = normalizeActivityCode(context.activity?.activityCode);
+  const usesVideoBackground = activityCode === MetaOnActivityCode.VideoWordBlank;
+  const wdbl02VideoPaths = usePackagePathList(context, `${dayBase(context)}/wdbl02/video/`);
+  const wdbl02VideoPath = useMemo(
+    () => wdbl02VideoPaths.find((path) => /\.(?:mp4|webm|m4v|mov)$/i.test(path)),
+    [wdbl02VideoPaths]
+  );
+  const wdbl02VideoUrl = usePackageUrl(context, wdbl02VideoPath);
   const target = words[current];
   const targetKey = target ? wordOptionKey(target) : "";
   const question = useMemo(
@@ -2104,6 +2112,11 @@ export function WordBlankActivity({
   const isCorrect = selected != null && normalizeToken(selected) === normalizeToken(question.answer);
   const wordPrefix = question.blankIndex >= 0 ? question.letters.slice(0, question.blankIndex).join("") : "";
   const wordSuffix = question.blankIndex >= 0 ? question.letters.slice(question.blankIndex + 1).join("") : "";
+  const videoWordUnits = Math.max(1, question.letters.length + Math.max(0, question.letters.length - 1) * 0.112);
+  const videoWordFontSize = Math.max(20, Math.min(40, Math.floor(416 / videoWordUnits)));
+  const videoWordStyle = usesVideoBackground
+    ? ({ "--wdbl02-word-font-size": `${videoWordFontSize}px` } as CSSProperties)
+    : undefined;
   const questionViewKeyRef = useRef("");
 
   useEffect(() => {
@@ -2178,9 +2191,30 @@ export function WordBlankActivity({
 
   return (
     <ActivityFrame context={context} actionLabel={label} className="figma-renewal-frame">
-      <div className="figma-renewal-shell word-blank-renewal-shell">
-        <RenewalCounter current={words.length === 0 ? 0 : current + 1} total={words.length} className="word-blank-counter" />
-        <ActivityQuestionNavigation current={current} total={words.length} onChange={setCurrent} />
+      <div className={`figma-renewal-shell word-blank-renewal-shell${usesVideoBackground ? " wdbl02-video-word-blank-shell" : ""}`}>
+        {usesVideoBackground ? (
+          <>
+            {wdbl02VideoUrl ? (
+              <video
+                aria-hidden="true"
+                autoPlay
+                className="wdbl02-background-video"
+                loop
+                muted
+                playsInline
+                preload="auto"
+                src={wdbl02VideoUrl}
+              />
+            ) : null}
+            <span aria-hidden="true" className="wdbl02-background-scrim" />
+          </>
+        ) : null}
+        {usesVideoBackground ? (
+          <VideoActivityProgress currentIndex={current} total={words.length} />
+        ) : (
+          <RenewalCounter current={words.length === 0 ? 0 : current + 1} total={words.length} className="word-blank-counter" />
+        )}
+        <ActivityQuestionNavigation current={current} total={words.length} onChange={setCurrent} variant={usesVideoBackground ? "video" : "standard"} />
         <div className="word-blank-renewal-content">
           <div className="word-blank-renewal-media">
             {target?.imageUrl ? <img src={target.imageUrl} alt={target.eng} /> : <ResourceMissing label="word image" />}
@@ -2188,6 +2222,7 @@ export function WordBlankActivity({
               src={target?.audioUrl}
               label={`Play ${target?.eng || "word"}`}
               className="word-blank-sound-button"
+              icon={usesVideoBackground ? "sound" : "listening"}
               onPlay={() =>
                 recordLearnEvent(context, {
                   action: "audio_play",
@@ -2200,12 +2235,36 @@ export function WordBlankActivity({
             />
           </div>
           <div className="word-blank-renewal-question">
-            <div className="word-blank-renewal-word" aria-label={target?.eng ? `Word blank for ${target.eng}` : "Word blank"}>
-              <span>{wordPrefix}</span>
-              <span className={selected ? (isCorrect ? "renewal-blank is-correct" : "renewal-blank is-wrong") : "renewal-blank"}>
-                {selected || ""}
-              </span>
-              <span>{wordSuffix}</span>
+            <div className="word-blank-renewal-word" aria-label={target?.eng ? `Word blank for ${target.eng}` : "Word blank"} style={videoWordStyle}>
+              {usesVideoBackground ? (
+                question.letters.map((letter, index) => {
+                  const isBlank = index === question.blankIndex;
+                  return (
+                    <span
+                      className={
+                        isBlank
+                          ? selected
+                            ? isCorrect
+                              ? "renewal-blank is-correct"
+                              : "renewal-blank is-wrong"
+                            : "renewal-blank"
+                          : "word-blank-letter"
+                      }
+                      key={`${letter}:${index}`}
+                    >
+                      {isBlank ? selected || "" : letter}
+                    </span>
+                  );
+                })
+              ) : (
+                <>
+                  <span>{wordPrefix}</span>
+                  <span className={selected ? (isCorrect ? "renewal-blank is-correct" : "renewal-blank is-wrong") : "renewal-blank"}>
+                    {selected || ""}
+                  </span>
+                  <span>{wordSuffix}</span>
+                </>
+              )}
             </div>
             <UniformAutoFitTextGroup className="word-blank-renewal-options" maximumSize={40} minimumSize={8}>
               {question.options.map((option) => (
