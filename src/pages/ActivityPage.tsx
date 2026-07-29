@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { endStudy, startStudy } from "../api/uniplanetApi";
-import { activityControlAssets } from "../components/ActivityImageControls";
+import { activityControlAssets, VideoActivityCheckControl } from "../components/ActivityImageControls";
 import { ActivityCompletionCelebration } from "../components/ActivityCompletionCelebration";
 import { ActivityTopBar } from "../components/ActivityTopBar";
 import { EmptyState } from "../components/EmptyState";
@@ -61,6 +61,9 @@ export function ActivityPage() {
     normalizedActivityCode === MetaOnActivityCode.NpcQuickCheck ||
     normalizedActivityCode === MetaOnActivityCode.LegacyNpcQuickCheck ||
     normalizedActivityCode === MetaOnActivityCode.NpcQuickCheck2;
+  const isVideoActivity =
+    normalizedActivityCode === MetaOnActivityCode.VideoWordCard ||
+    normalizedActivityCode === MetaOnActivityCode.VideoWordQuiz;
   const activityLayoutStyle = {
     "--unity-activity-bg": `url("${getActivityBackgroundUrl(activity?.actType)}")`
   } as CSSProperties;
@@ -215,6 +218,7 @@ export function ActivityPage() {
         onPrev={() => goToActivity(currentActivityIndex - 1)}
         onNext={() => goToActivity(currentActivityIndex + 1)}
         onToggleFullscreen={toggleFullscreen}
+        variant={isVideoActivity ? "video" : "standard"}
       />
       {renderer.render({
         packageMeta: packageState.packageMeta,
@@ -230,12 +234,16 @@ export function ActivityPage() {
         <button
           aria-label={isComplete ? "Activity completion saved" : "Complete activity"}
           aria-pressed={isComplete}
-          className={`hub-activity-complete-button${isComplete ? " is-complete" : ""}`}
+          className={`hub-activity-complete-button${isVideoActivity ? " video-activity-check" : ""}${isComplete ? " is-complete" : ""}`}
           title="완료"
           type="button"
           onClick={() => void finishActivity()}
         >
-          <img aria-hidden="true" draggable={false} src={activityControlAssets.check} alt="" />
+          {isVideoActivity ? (
+            <VideoActivityCheckControl />
+          ) : (
+            <img aria-hidden="true" draggable={false} src={activityControlAssets.check} alt="" />
+          )}
         </button>
       ) : null}
       {celebration ? (

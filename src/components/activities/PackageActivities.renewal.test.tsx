@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { indexedDbStorage } from "../../services/indexedDbStorage";
 import { ActType, type ActivityRendererContext } from "../../types/metaonTypes";
 import {
+  FlashCardActivity,
   MatchingGameActivity,
   MemoryGameActivity,
   SentenceBlankActivity,
@@ -84,7 +85,7 @@ function activityContext(
   };
 }
 
-function mockRenewalPackage(sentenceRecords = sentences) {
+function mockRenewalPackage(sentenceRecords = sentences, extraPaths: string[] = []) {
   const wordInfoPath = `${basePath}/word/info_word.json`;
   const sentenceInfoPath = `${basePath}/sentence/info_sentence.json`;
   const paths = [
@@ -94,7 +95,8 @@ function mockRenewalPackage(sentenceRecords = sentences) {
       `${basePath}/word/img/word_${String(index + 1).padStart(2, "0")}.png`,
       `${basePath}/word/snd/snd_word_${String(index + 1).padStart(2, "0")}.mp3`
     ]),
-    `${basePath}/sentence/snd/snd_sentence_01.mp3`
+    `${basePath}/sentence/snd/snd_sentence_01.mp3`,
+    ...extraPaths
   ];
 
   vi.mocked(indexedDbStorage.listFiles).mockResolvedValue(
@@ -198,6 +200,65 @@ describe("Figma renewal activities", () => {
     fireEvent.click(nextQuestion);
     expect(await screen.findByLabelText("Question 2 of 6")).toBeInTheDocument();
     expect(await screen.findByRole("img", { name: "river" })).toBeInTheDocument();
+  });
+
+  it("renders WDCA02 with a cached looping video background while keeping the WDCA card controls", async () => {
+    const backgroundVideoPath = `${basePath}/wdca02/video/night-loop.mp4`;
+    mockRenewalPackage(sentences, [backgroundVideoPath]);
+
+    const { container } = render(
+      <FlashCardActivity context={activityContext(ActType.FlashCardSpace, "WDCA02")} label="Word Card" />
+    );
+
+    const video = await waitFor(() => {
+      const element = container.querySelector<HTMLVideoElement>(".wdca02-background-video");
+      expect(element).toBeInTheDocument();
+      return element;
+    });
+    expect(video).toHaveAttribute("loop");
+    expect(video?.muted).toBe(true);
+    expect(video).toHaveAttribute("playsinline");
+    expect(container.querySelector(".wdca02-video-flashcard-shell")).toBeInTheDocument();
+    await screen.findByRole("button", { name: /flip word card bridge/i });
+    expect(screen.getByRole("status", { name: "Page 1 of 6" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Previous word card" }).querySelector(".video-activity-page-arrow")).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: /more info/i })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /flip word card bridge/i })).toBeInTheDocument();
+  });
+
+  it("renders WDQU03 as a video Word Quiz with the Figma text-choice layout", async () => {
+    const backgroundVideoPath = `${basePath}/wdqu03/video/quiz-loop.mp4`;
+    mockRenewalPackage(sentences, [backgroundVideoPath]);
+
+    const { container } = render(
+      <VocaQuizActivity context={activityContext(ActType.VocaQuizSpace, "WDQU03", { quiz_type: 1 })} />
+    );
+
+    const video = await waitFor(() => {
+      const element = container.querySelector<HTMLVideoElement>(".wdqu03-background-video");
+      expect(element).toBeInTheDocument();
+      return element;
+    });
+    expect(video).toHaveAttribute("loop");
+    expect(video?.muted).toBe(true);
+    expect(video).toHaveAttribute("playsinline");
+    expect(container.querySelector(".wdqu03-video-quiz-shell")).toBeInTheDocument();
+    await waitFor(() => expect(container.querySelectorAll(".voca-quiz-options button")).toHaveLength(4));
+    expect(screen.getByRole("status", { name: "Page 1 of 6" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Previous question" }).querySelector(".video-activity-page-arrow")).toBeInTheDocument();
+  });
+
+  it("keeps the WDQU03 image-choice variant inside the same video frame", async () => {
+    const backgroundVideoPath = `${basePath}/wdqu03/video/quiz-loop.mp4`;
+    mockRenewalPackage(sentences, [backgroundVideoPath]);
+
+    const { container } = render(
+      <VocaQuizActivity context={activityContext(ActType.VocaQuizSpace, "WDQU03", { quiz_type: 0 })} />
+    );
+
+    await waitFor(() => expect(container.querySelectorAll(".voca-quiz-options.is-image img")).toHaveLength(4));
+    expect(container.querySelector(".wdqu03-video-quiz-shell")).toHaveAttribute("data-quiz-mode", "text-image");
+    expect(container.querySelector(".wdqu03-background-video")).toBeInTheDocument();
   });
 
   it("renders WDQU02 as the Figma Word Search image-to-word quiz", async () => {

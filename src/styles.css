@@ -994,6 +994,141 @@ code {
   border: 0;
 }
 
+.video-activity-back,
+.video-activity-map {
+  position: absolute;
+  z-index: 38;
+  top: 0;
+  width: 64px;
+  height: 64px;
+}
+
+.video-activity-back {
+  left: 3.125%;
+  position: absolute;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transition: transform 160ms ease;
+}
+
+.video-activity-back-background {
+  width: 64px;
+  height: 64px;
+  display: block;
+}
+
+.video-activity-back-arrow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 32px;
+  height: 37px;
+  filter: brightness(0) saturate(100%) invert(15%) sepia(16%) saturate(1379%) hue-rotate(205deg) brightness(92%) contrast(93%);
+  transform: translate(-50%, -50%) rotate(-90deg);
+}
+
+.video-activity-back:hover {
+  transform: translateY(-2px);
+}
+
+.video-activity-map {
+  right: 3.125%;
+}
+
+.video-activity-map-trigger {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 24px rgba(5, 5, 28, 0.18);
+  backdrop-filter: blur(10px);
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.video-activity-map-trigger:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.video-activity-map-planet,
+.video-activity-map-pin,
+.video-activity-map-accent {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+}
+
+.video-activity-map-planet {
+  width: 37.9px;
+  height: 37.9px;
+  top: 12px;
+  left: 7px;
+  transform: rotate(27.25deg);
+}
+
+.video-activity-map-pin {
+  width: 24px;
+  height: 33px;
+  top: 4.5px;
+  left: 7px;
+}
+
+.video-activity-map-accent {
+  width: 6px;
+  height: 6px;
+  top: 13px;
+  left: 46px;
+}
+
+.video-activity-map-actions {
+  position: absolute;
+  z-index: 1;
+  top: 72px;
+  right: 0;
+  display: none;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 18px;
+  background: rgba(29, 24, 74, 0.76);
+  box-shadow: 0 14px 30px rgba(3, 3, 26, 0.28);
+  backdrop-filter: blur(12px);
+}
+
+.video-activity-map.is-open .video-activity-map-actions {
+  display: flex;
+}
+
+.video-activity-map-actions button {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.video-activity-map-actions button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.video-activity-map-actions button:disabled {
+  opacity: 0.34;
+}
+
 .activity-common-back {
   position: absolute;
   z-index: 38;
@@ -3169,6 +3304,65 @@ button.image-page-control:hover:not(:disabled) {
   font-family: Pretendard, "Segoe UI", Arial, sans-serif;
 }
 
+.wdca02-video-flashcard-shell {
+  background-image: url("/metaon-assets/activity/wdca02/video-word-card-fallback.png");
+}
+
+.wdca02-background-video,
+.wdca02-background-scrim {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.video-activity-page-indicator {
+  position: absolute;
+  z-index: 6;
+  top: 8px;
+  right: 10%;
+  width: 121px;
+  height: 49px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border-radius: 40px;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+  box-sizing: border-box;
+  font-family: Pretendard, "Segoe UI", Arial, sans-serif;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  backdrop-filter: blur(10px);
+}
+
+.video-activity-page-indicator strong {
+  color: inherit;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 29px;
+}
+
+.video-activity-page-indicator span {
+  color: inherit;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.wdca02-background-video {
+  z-index: 0;
+  object-fit: cover;
+}
+
+.wdca02-background-scrim {
+  z-index: 1;
+  background: rgba(18, 15, 59, 0.3);
+}
+
 .wdca-more-info-toggle {
   position: absolute;
   z-index: 6;
@@ -3474,6 +3668,170 @@ button.image-page-control:hover:not(:disabled) {
   left: 74.375%;
 }
 
+.wdca02-video-flashcard-shell .wdca-card-arrow {
+  z-index: 7;
+  top: 50%;
+  width: 64px;
+  height: 64px;
+  padding: 0 !important;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none;
+}
+
+.wdca02-video-flashcard-shell .wdca-flashcard-face {
+  border-color: rgba(190, 194, 207, 0.9);
+  box-shadow:
+    0 18px 48px rgba(10, 12, 34, 0.42),
+    0 0 24px rgba(190, 194, 207, 0.32),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.38);
+  backdrop-filter: blur(10px);
+}
+
+.wdca02-video-flashcard-shell .wdca-flashcard-front {
+  background: rgba(231, 241, 248, 0.9);
+}
+
+.wdca02-video-flashcard-shell .wdca-more-info-toggle {
+  width: 240px;
+  height: 60px;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.wdca02-video-flashcard-shell .wdca-more-info-toggle > img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  object-fit: contain;
+}
+
+.wdca02-video-flashcard-shell .wdca-card-arrow-prev {
+  left: 5.625%;
+}
+
+.wdca02-video-flashcard-shell .wdca-card-arrow-next {
+  left: 94.375%;
+}
+
+.video-activity-page-arrow {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  display: block;
+  pointer-events: none;
+}
+
+.video-activity-page-arrow-background {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.video-activity-page-arrow-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20.833px;
+  height: 12.5px;
+  filter: brightness(0) saturate(100%) invert(15%) sepia(16%) saturate(1379%) hue-rotate(205deg) brightness(92%) contrast(93%);
+}
+
+.video-activity-page-arrow.is-prev .video-activity-page-arrow-icon {
+  transform: translate(-50%, -50%) rotate(-90deg);
+}
+
+.video-activity-page-arrow.is-next .video-activity-page-arrow-icon {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.wdca02-video-flashcard-shell .wdca-card-arrow:hover:not(:disabled) {
+  filter: brightness(1.16);
+  transform: translate(-50%, calc(-50% - 2px));
+}
+
+.activity-layout:has(.wdca02-video-flashcard-shell) .hub-activity-complete-button {
+  right: 3.125%;
+  bottom: 0;
+}
+
+.video-activity-check {
+  z-index: 38;
+  width: 160px;
+  height: 64px;
+  min-height: 64px;
+  aspect-ratio: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: #ffffff;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  filter: none;
+}
+
+.video-activity-check-control {
+  position: relative;
+  width: 160px;
+  height: 64px;
+  display: block;
+  pointer-events: none;
+}
+
+.video-activity-check-background {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.video-activity-check-mark {
+  position: absolute;
+  top: 24.7px;
+  left: 20.2px;
+  width: 20.4px;
+  height: 14.6px;
+  filter: brightness(0) saturate(100%) invert(15%) sepia(16%) saturate(1379%) hue-rotate(205deg) brightness(92%) contrast(93%);
+}
+
+.video-activity-check-control > strong {
+  position: absolute;
+  top: 16px;
+  left: 52px;
+  color: #292541;
+  font-size: 28px;
+  line-height: 32px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.video-activity-check:not(.is-complete):hover {
+  filter: none;
+}
+
+.video-activity-check.is-complete,
+.video-activity-check.is-complete:hover {
+  color: #f8ffcc;
+  background: transparent;
+  filter: none;
+  transform: translateY(2px) scale(0.98);
+}
+
+.video-activity-check.is-complete > .video-activity-check-control {
+  filter: drop-shadow(0 0 6px rgba(222, 255, 176, 0.82));
+}
+
 .activity-layout:has(.wdca-flashcard-shell) .hub-activity-complete-button {
   right: 40px;
   bottom: 8px;
@@ -3530,6 +3888,140 @@ button.image-page-control:hover:not(:disabled) {
   .activity-layout:has(.wdca-flashcard-shell) .hub-activity-complete-button {
     right: 10px;
     bottom: 6px;
+  }
+
+  .video-activity-back,
+  .video-activity-map {
+    width: 46px;
+    height: 46px;
+  }
+
+  .video-activity-back {
+    left: 10px;
+  }
+
+  .video-activity-back-background {
+    width: 46px;
+    height: 46px;
+  }
+
+  .video-activity-back-arrow {
+    width: 23px;
+    height: 27px;
+  }
+
+  .video-activity-map {
+    right: 10px;
+  }
+
+  .video-activity-map-trigger {
+    width: 46px;
+    height: 46px;
+  }
+
+  .video-activity-map-planet {
+    top: 8px;
+    left: 4px;
+    transform: scale(0.78) rotate(27.25deg);
+    transform-origin: top left;
+  }
+
+  .video-activity-map-pin {
+    top: 3px;
+    left: 4px;
+    transform: scale(0.78);
+    transform-origin: top left;
+  }
+
+  .video-activity-map-accent {
+    top: 10px;
+    left: 34px;
+  }
+
+  .video-activity-page-indicator {
+    top: 5px;
+    right: 66px;
+    width: 95px;
+    height: 40px;
+    gap: 5px;
+    padding: 8px 14px;
+  }
+
+  .video-activity-page-indicator strong {
+    font-size: 19px;
+    line-height: 23px;
+  }
+
+  .video-activity-page-indicator span {
+    font-size: 16px;
+    line-height: 20px;
+  }
+
+  .wdca02-video-flashcard-shell .wdca-card-arrow {
+    width: 46px;
+    height: 46px;
+  }
+
+  .wdqu03-video-quiz-shell::before {
+    border-radius: 28px;
+  }
+
+  .wdqu03-video-quiz-shell .activity-question-edge-nav {
+    width: 46px;
+    height: 46px;
+  }
+
+  .wdqu03-video-quiz-shell .voca-quiz-options.is-text {
+    gap: 10px 8px;
+  }
+
+  .wdqu03-video-quiz-shell .voca-quiz-options.is-image {
+    gap: 8px;
+  }
+
+  .wdca02-video-flashcard-shell .wdca-card-arrow-prev {
+    left: 5.5%;
+  }
+
+  .wdca02-video-flashcard-shell .wdca-card-arrow-next {
+    left: 94.5%;
+  }
+
+  .video-activity-page-arrow {
+    width: 46px;
+    height: 46px;
+  }
+
+  .activity-layout:has(.wdca02-video-flashcard-shell) .hub-activity-complete-button {
+    right: 10px;
+    bottom: 6px;
+  }
+
+  .video-activity-check {
+    width: 116px;
+    height: 46px;
+    min-height: 46px;
+    gap: 5px;
+    padding: 8px 12px 10px;
+  }
+
+  .video-activity-check-control {
+    width: 116px;
+    height: 46px;
+  }
+
+  .video-activity-check-mark {
+    top: 17.8px;
+    left: 14.6px;
+    width: 14.8px;
+    height: 10.5px;
+  }
+
+  .video-activity-check-control > strong {
+    top: 11.5px;
+    left: 37.7px;
+    font-size: 20.3px;
+    line-height: 23px;
   }
 }
 
@@ -3926,6 +4418,170 @@ button.image-page-control:hover:not(:disabled) {
 .voca-quiz-renewal-shell {
   background-color: #322776;
   background-image: url("/metaon-assets/activity/figma-renewal/voca-quiz-space.png");
+}
+
+/* WDQU03 is the video counterpart of Word Quiz. The runtime video comes from the
+   cached Book package; the exported Figma scene is only the no-video fallback. */
+.wdqu03-video-quiz-shell {
+  background-color: #171247;
+  background-image: url("/metaon-assets/activity/wdqu03/word-quiz-fallback.png");
+}
+
+.wdqu03-background-video,
+.wdqu03-background-scrim {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.wdqu03-background-video {
+  object-fit: cover;
+}
+
+.wdqu03-background-scrim {
+  z-index: 1;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.wdqu03-video-quiz-shell::before {
+  position: absolute;
+  z-index: 2;
+  top: 18%;
+  left: 9.375%;
+  width: 81.25%;
+  height: 64%;
+  box-sizing: border-box;
+  border: 2px solid #8e8e8e;
+  border-radius: 48px;
+  background: rgba(0, 0, 0, 0.32);
+  box-shadow: 0 20px 46px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(4px);
+  content: "";
+  pointer-events: none;
+}
+
+.wdqu03-video-quiz-shell .voca-quiz-prompt {
+  z-index: 4;
+  left: 11.875%;
+  top: 23%;
+  width: 33.75%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.wdqu03-video-quiz-shell .voca-quiz-prompt.is-text,
+.wdqu03-video-quiz-shell .voca-quiz-prompt.is-sound {
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 0 0 2px rgba(250, 250, 250, 0.9);
+  backdrop-filter: blur(8px);
+}
+
+.wdqu03-video-quiz-shell .voca-quiz-prompt > .voca-quiz-fit-text {
+  color: #ffffff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.42);
+}
+
+.wdqu03-video-quiz-shell .voca-quiz-options {
+  z-index: 5;
+}
+
+.wdqu03-video-quiz-shell .voca-quiz-options.is-text {
+  left: 48.125%;
+  top: 37.5%;
+  width: 40%;
+  height: 25%;
+  gap: 24px 20px;
+}
+
+.wdqu03-video-quiz-shell .voca-quiz-options.is-image {
+  left: 52.8125%;
+  top: 26.5%;
+  width: 30.625%;
+  gap: 16px;
+}
+
+.wdqu03-video-quiz-shell .voca-quiz-option {
+  border: 2px solid #fafafa;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  box-shadow: none;
+  backdrop-filter: blur(8px);
+}
+
+.wdqu03-video-quiz-shell .voca-quiz-option .voca-quiz-fit-text {
+  color: inherit;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
+}
+
+.wdqu03-video-quiz-shell .voca-quiz-options.is-image .voca-quiz-option {
+  border-color: #fafafa;
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: none;
+}
+
+.wdqu03-video-quiz-shell .voca-quiz-option:hover:not(:disabled) {
+  border-color: #ffffff;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.wdqu03-video-quiz-shell .voca-quiz-option.is-selected,
+.wdqu03-video-quiz-shell .voca-quiz-option.is-correct {
+  border-color: #ffce1f;
+  background: #ffce1f;
+  color: #141414;
+  box-shadow: inset 0 -6px 0 #f5b509;
+}
+
+.wdqu03-video-quiz-shell .voca-quiz-option.is-wrong {
+  border-color: #ff8f9f;
+  background: rgba(255, 214, 220, 0.96);
+  color: #7d2234;
+}
+
+.wdqu03-video-quiz-shell .activity-question-edge-nav {
+  z-index: 13;
+  top: 45%;
+  width: 64px;
+  height: 64px;
+  padding: 0 !important;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none;
+}
+
+.wdqu03-video-quiz-shell .activity-question-edge-nav.previous {
+  left: 3.125%;
+}
+
+.wdqu03-video-quiz-shell .activity-question-edge-nav.next {
+  right: 3.125%;
+}
+
+.wdqu03-video-quiz-shell .activity-question-edge-nav:hover:not(:disabled) {
+  filter: brightness(1.16);
+  transform: translateY(calc(-50% - 2px));
+}
+
+.wdqu03-video-quiz-shell .renewal-feedback {
+  z-index: 14;
+}
+
+.wdqu03-video-quiz-shell .video-activity-page-indicator {
+  z-index: 14;
+}
+
+.activity-layout:has(.wdqu03-video-quiz-shell) .hub-activity-complete-button {
+  right: 3.125%;
+  bottom: 0;
 }
 
 .voca-quiz-counter {

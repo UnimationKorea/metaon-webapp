@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { activityControlAssets } from "../components/ActivityImageControls";
+import { activityControlAssets, VideoActivityCheckControl } from "../components/ActivityImageControls";
 import { ActivityTopBar } from "../components/ActivityTopBar";
 import {
   FlashCardActivity,
@@ -124,6 +124,7 @@ export function ActivityRenewalPreviewPage() {
   const navigate = useNavigate();
   const { kind } = useParams();
   const [previewComplete, setPreviewComplete] = useState(false);
+  const isVideoActivity = kind === "video-flashcard" || kind === "video-voca-quiz";
 
   if (!import.meta.env.DEV) return <Navigate replace to="/" />;
 
@@ -131,6 +132,12 @@ export function ActivityRenewalPreviewPage() {
   switch (kind) {
     case "flashcard":
       activity = <FlashCardActivity context={previewContext(ActType.FlashCardSpace, "WDCA01")} label="Word Card" prototypeData={{ words: previewWords }} />;
+      break;
+    case "video-flashcard":
+      activity = <FlashCardActivity context={previewContext(ActType.FlashCardSpace, "WDCA02")} label="Word Card" prototypeData={{ words: previewWords }} />;
+      break;
+    case "video-voca-quiz":
+      activity = <VocaQuizActivity context={previewContext(ActType.VocaQuizSpace, "WDQU03", { quiz_type: 1 })} prototypeData={{ words: previewWords }} />;
       break;
     case "voca-text":
       activity = <VocaQuizActivity context={previewContext(ActType.VocaQuizSpace, "WDQU01", { quiz_type: 1 })} prototypeData={{ words: previewWords }} />;
@@ -176,16 +183,21 @@ export function ActivityRenewalPreviewPage() {
         onPrev={() => undefined}
         onNext={() => undefined}
         onToggleFullscreen={() => undefined}
+        variant={isVideoActivity ? "video" : "standard"}
       />
       {activity}
       <button
         aria-label="Complete activity"
         aria-pressed={previewComplete}
-        className={`hub-activity-complete-button${previewComplete ? " is-complete" : ""}`}
+        className={`hub-activity-complete-button${isVideoActivity ? " video-activity-check" : ""}${previewComplete ? " is-complete" : ""}`}
         onClick={() => setPreviewComplete(true)}
         type="button"
       >
-        <img aria-hidden="true" draggable={false} src={activityControlAssets.check} alt="" />
+        {isVideoActivity ? (
+          <VideoActivityCheckControl />
+        ) : (
+          <img aria-hidden="true" draggable={false} src={activityControlAssets.check} alt="" />
+        )}
       </button>
     </div>
   );

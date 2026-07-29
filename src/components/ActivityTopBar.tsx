@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight, Maximize2, Menu, Minimize2, PenLine, Star, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { activityControlAssets } from "./ActivityImageControls";
+import { activityControlAssets, videoActivityControlAssets } from "./ActivityImageControls";
 
 const ACTIVITY_MENU_AUTO_HIDE_MS = 3000;
 
@@ -11,7 +11,8 @@ export function ActivityTopBar({
   onBack,
   onPrev,
   onNext,
-  onToggleFullscreen
+  onToggleFullscreen,
+  variant = "standard"
 }: {
   isFullscreen: boolean;
   isFirstActivity: boolean;
@@ -20,6 +21,7 @@ export function ActivityTopBar({
   onPrev: () => void;
   onNext: () => void;
   onToggleFullscreen: () => void;
+  variant?: "standard" | "video";
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -32,6 +34,47 @@ export function ActivityTopBar({
   function runAndClose(action: () => void) {
     action();
     setIsOpen(false);
+  }
+
+  if (variant === "video") {
+    return (
+      <>
+        <button className="video-activity-back" type="button" onClick={onBack} aria-label="Back to book">
+          <img aria-hidden="true" className="video-activity-back-background" draggable={false} src={videoActivityControlAssets.backBackground} alt="" />
+          <img aria-hidden="true" className="video-activity-back-arrow" draggable={false} src={videoActivityControlAssets.backArrow} alt="" />
+        </button>
+        <div className={`video-activity-map${isOpen ? " is-open" : ""}`}>
+          <button
+            className="video-activity-map-trigger"
+            type="button"
+            onClick={() => setIsOpen((current) => !current)}
+            aria-expanded={isOpen}
+            aria-label={isOpen ? "Hide activity map" : "Show activity map"}
+            title="Activity map"
+          >
+            <img aria-hidden="true" className="video-activity-map-planet" draggable={false} src={videoActivityControlAssets.mapPlanet} alt="" />
+            <img aria-hidden="true" className="video-activity-map-pin" draggable={false} src={videoActivityControlAssets.mapPin} alt="" />
+            <img aria-hidden="true" className="video-activity-map-accent" draggable={false} src={videoActivityControlAssets.mapAccent} alt="" />
+          </button>
+          <div className="video-activity-map-actions" aria-label="Activity navigation menu">
+            <button type="button" onClick={() => runAndClose(onPrev)} aria-label="Previous activity" title="Previous activity" disabled={isFirstActivity}>
+              <ChevronLeft size={22} />
+            </button>
+            <button type="button" onClick={() => runAndClose(onNext)} aria-label="Next activity" title="Next activity" disabled={isLastActivity}>
+              <ChevronRight size={22} />
+            </button>
+            <button
+              type="button"
+              onClick={() => runAndClose(onToggleFullscreen)}
+              aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+              title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+            >
+              {isFullscreen ? <Minimize2 size={19} /> : <Maximize2 size={19} />}
+            </button>
+          </div>
+        </div>
+      </>
+    );
   }
 
   return (

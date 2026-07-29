@@ -3,8 +3,10 @@ import { ActType } from "../types/metaonTypes";
 export const MetaOnActivityCode = {
   ListenRead: "EBOOK01",
   WordCard: "WDCA01",
+  VideoWordCard: "WDCA02",
   WordQuiz: "WDQU01",
   WordSearch: "WDQU02",
+  VideoWordQuiz: "WDQU03",
   WordBlank: "WDBL01",
   MatchingGame: "WDPL01",
   MemoryCard: "WDPL02",
@@ -21,7 +23,9 @@ export type MetaOnActivityCode = (typeof MetaOnActivityCode)[keyof typeof MetaOn
 
 const actTypeByActivityCode = new Map<string, ActType>([
   [MetaOnActivityCode.WordCard, ActType.FlashCardSpace],
+  [MetaOnActivityCode.VideoWordCard, ActType.FlashCardSpace],
   [MetaOnActivityCode.WordQuiz, ActType.VocaQuizSpace],
+  [MetaOnActivityCode.VideoWordQuiz, ActType.VocaQuizSpace],
   [MetaOnActivityCode.WordSearch, ActType.WordSearch],
   [MetaOnActivityCode.WordBlank, ActType.VocaCheckSpace],
   [MetaOnActivityCode.MatchingGame, ActType.MatchingGame],
@@ -62,8 +66,10 @@ const activityCodeByActType = new Map<ActType, MetaOnActivityCode>([
 const titleByActivityCode = new Map<MetaOnActivityCode, string>([
   [MetaOnActivityCode.ListenRead, "Listen & Read"],
   [MetaOnActivityCode.WordCard, "Word Card"],
+  [MetaOnActivityCode.VideoWordCard, "Word Card"],
   [MetaOnActivityCode.WordQuiz, "Word Quiz"],
   [MetaOnActivityCode.WordSearch, "Word Search"],
+  [MetaOnActivityCode.VideoWordQuiz, "Word Quiz"],
   [MetaOnActivityCode.WordBlank, "Word Blank"],
   [MetaOnActivityCode.MatchingGame, "Matching Game"],
   [MetaOnActivityCode.MemoryCard, "Memory Card"],

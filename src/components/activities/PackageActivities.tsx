@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from "react";
 import { BarChart3, BookOpen, Check, ChevronLeft, ChevronRight, Flag, Gauge, ImageOff, Keyboard, Mic, Pause, Play, RotateCcw, Square, Star, Trophy, Volume2, Wrench, X } from "lucide-react";
 import { uploadLearnRecording } from "../../api/uniplanetApi";
-import { ActivityHintImage, ActivityListeningImage, ActivityPageArrowImage, ActivitySoundImage, ActivityTimerBadge } from "../ActivityImageControls";
+import { ActivityHintImage, ActivityListeningImage, ActivityPageArrowImage, ActivitySoundImage, ActivityTimerBadge, videoActivityControlAssets, VideoActivityPageArrow, VideoActivityPageIndicator } from "../ActivityImageControls";
 import { bffRecognitionPort } from "../../ports/bffRecognitionPort";
 import { browserRecorderPort } from "../../ports/browserRecorderPort";
 import { getActTypeDefinition, getActTypeLabel } from "../../services/actTypeCatalog";
@@ -328,33 +328,35 @@ function ActivityQuestionNavigation({
   total,
   onChange,
   disablePrev = false,
-  disableNext = false
+  disableNext = false,
+  variant = "standard"
 }: {
   current: number;
   total: number;
   onChange: (nextIndex: number) => void;
   disablePrev?: boolean;
   disableNext?: boolean;
+  variant?: "standard" | "video";
 }) {
   return (
     <>
       <button
         aria-label="Previous question"
-        className="activity-question-edge-nav previous image-page-control"
+        className={`activity-question-edge-nav previous image-page-control${variant === "video" ? " is-video" : ""}`}
         disabled={disablePrev || total === 0 || current <= 0}
         onClick={() => onChange(Math.max(0, current - 1))}
         type="button"
       >
-        <ActivityPageArrowImage direction="prev" />
+        {variant === "video" ? <VideoActivityPageArrow direction="prev" /> : <ActivityPageArrowImage direction="prev" />}
       </button>
       <button
         aria-label="Next question"
-        className="activity-question-edge-nav next image-page-control"
+        className={`activity-question-edge-nav next image-page-control${variant === "video" ? " is-video" : ""}`}
         disabled={disableNext || total === 0 || current >= total - 1}
         onClick={() => onChange(Math.min(Math.max(total - 1, 0), current + 1))}
         type="button"
       >
-        <ActivityPageArrowImage direction="next" />
+        {variant === "video" ? <VideoActivityPageArrow direction="next" /> : <ActivityPageArrowImage direction="next" />}
       </button>
     </>
   );
@@ -1437,8 +1439,18 @@ export function FlashCardActivity({
   const word = words[index];
   const cardViewKeyRef = useRef("");
   const flipCountRef = useRef(0);
+  const activityCode = normalizeActivityCode(context.activity?.activityCode);
+  const usesVideoBackground = activityCode === MetaOnActivityCode.VideoWordCard;
+  const wdca02VideoPaths = usePackagePathList(context, `${dayBase(context)}/wdca02/video/`);
+  const wdca02VideoPath = useMemo(
+    () => wdca02VideoPaths.find((path) => /\.(?:mp4|webm|m4v|mov)$/i.test(path)),
+    [wdca02VideoPaths]
+  );
+  const wdca02VideoUrl = usePackageUrl(context, wdca02VideoPath);
   const usesWdcaDesign =
-    context.activity?.activityCode?.trim().toUpperCase() === "WDCA01" || context.activity?.actType === ActType.FlashCardSpace;
+    activityCode === MetaOnActivityCode.WordCard ||
+    usesVideoBackground ||
+    context.activity?.actType === ActType.FlashCardSpace;
 
   useEffect(() => {
     setShowBack(false);
@@ -1538,7 +1550,24 @@ export function FlashCardActivity({
   if (usesWdcaDesign) {
     return (
       <ActivityFrame context={context} actionLabel={label} className="wdca-flashcard-frame">
-        <div className="wdca-flashcard-shell">
+        <div className={usesVideoBackground ? "wdca-flashcard-shell wdca02-video-flashcard-shell" : "wdca-flashcard-shell"}>
+          {usesVideoBackground ? (
+            <>
+              {wdca02VideoUrl ? (
+                <video
+                  aria-hidden="true"
+                  autoPlay
+                  className="wdca02-background-video"
+                  loop
+                  muted
+                  playsInline
+                  preload="auto"
+                  src={wdca02VideoUrl}
+                />
+              ) : null}
+              <span aria-hidden="true" className="wdca02-background-scrim" />
+            </>
+          ) : null}
           <button
             aria-checked={showMoreInfo}
             aria-label="More info"
@@ -1547,17 +1576,32 @@ export function FlashCardActivity({
             role="switch"
             type="button"
           >
-            <span>MORE INFO</span>
-            <span aria-hidden="true" className="wdca-toggle-track">
-              <span className="wdca-toggle-knob" />
-            </span>
+            {usesVideoBackground ? (
+              <img
+                aria-hidden="true"
+                draggable={false}
+                src={showMoreInfo ? videoActivityControlAssets.moreInfoOn : videoActivityControlAssets.moreInfoOff}
+                alt=""
+              />
+            ) : (
+              <>
+                <span>MORE INFO</span>
+                <span aria-hidden="true" className="wdca-toggle-track">
+                  <span className="wdca-toggle-knob" />
+                </span>
+              </>
+            )}
           </button>
 
-          <div aria-live="polite" className="wdca-card-count">
-            <strong>{words.length === 0 ? 0 : index + 1}</strong>
-            <span>/</span>
-            <span>{words.length}</span>
-          </div>
+          {usesVideoBackground ? (
+            <VideoActivityProgress currentIndex={index} total={words.length} />
+          ) : (
+            <div aria-live="polite" className="wdca-card-count">
+              <strong>{words.length === 0 ? 0 : index + 1}</strong>
+              <span>/</span>
+              <span>{words.length}</span>
+            </div>
+          )}
 
           <button
             aria-label="Previous word card"
@@ -1566,7 +1610,7 @@ export function FlashCardActivity({
             onClick={() => moveCard(-1)}
             type="button"
           >
-            <ActivityPageArrowImage direction="prev" />
+            {usesVideoBackground ? <VideoActivityPageArrow direction="prev" /> : <ActivityPageArrowImage direction="prev" />}
           </button>
 
           <button
@@ -1603,7 +1647,7 @@ export function FlashCardActivity({
             onClick={() => moveCard(1)}
             type="button"
           >
-            <ActivityPageArrowImage direction="next" />
+            {usesVideoBackground ? <VideoActivityPageArrow direction="next" /> : <ActivityPageArrowImage direction="next" />}
           </button>
 
           {word?.audioUrl ? <audio ref={audioRef} src={word.audioUrl} preload="auto" /> : null}
@@ -1670,6 +1714,10 @@ export function FlashCardActivity({
       </div>
     </ActivityFrame>
   );
+}
+
+function VideoActivityProgress({ currentIndex, total }: { currentIndex: number; total: number }) {
+  return <VideoActivityPageIndicator current={currentIndex + 1} total={total} />;
 }
 
 function calculateSingleLineFontSize(element: HTMLElement, maximumSize: number, minimumSize: number): number {
@@ -2978,6 +3026,14 @@ function VocaQuizChoiceActivity({
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<string>();
   const feedbackTimerRef = useRef<number | undefined>(undefined);
+  const activityCode = normalizeActivityCode(context.activity?.activityCode);
+  const usesVideoBackground = activityCode === MetaOnActivityCode.VideoWordQuiz;
+  const wdqu03VideoPaths = usePackagePathList(context, `${dayBase(context)}/wdqu03/video/`);
+  const wdqu03VideoPath = useMemo(
+    () => wdqu03VideoPaths.find((path) => /\.(?:mp4|webm|m4v|mov)$/i.test(path)),
+    [wdqu03VideoPaths]
+  );
+  const wdqu03VideoUrl = usePackageUrl(context, wdqu03VideoPath);
   const target = words[current];
   const wordsSignature = buildWordsSignature(words);
   const answers = useMemo(
@@ -3064,9 +3120,33 @@ function VocaQuizChoiceActivity({
 
   return (
     <ActivityFrame context={context} actionLabel="Word Quiz" className="figma-renewal-frame">
-      <div className="figma-renewal-shell voca-quiz-renewal-shell" data-quiz-mode={`${promptKind}-${optionKind}`}>
-        <RenewalCounter current={words.length === 0 ? 0 : current + 1} total={words.length} className="voca-quiz-counter" />
-        <ActivityQuestionNavigation current={current} total={words.length} onChange={setCurrent} />
+      <div
+        className={`figma-renewal-shell voca-quiz-renewal-shell${usesVideoBackground ? " wdqu03-video-quiz-shell" : ""}`}
+        data-quiz-mode={`${promptKind}-${optionKind}`}
+      >
+        {usesVideoBackground ? (
+          <>
+            {wdqu03VideoUrl ? (
+              <video
+                aria-hidden="true"
+                autoPlay
+                className="wdqu03-background-video"
+                loop
+                muted
+                playsInline
+                preload="auto"
+                src={wdqu03VideoUrl}
+              />
+            ) : null}
+            <span aria-hidden="true" className="wdqu03-background-scrim" />
+          </>
+        ) : null}
+        {usesVideoBackground ? (
+          <VideoActivityProgress currentIndex={current} total={words.length} />
+        ) : (
+          <RenewalCounter current={words.length === 0 ? 0 : current + 1} total={words.length} className="voca-quiz-counter" />
+        )}
+        <ActivityQuestionNavigation current={current} total={words.length} onChange={setCurrent} variant={usesVideoBackground ? "video" : "standard"} />
         <div className={`voca-quiz-prompt is-${promptKind}`}>
           {promptKind === "image" ? (
             target?.imageUrl ? <img src={target.imageUrl} alt={target.eng} /> : <ResourceMissing label="word image" />

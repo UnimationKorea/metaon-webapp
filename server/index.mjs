@@ -1827,7 +1827,9 @@ function normalizeBookResourceManifest(raw) {
 const METAON_ACTIVITY_CODE = {
   listenRead: "EBOOK01",
   wordCard: "WDCA01",
+  videoWordCard: "WDCA02",
   wordQuiz: "WDQU01",
+  videoWordQuiz: "WDQU03",
   wordBlank: "WDBL01",
   matchingGame: "WDPL01",
   memoryCard: "WDPL02",
@@ -1841,7 +1843,9 @@ const METAON_ACTIVITY_CODE = {
 
 const actTypeByActivityCode = new Map([
   [METAON_ACTIVITY_CODE.wordCard, 1017],
+  [METAON_ACTIVITY_CODE.videoWordCard, 1017],
   [METAON_ACTIVITY_CODE.wordQuiz, 1004],
+  [METAON_ACTIVITY_CODE.videoWordQuiz, 1004],
   [METAON_ACTIVITY_CODE.wordBlank, 1005],
   [METAON_ACTIVITY_CODE.matchingGame, 8],
   [METAON_ACTIVITY_CODE.memoryCard, 15],
@@ -1879,7 +1883,9 @@ const activityCodeByActType = new Map([
 const titleByActivityCode = new Map([
   [METAON_ACTIVITY_CODE.listenRead, "Listen & Read"],
   [METAON_ACTIVITY_CODE.wordCard, "Word Card"],
+  [METAON_ACTIVITY_CODE.videoWordCard, "Word Card"],
   [METAON_ACTIVITY_CODE.wordQuiz, "Word Quiz"],
+  [METAON_ACTIVITY_CODE.videoWordQuiz, "Word Quiz"],
   [METAON_ACTIVITY_CODE.wordBlank, "Word Blank"],
   [METAON_ACTIVITY_CODE.matchingGame, "Matching Game"],
   [METAON_ACTIVITY_CODE.memoryCard, "Memory Card"],
@@ -1973,8 +1979,37 @@ function collectBookInfoResources(day, virtualBase, resources) {
     collectCaptionBookInfoResources(listening, virtualBase, index + 1, "listening", resources);
   });
   collectEbookBookInfoResources(day, virtualBase, resources);
+  collectVideoWordActivityBookInfoResources(day, virtualBase, resources);
   collectNpcQuickCheckBookInfoResources(day, virtualBase, resources);
   collectNpcQuickCheck2BookInfoResources(day, virtualBase, resources);
+}
+
+function collectVideoWordActivityBookInfoResources(day, virtualBase, resources) {
+  firstArray(day.activities).forEach((rawActivity, index) => {
+    const activity = recordValue(rawActivity);
+    const activityCode = normalizeActivityCodeValue(activity.act_code ?? activity.actCode ?? activity.activity_code ?? activity.activityCode);
+    const videoFolder = activityCode === METAON_ACTIVITY_CODE.videoWordCard ? "wdca02" : activityCode === METAON_ACTIVITY_CODE.videoWordQuiz ? "wdqu03" : "";
+    if (!videoFolder) return;
+
+    const sourcePath = firstBookInfoResourcePath(
+      activity.background_video,
+      activity.backgroundVideo,
+      activity.bg_video,
+      activity.bgVideo,
+      activity.video_path,
+      activity.videoPath,
+      activity.video_url,
+      activity.videoUrl
+    );
+    if (!sourcePath) return;
+
+    addBookInfoResource(
+      resources,
+      `${virtualBase}/${videoFolder}/video/${videoBackgroundFileName(sourcePath, index)}`,
+      sourcePath,
+      videoFolder
+    );
+  });
 }
 
 function collectNpcQuickCheckBookInfoResources(day, virtualBase, resources) {
@@ -2114,6 +2149,11 @@ function firstBookInfoResourcePaths(...values) {
     if (typeof value === "string" && value.trim()) return [value.trim()];
   }
   return [];
+}
+
+function videoBackgroundFileName(sourcePath, index) {
+  const normalized = sourcePath.replace(/\\/g, "/").split("?")[0];
+  return normalized.split("/").filter(Boolean).pop() || `background_${twoDigit(index + 1)}.mp4`;
 }
 
 function toListenEbookInfo(day, virtualBase, book) {

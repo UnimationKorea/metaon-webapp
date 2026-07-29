@@ -31,6 +31,20 @@ describe("MetaOn activity code mapping", () => {
     expect(canonicalActivityCodeForActType(ActType.VocaQuizSpace, "1004")).toBe(MetaOnActivityCode.WordQuiz);
   });
 
+  it("maps WDCA02 to the Word Card renderer while preserving the video-card code from Book data", () => {
+    expect(resolveActTypeFromActivityCode(MetaOnActivityCode.VideoWordCard)).toBe(ActType.FlashCardSpace);
+    expect(canonicalActivityCodeForActType(ActType.FlashCardSpace, MetaOnActivityCode.VideoWordCard))
+      .toBe(MetaOnActivityCode.VideoWordCard);
+    expect(activityTitleForCode(MetaOnActivityCode.VideoWordCard, "Fallback")).toBe("Word Card");
+  });
+
+  it("maps WDQU03 to the existing Word Quiz renderer while preserving the video-quiz code from Book data", () => {
+    expect(resolveActTypeFromActivityCode(MetaOnActivityCode.VideoWordQuiz)).toBe(ActType.VocaQuizSpace);
+    expect(canonicalActivityCodeForActType(ActType.VocaQuizSpace, MetaOnActivityCode.VideoWordQuiz))
+      .toBe(MetaOnActivityCode.VideoWordQuiz);
+    expect(activityTitleForCode(MetaOnActivityCode.VideoWordQuiz, "Fallback")).toBe("Word Quiz");
+  });
+
   it("can route EBOOK01 to the old Reading renderer when the API marks it as reading-only", () => {
     expect(resolveActTypeFromActivityCode(MetaOnActivityCode.ListenRead, { category: "reading", title: "Read" })).toBe(ActType.Reading);
   });

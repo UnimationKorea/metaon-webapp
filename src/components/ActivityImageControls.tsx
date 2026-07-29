@@ -11,6 +11,21 @@ export const activityControlAssets = {
   watch: "/metaon-assets/activity/common-controls/watch.png"
 } as const;
 
+export const videoActivityControlAssets = {
+  backBackground: "/metaon-assets/activity/video-controls/back-background.png",
+  backArrow: "/metaon-assets/activity/video-controls/back-arrow.svg",
+  checkBackground: "/metaon-assets/activity/video-controls/check-background.png",
+  checkIcon: "/metaon-assets/activity/video-controls/check.svg",
+  mapAccent: "/metaon-assets/activity/video-controls/map-accent.svg",
+  mapPin: "/metaon-assets/activity/video-controls/map-pin.svg",
+  mapPlanet: "/metaon-assets/activity/video-controls/map-planet.svg",
+  moreInfoOff: "/metaon-assets/activity/video-controls/more-info-off.png",
+  moreInfoOn: "/metaon-assets/activity/video-controls/more-info-on.png",
+  pageChevron: "/metaon-assets/activity/video-controls/page-chevron.svg",
+  pageNextBackground: "/metaon-assets/activity/video-controls/page-next-background.png",
+  pagePrevBackground: "/metaon-assets/activity/video-controls/page-prev-background.png"
+} as const;
+
 export function ActivityPageArrowImage({ direction }: { direction: "prev" | "next" }) {
   return (
     <img
@@ -20,6 +35,47 @@ export function ActivityPageArrowImage({ direction }: { direction: "prev" | "nex
       src={activityControlAssets[direction]}
       alt=""
     />
+  );
+}
+
+export function VideoActivityPageArrow({ direction }: { direction: "prev" | "next" }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`video-activity-page-arrow is-${direction}`}
+    >
+      <img
+        aria-hidden="true"
+        className="video-activity-page-arrow-background"
+        draggable={false}
+        src={direction === "prev" ? videoActivityControlAssets.pagePrevBackground : videoActivityControlAssets.pageNextBackground}
+        alt=""
+      />
+      <img aria-hidden="true" className="video-activity-page-arrow-icon" draggable={false} src={videoActivityControlAssets.pageChevron} alt="" />
+    </span>
+  );
+}
+
+export function VideoActivityCheckControl() {
+  return (
+    <span aria-hidden="true" className="video-activity-check-control">
+      <img className="video-activity-check-background" draggable={false} src={videoActivityControlAssets.checkBackground} alt="" />
+      <img className="video-activity-check-mark" draggable={false} src={videoActivityControlAssets.checkIcon} alt="" />
+      <strong>Check</strong>
+    </span>
+  );
+}
+
+export function VideoActivityPageIndicator({ current, total }: { current: number; total: number }) {
+  const safeTotal = Math.max(total, 1);
+  const safeCurrent = Math.min(Math.max(current, 1), safeTotal);
+
+  return (
+    <div aria-label={`Page ${safeCurrent} of ${safeTotal}`} className="video-activity-page-indicator" role="status">
+      <strong>{safeCurrent}</strong>
+      <span>/</span>
+      <strong>{safeTotal}</strong>
+    </div>
   );
 }
 

@@ -2,6 +2,7 @@ import { METAON3_BOOKDATA_BASE, assetUrl } from "../api/catalogNormalizer";
 import {
   activityTitleForCode,
   canonicalActivityCodeForActType,
+  MetaOnActivityCode,
   normalizeActivityCode,
   resolveActTypeFromActivityCode
 } from "./activityCodes";
@@ -50,6 +51,7 @@ export function normalizeBookResourceManifest(raw: unknown): BookResourceManifes
       collectSentenceResources(day, virtualBase, resources);
       collectReadingResources(day, virtualBase, resources);
       collectListeningResources(day, virtualBase, resources);
+      collectVideoWordActivityResources(day, virtualBase, resources);
       collectEbookResources(day, virtualBase, resources);
       collectNpcQuickCheckResources(day, virtualBase, resources);
       collectNpcQuickCheck2Resources(day, virtualBase, resources);
@@ -376,6 +378,29 @@ function collectListeningResources(day: UnknownRecord, virtualBase: string, reso
   });
 }
 
+function collectVideoWordActivityResources(day: UnknownRecord, virtualBase: string, resources: Map<string, BookResource>): void {
+  arrayValue(day.activities).forEach((rawActivity, index) => {
+    const activity = asRecord(rawActivity);
+    const activityCode = normalizeActivityCode(activity.act_code ?? activity.actCode ?? activity.activity_code ?? activity.activityCode);
+    const videoFolder = activityCode === MetaOnActivityCode.VideoWordCard ? "wdca02" : activityCode === MetaOnActivityCode.VideoWordQuiz ? "wdqu03" : "";
+    if (!videoFolder) return;
+
+    const sourcePath = firstResourcePath(
+      activity.background_video,
+      activity.backgroundVideo,
+      activity.bg_video,
+      activity.bgVideo,
+      activity.video_path,
+      activity.videoPath,
+      activity.video_url,
+      activity.videoUrl
+    );
+    if (!sourcePath) return;
+
+    addResource(resources, `${virtualBase}/${videoFolder}/video/${videoBackgroundFileName(sourcePath, index)}`, sourcePath, videoFolder);
+  });
+}
+
 function collectEbookResources(day: UnknownRecord, virtualBase: string, resources: Map<string, BookResource>): void {
   const ebook = ebookRecord(day);
   if (!ebook) return;
@@ -518,6 +543,11 @@ function firstResourcePaths(...values: unknown[]): string[] {
     if (typeof value === "string" && value.trim()) return [value.trim()];
   }
   return [];
+}
+
+function videoBackgroundFileName(sourcePath: string, index: number): string {
+  const normalized = sourcePath.replace(/\\/g, "/").split("?")[0];
+  return normalized.split("/").filter(Boolean).pop() || `background_${twoDigit(index + 1)}.mp4`;
 }
 
 function addResource(resources: Map<string, BookResource>, virtualPath: string, sourcePath: string, category: string): void {
