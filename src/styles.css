@@ -3916,6 +3916,122 @@ button.image-page-control:hover:not(:disabled) {
   background: #ffd6dc;
 }
 
+.voca-quiz-spelling-content {
+  position: absolute;
+  z-index: 4;
+  left: 13.125%;
+  top: 20%;
+  width: 73.75%;
+  height: 60%;
+  display: grid;
+  grid-template-columns: minmax(0, 45.76%) minmax(0, 1fr);
+  gap: 6.78%;
+  align-items: center;
+}
+
+.voca-quiz-spelling-media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: clamp(10px, 1.25cqw, 16px);
+  background: #fffafa;
+}
+
+.voca-quiz-spelling-media > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.voca-quiz-spelling-sound-button {
+  position: absolute;
+  top: 4.63%;
+  left: 4.63%;
+}
+
+.voca-quiz-spelling-question {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: min(18.3cqh, 132px);
+  min-width: 0;
+}
+
+.voca-quiz-spelling-word {
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--voca-quiz-spelling-gap, clamp(8px, 1.25cqw, 16px));
+  color: #1f1f1f;
+  font-size: var(--voca-quiz-spelling-font-size, clamp(22px, 3.125cqw, 40px));
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.voca-quiz-spelling-letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: var(--voca-quiz-spelling-blank-size, clamp(28px, 3.75cqw, 48px));
+  color: inherit;
+  text-transform: lowercase;
+}
+
+.voca-quiz-spelling-letter.is-blank {
+  width: var(--voca-quiz-spelling-blank-size, clamp(28px, 3.75cqw, 48px));
+  flex: 0 0 auto;
+  border-bottom: clamp(2px, 0.23cqw, 3px) solid #ffce1f;
+}
+
+.voca-quiz-spelling-letter.is-filled {
+  width: auto;
+}
+
+.voca-quiz-spelling-letter.is-blank.is-wrong {
+  color: #e84c63;
+  border-bottom-color: #e84c63;
+}
+
+.voca-quiz-spelling-word.is-complete .voca-quiz-spelling-letter {
+  color: #1f1f1f;
+}
+
+.voca-quiz-spelling-options {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(12px, 2.5cqw, 32px);
+}
+
+.voca-quiz-spelling-options .renewal-option-button {
+  aspect-ratio: 1 / 1;
+  min-height: 0;
+  padding: 0;
+  font-size: clamp(22px, 3.125cqw, 40px);
+  text-transform: lowercase;
+}
+
+.voca-quiz-spelling-option-text {
+  display: block;
+  width: 90%;
+  max-width: 90%;
+  overflow: hidden;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+
 .word-blank-renewal-shell {
   background-color: #afe83e;
   background-image: url("/metaon-assets/activity/figma-renewal/word-blank-lab.png");

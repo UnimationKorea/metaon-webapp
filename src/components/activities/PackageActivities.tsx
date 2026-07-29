@@ -1,10 +1,11 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from "react";
 import { BarChart3, BookOpen, Check, ChevronLeft, ChevronRight, Flag, Gauge, ImageOff, Keyboard, Mic, Pause, Play, RotateCcw, Square, Star, Trophy, Volume2, Wrench, X } from "lucide-react";
 import { uploadLearnRecording } from "../../api/uniplanetApi";
 import { ActivityHintImage, ActivityListeningImage, ActivityPageArrowImage, ActivitySoundImage, ActivityTimerBadge } from "../ActivityImageControls";
 import { bffRecognitionPort } from "../../ports/bffRecognitionPort";
 import { browserRecorderPort } from "../../ports/browserRecorderPort";
 import { getActTypeDefinition, getActTypeLabel } from "../../services/actTypeCatalog";
+import { MetaOnActivityCode, normalizeActivityCode } from "../../services/activityCodes";
 import { indexedDbStorage } from "../../services/indexedDbStorage";
 import { parseCaptionCues, type ListenCaptionCue } from "../../services/listenEbookCaptions";
 import type { LearnEventInput } from "../../types/learnEvents";
@@ -1859,6 +1860,55 @@ function AutoFitVocaQuizText({ text, variant }: { text: string; variant: "prompt
   );
 }
 
+function useVocaQuizSpellingWordStyle(letterCount: number): {
+  ref: RefObject<HTMLDivElement>;
+  style: CSSProperties;
+} {
+  const ref = useRef<HTMLDivElement>(null);
+  const [fontSize, setFontSize] = useState(40);
+
+  useLayoutEffect(() => {
+    const word = ref.current;
+    const container = word?.parentElement;
+    if (!container) return undefined;
+
+    let animationFrame = 0;
+    const updateSize = () => {
+      const availableWidth = container.clientWidth * 0.94;
+      if (availableWidth <= 0) return;
+      const count = Math.max(1, letterCount);
+      // The Figma design uses 40px letters, 16px gaps, and a 48px blank slot.
+      const widthInLetterUnits = count * 0.66 + 0.54 + Math.max(0, count - 1) * 0.4;
+      const nextSize = Math.max(14, Math.min(40, Math.floor(availableWidth / widthInLetterUnits)));
+      setFontSize((current) => (current === nextSize ? current : nextSize));
+    };
+    const scheduleUpdate = () => {
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = window.requestAnimationFrame(updateSize);
+    };
+
+    updateSize();
+    const resizeObserver = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(scheduleUpdate);
+    resizeObserver?.observe(container);
+    window.addEventListener("resize", scheduleUpdate);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", scheduleUpdate);
+    };
+  }, [letterCount]);
+
+  return {
+    ref,
+    style: {
+      "--voca-quiz-spelling-font-size": `${fontSize}px`,
+      "--voca-quiz-spelling-gap": `${Math.max(5, Math.round(fontSize * 0.4))}px`,
+      "--voca-quiz-spelling-blank-size": `${Math.max(20, Math.round(fontSize * 1.2))}px`
+    } as CSSProperties
+  };
+}
+
 function AutoFitSentenceBlankOption({ text }: { text: string }) {
   return <UniformAutoFitText className="sentence-blank-option-text" text={text} />;
 }
@@ -2826,6 +2876,21 @@ export function VocaQuizActivity({
 }) {
   const loadedWords = useWords(context);
   const words = prototypeData?.words ?? loadedWords;
+
+  if (isMetaOnWordQuiz(context.activity)) {
+    return <VocaQuizSpellingActivity context={context} words={words} />;
+  }
+
+  return <VocaQuizChoiceActivity context={context} words={words} />;
+}
+
+function VocaQuizChoiceActivity({
+  context,
+  words
+}: {
+  context: ActivityRendererContext;
+  words: LoadedWord[];
+}) {
   const [shuffleSeed] = useState(createShuffleSeed);
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<string>();
@@ -2971,6 +3036,181 @@ export function VocaQuizActivity({
         {selected ? (
           <p className={selected === target?.eng ? "renewal-feedback is-correct" : "renewal-feedback is-wrong"} role="status">
             {selected === target?.eng ? "Correct" : `Answer: ${target?.eng}`}
+          </p>
+        ) : null}
+      </div>
+    </ActivityFrame>
+  );
+}
+
+function VocaQuizSpellingActivity({
+  context,
+  words
+}: {
+  context: ActivityRendererContext;
+  words: LoadedWord[];
+}) {
+  const [shuffleSeed] = useState(createShuffleSeed);
+  const [current, setCurrent] = useState(0);
+  const [selected, setSelected] = useState<string>();
+  const feedbackTimerRef = useRef<number | undefined>(undefined);
+  const target = words[current];
+  const targetKey = target ? wordOptionKey(target) : "";
+  const question = useMemo(
+    () => buildWordBlankQuestion(target, mixSeed(shuffleSeed, `word-quiz:${targetKey}:${current}`)),
+    [current, shuffleSeed, target, targetKey]
+  );
+  const isCorrect = selected != null && normalizeToken(selected) === normalizeToken(question.answer);
+  const wordStyle = useVocaQuizSpellingWordStyle(question.letters.length);
+  const questionViewKeyRef = useRef("");
+
+  useEffect(() => {
+    if (feedbackTimerRef.current !== undefined) window.clearTimeout(feedbackTimerRef.current);
+    setSelected(undefined);
+    if (current >= words.length) setCurrent(0);
+  }, [current, words.length]);
+
+  useEffect(
+    () => () => {
+      if (feedbackTimerRef.current !== undefined) window.clearTimeout(feedbackTimerRef.current);
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!target || !question.answer) return;
+    const viewKey = `${wordItemIdx(target) ?? target.index}:${current}:${question.blankIndex}:${question.options.join("|")}`;
+    if (questionViewKeyRef.current === viewKey) return;
+    questionViewKeyRef.current = viewKey;
+    recordLearnEvent(context, {
+      action: "question_view",
+      item_type: "word",
+      item_idx: wordItemIdx(target),
+      chunk_index: question.blankIndex >= 0 ? question.blankIndex : undefined,
+      extra: {
+        quiz_mode: "spelling-letter",
+        blank_indexes: question.blankIndex >= 0 ? [question.blankIndex] : [],
+        blank_pattern: question.letters.map((letter, index) => (index === question.blankIndex ? "_" : letter)).join(""),
+        option_order: question.options
+      }
+    });
+  }, [context, current, question, target]);
+
+  function chooseLetter(option: string) {
+    if (!target || !question.answer || selected !== undefined) return;
+    const correct = normalizeToken(option) === normalizeToken(question.answer);
+    setSelected(option);
+    recordLearnEvent(context, {
+      action: "letter_select",
+      item_type: "word",
+      item_idx: wordItemIdx(target),
+      chunk_index: question.blankIndex >= 0 ? question.blankIndex : undefined,
+      extra: {
+        quiz_mode: "spelling-letter",
+        selected_letter: option,
+        blank_index: question.blankIndex
+      }
+    });
+    recordLearnEvent(context, {
+      action: "submit",
+      item_type: "word",
+      item_idx: wordItemIdx(target),
+      chunk_index: question.blankIndex >= 0 ? question.blankIndex : undefined,
+      correct: boolCorrect(correct),
+      attempts: 1,
+      extra: {
+        quiz_mode: "spelling-letter",
+        answer: question.answer,
+        selected: option,
+        blank_indexes: question.blankIndex >= 0 ? [question.blankIndex] : [],
+        option_order: question.options
+      }
+    });
+
+    if (feedbackTimerRef.current !== undefined) window.clearTimeout(feedbackTimerRef.current);
+    feedbackTimerRef.current = window.setTimeout(() => {
+      if (correct && current < words.length - 1) {
+        setCurrent((value) => Math.min(words.length - 1, value + 1));
+      } else if (!correct) {
+        setSelected(undefined);
+      }
+    }, correct ? 850 : 700);
+  }
+
+  return (
+    <ActivityFrame context={context} actionLabel="Word Quiz" className="figma-renewal-frame">
+      <div className="figma-renewal-shell voca-quiz-renewal-shell voca-quiz-spelling-shell" data-quiz-mode="spelling-letter">
+        <RenewalCounter current={words.length === 0 ? 0 : current + 1} total={words.length} className="voca-quiz-counter" />
+        <ActivityQuestionNavigation current={current} total={words.length} onChange={setCurrent} />
+        <div className="voca-quiz-spelling-content">
+          <div className="voca-quiz-spelling-media">
+            {target?.imageUrl ? <img src={target.imageUrl} alt={target.eng} /> : <ResourceMissing label="word image" />}
+            <RenewalSoundButton
+              src={target?.audioUrl}
+              label={`Play ${target?.eng || "word"}`}
+              className="voca-quiz-spelling-sound-button"
+              onPlay={() =>
+                recordLearnEvent(context, {
+                  action: "audio_play",
+                  item_type: "word",
+                  item_idx: wordItemIdx(target),
+                  audio_replays: 1,
+                  extra: { word: target?.eng, question_index: current + 1 }
+                })
+              }
+            />
+          </div>
+          <div className="voca-quiz-spelling-question">
+            <div
+              aria-label={target?.eng ? `Word spelling for ${target.eng}` : "Word spelling"}
+              className={isCorrect ? "voca-quiz-spelling-word is-complete" : "voca-quiz-spelling-word"}
+              data-answer={target?.eng || ""}
+              ref={wordStyle.ref}
+              style={wordStyle.style}
+            >
+              {question.letters.map((letter, index) => {
+                const isBlank = index === question.blankIndex;
+                const isFilled = isBlank && selected !== undefined;
+                const hasUnderline = isBlank && (!isFilled || !isCorrect);
+                return (
+                  <span
+                    className={[
+                      "voca-quiz-spelling-letter",
+                      hasUnderline ? "is-blank" : "",
+                      isFilled ? "is-filled" : "",
+                      hasUnderline && selected && !isCorrect ? "is-wrong" : ""
+                    ].filter(Boolean).join(" ")}
+                    key={`${letter}:${index}`}
+                  >
+                    {isBlank && !isFilled ? "" : isBlank ? selected : letter}
+                  </span>
+                );
+              })}
+            </div>
+            <UniformAutoFitTextGroup className="voca-quiz-spelling-options" maximumSize={40} minimumSize={8}>
+              {question.options.map((option) => (
+                <button
+                  aria-label={`Choose ${option}`}
+                  className={[
+                    "renewal-option-button",
+                    selected === option ? "is-selected" : "",
+                    selected === option && isCorrect ? "is-correct" : "",
+                    selected === option && !isCorrect ? "is-wrong" : ""
+                  ].filter(Boolean).join(" ")}
+                  disabled={!question.answer || selected !== undefined}
+                  key={option}
+                  onClick={() => chooseLetter(option)}
+                  type="button"
+                >
+                  <UniformAutoFitText className="voca-quiz-spelling-option-text" text={option} />
+                </button>
+              ))}
+            </UniformAutoFitTextGroup>
+          </div>
+        </div>
+        {selected ? (
+          <p className={isCorrect ? "renewal-feedback is-correct" : "renewal-feedback is-wrong"} role="status">
+            {isCorrect ? "Correct" : `Answer: ${question.answer}`}
           </p>
         ) : null}
       </div>
@@ -5852,6 +6092,10 @@ function resolveVocaQuizMode(activity: Activity | undefined, current: number, se
   }
 
   return modes[mixSeed(seed, `${activity?.id || activity?.actIdx || "quiz"}:${current}`) % modes.length];
+}
+
+function isMetaOnWordQuiz(activity: Activity | undefined): boolean {
+  return normalizeActivityCode(activity?.activityCode || activity?.id) === MetaOnActivityCode.WordQuiz;
 }
 
 function buildUnscrambleDisplayModel(
