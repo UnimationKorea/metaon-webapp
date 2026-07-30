@@ -66,6 +66,14 @@ describe("normalizeBookResourceManifest", () => {
                     act_name: "Unscramble",
                     category: "sentence",
                     background_video: "/11/160/591/6710/978/978/stsc02/video/unscramble-loop.mp4"
+                  },
+                  {
+                    act_idx: 12889,
+                    num: 9,
+                    act_code: "STRC02",
+                    act_name: "Sentence Record",
+                    category: "sentence",
+                    background_video: "/11/160/591/6710/978/978/strc02/video/record-loop.mp4"
                   }
                 ],
                 word: [
@@ -133,8 +141,15 @@ describe("normalizeBookResourceManifest", () => {
       { actIdx: 12885, activityCode: "WDQU03", actType: 1004, category: "word", title: "Word Quiz" },
       { actIdx: 12886, activityCode: "WDBL02", actType: 1005, category: "word", title: "Word Blank" },
       { actIdx: 12887, activityCode: "STBL02", actType: 1006, category: "sentence", title: "Sentence Blank" },
-      { actIdx: 12888, activityCode: "STSC02", actType: 1007, category: "sentence", title: "Unscramble" }
+      { actIdx: 12888, activityCode: "STSC02", actType: 1007, category: "sentence", title: "Unscramble" },
+      { actIdx: 12889, activityCode: "STRC02", actType: 1009, category: "sentence", title: "Sentence Record" }
     ]);
+    expect(manifest.resources).toContainEqual(expect.objectContaining({
+      path: "Lessons/L1/D1/strc02/video/record-loop.mp4",
+      sourcePath: "/11/160/591/6710/978/978/strc02/video/record-loop.mp4",
+      mimeType: "video/mp4",
+      category: "strc02"
+    }));
     expect(manifest.generatedFiles.map((file) => file.path)).toEqual([
       "Lessons/L1/D1/word/info_word.json",
       "Lessons/L1/D1/sentence/info_sentence.json",
@@ -297,7 +312,8 @@ describe("normalizeBookResourceManifest", () => {
                   { act_idx: 21010, num: 3, act_code: "WDQU03", act_name: "Word Quiz" },
                   { act_idx: 21011, num: 4, act_code: "WDBL02", act_name: "Word Blank" },
                   { act_idx: 21012, num: 5, act_code: "STBL02", act_name: "Sentence Blank" },
-                  { act_idx: 21013, num: 6, act_code: "STSC02", act_name: "Unscramble" }
+                  { act_idx: 21013, num: 6, act_code: "STSC02", act_name: "Unscramble" },
+                  { act_idx: 21014, num: 7, act_code: "STRC02", act_name: "Sentence Record" }
                 ]
               }
             ]

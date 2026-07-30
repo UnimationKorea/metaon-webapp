@@ -139,7 +139,7 @@ export function ActivityRenewalPreviewPage() {
   const navigate = useNavigate();
   const { kind } = useParams();
   const [previewComplete, setPreviewComplete] = useState(false);
-  const isVideoActivity = kind === "video-flashcard" || kind === "video-voca-quiz" || kind === "video-word-blank" || kind === "video-sentence-blank" || kind === "video-unscramble";
+  const isVideoActivity = kind === "video-flashcard" || kind === "video-voca-quiz" || kind === "video-word-blank" || kind === "video-sentence-blank" || kind === "video-unscramble" || kind === "video-sentence-record";
 
   if (!import.meta.env.DEV) return <Navigate replace to="/" />;
 
@@ -192,6 +192,9 @@ export function ActivityRenewalPreviewPage() {
       break;
     case "sentence-record":
       activity = <SentenceRecordActivity context={previewContext(ActType.SentenceShadowingSpace, "STRC01")} prototypeData={sentenceRecordData} />;
+      break;
+    case "video-sentence-record":
+      activity = <SentenceRecordActivity context={previewContext(ActType.SentenceShadowingSpace, "STRC02")} prototypeData={sentenceRecordData} />;
       break;
     default:
       return <Navigate replace to="/activity-preview/voca-text" />;

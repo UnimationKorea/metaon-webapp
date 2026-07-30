@@ -4885,12 +4885,26 @@ export function SentenceRecordActivity({
   const packageSentences = useSentences(context);
   const sentences = prototypeData?.sentences || packageSentences;
   const [index, setIndex] = useState(0);
+  const [videoUnavailable, setVideoUnavailable] = useState(false);
+  const activityCode = normalizeActivityCode(context.activity?.activityCode);
+  const usesVideoBackground = activityCode === MetaOnActivityCode.VideoSentenceRecord;
+  const strc02VideoPaths = usePackagePathList(context, `${dayBase(context)}/strc02/video/`);
+  const dayVideoPaths = usePackagePathList(context, `${dayBase(context)}/video/`);
+  const strc02VideoPath = useMemo(
+    () => [...strc02VideoPaths, ...dayVideoPaths].find((path) => /\.(?:mp4|webm|m4v|mov)$/i.test(path)),
+    [strc02VideoPaths, dayVideoPaths]
+  );
+  const strc02VideoUrl = usePackageUrl(context, strc02VideoPath);
   const safeIndex = Math.min(index, Math.max(sentences.length - 1, 0));
   const sentence = sentences[safeIndex];
 
   useEffect(() => {
     if (index >= sentences.length && sentences.length > 0) setIndex(0);
   }, [index, sentences.length]);
+
+  useEffect(() => {
+    setVideoUnavailable(usesVideoBackground && !strc02VideoUrl);
+  }, [strc02VideoUrl, usesVideoBackground]);
 
   if (!sentence) {
     return (
@@ -4912,6 +4926,10 @@ export function SentenceRecordActivity({
       onChange={setIndex}
       sentence={sentence}
       total={sentences.length}
+      usesVideoBackground={usesVideoBackground}
+      videoUnavailable={videoUnavailable}
+      videoUrl={strc02VideoUrl}
+      onVideoUnavailable={() => setVideoUnavailable(true)}
     />
   );
 }
@@ -4923,13 +4941,21 @@ function SentenceRecordRenewalPanel({
   current,
   onChange,
   sentence,
-  total
+  total,
+  usesVideoBackground = false,
+  videoUnavailable = false,
+  videoUrl,
+  onVideoUnavailable
 }: {
   context: ActivityRendererContext;
   current: number;
   onChange: (nextIndex: number) => void;
   sentence: LoadedSentence;
   total: number;
+  usesVideoBackground?: boolean;
+  videoUnavailable?: boolean;
+  videoUrl?: string;
+  onVideoUnavailable?: () => void;
 }) {
   const recorder = useActivityRecording({
     context,
@@ -5091,20 +5117,28 @@ function SentenceRecordRenewalPanel({
 
   return (
     <ActivityFrame context={context} actionLabel="Sentence Record" className="figma-renewal-frame">
-      <div className="figma-renewal-shell sentence-record-renewal-shell">
+      <div className={`figma-renewal-shell sentence-record-renewal-shell${usesVideoBackground ? ` strc02-video-sentence-record-shell${videoUnavailable ? " is-video-background-unavailable" : ""}` : ""}`}>
+        {usesVideoBackground ? (
+          <>
+            <VideoActivityBackground className="strc02-background-video" onUnavailable={onVideoUnavailable || (() => undefined)} url={videoUrl} />
+            <span aria-hidden="true" className="strc02-background-scrim" />
+            <VideoActivityProgress currentIndex={current} total={total} />
+          </>
+        ) : null}
         <ActivityQuestionNavigation
           current={current}
           disableNext={recorder.isRecording}
           disablePrev={recorder.isRecording}
           onChange={onChange}
           total={total}
+          variant={usesVideoBackground ? "video" : "standard"}
         />
         <div className="sentence-record-renewal-panel">
           <div className="sentence-record-meta" aria-label="Activity settings">
             <span><Gauge aria-hidden="true" />Speed: Normal</span>
             <span><BarChart3 aria-hidden="true" />Difficulty: Normal</span>
           </div>
-          <RenewalCounter className="sentence-record-counter" current={current + 1} total={total} />
+          {usesVideoBackground ? null : <RenewalCounter className="sentence-record-counter" current={current + 1} total={total} />}
           <SentenceRecordPrompt sentence={sentence} />
           <div className={`sentence-record-media is-${mode}`}>
             {statusLabel ? <span className="sentence-record-status-label">{statusLabel}</span> : null}

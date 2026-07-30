@@ -1839,6 +1839,7 @@ const METAON_ACTIVITY_CODE = {
   unscramble: "STSC01",
   videoUnscramble: "STSC02",
   sentenceRecord: "STRC01",
+  videoSentenceRecord: "STRC02",
   quickCheck: "QCHK01",
   npcQuickCheck: "QCNP01",
   npcQuickCheck2: "NPCQHK02"
@@ -1858,6 +1859,7 @@ const actTypeByActivityCode = new Map([
   [METAON_ACTIVITY_CODE.unscramble, 1007],
   [METAON_ACTIVITY_CODE.videoUnscramble, 1007],
   [METAON_ACTIVITY_CODE.sentenceRecord, 1009],
+  [METAON_ACTIVITY_CODE.videoSentenceRecord, 1009],
   [METAON_ACTIVITY_CODE.quickCheck, 65],
   [METAON_ACTIVITY_CODE.npcQuickCheck, 65],
   [METAON_ACTIVITY_CODE.npcQuickCheck2, 65]
@@ -2002,7 +2004,8 @@ function collectVideoWordActivityBookInfoResources(day, virtualBase, resources) 
       activityCode === METAON_ACTIVITY_CODE.videoWordQuiz ? "wdqu03" :
       activityCode === METAON_ACTIVITY_CODE.videoWordBlank ? "wdbl02" :
       activityCode === METAON_ACTIVITY_CODE.videoSentenceBlank ? "stbl02" :
-      activityCode === METAON_ACTIVITY_CODE.videoUnscramble ? "stsc02" : "";
+      activityCode === METAON_ACTIVITY_CODE.videoUnscramble ? "stsc02" :
+      activityCode === METAON_ACTIVITY_CODE.videoSentenceRecord ? "strc02" : "";
     if (!videoFolder) return null;
 
     return {
@@ -2022,7 +2025,7 @@ function collectVideoWordActivityBookInfoResources(day, virtualBase, resources) 
   }).filter(Boolean);
 
   // The current getBookInfo contract puts the background movie on the Day rather
-  // than on each WDCA02/WDQU03/WDBL02/STBL02/STSC02 activity. Store that shared MP4 once and
+  // than on each WDCA02/WDQU03/WDBL02/STBL02/STSC02/STRC02 activity. Store that shared MP4 once and
   // let every video activity in the Day use it when it has no explicit override.
   const movie = recordValue(day.movie);
   const sharedSourcePath = firstBookInfoResourcePath(

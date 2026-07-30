@@ -181,4 +181,34 @@ describe("Sentence Record Figma renewal", () => {
 
     await waitFor(() => expect(prompt).toHaveClass("is-wrapped"));
   });
+
+  it("renders STRC02 in the shared video frame with its cached background video", async () => {
+    const backgroundVideoPath = "Lessons/L1/D1/strc02/video/record-loop.mp4";
+    vi.mocked(indexedDbStorage.listFiles).mockResolvedValue([
+      { packageKey, path: sentenceInfoPath, blob: new Blob(), size: 1, mimeType: "application/json" },
+      { packageKey, path: sentenceAudioPath, blob: new Blob(), size: 1, mimeType: "audio/mpeg" },
+      { packageKey, path: backgroundVideoPath, blob: new Blob(), size: 1, mimeType: "video/mp4" }
+    ]);
+    const videoContext: ActivityRendererContext = {
+      ...context,
+      activity: { ...context.activity!, id: "STRC02", activityCode: "STRC02" }
+    };
+
+    const { container } = render(<SentenceRecordActivity context={videoContext} />);
+    const video = await waitFor(() => {
+      const element = container.querySelector<HTMLVideoElement>(".strc02-background-video");
+      expect(element).toBeInTheDocument();
+      return element;
+    });
+
+    expect(video).toHaveAttribute("loop");
+    expect(video?.muted).toBe(true);
+    expect(video).toHaveAttribute("playsinline");
+    expect(container.querySelector(".strc02-video-sentence-record-shell")).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Page 1 of 1" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Previous question" }).querySelector(".video-activity-page-arrow")).toBeInTheDocument();
+
+    fireEvent.error(video as HTMLVideoElement);
+    expect(container.querySelector(".strc02-video-sentence-record-shell")).toHaveClass("is-video-background-unavailable");
+  });
 });

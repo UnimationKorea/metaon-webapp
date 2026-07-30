@@ -387,7 +387,8 @@ function collectVideoWordActivityResources(day: UnknownRecord, virtualBase: stri
       activityCode === MetaOnActivityCode.VideoWordQuiz ? "wdqu03" :
       activityCode === MetaOnActivityCode.VideoWordBlank ? "wdbl02" :
       activityCode === MetaOnActivityCode.VideoSentenceBlank ? "stbl02" :
-      activityCode === MetaOnActivityCode.VideoUnscramble ? "stsc02" : "";
+      activityCode === MetaOnActivityCode.VideoUnscramble ? "stsc02" :
+      activityCode === MetaOnActivityCode.VideoSentenceRecord ? "strc02" : "";
     if (!videoFolder) return undefined;
 
     return {

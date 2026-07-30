@@ -66,6 +66,13 @@ describe("MetaOn activity code mapping", () => {
     expect(activityTitleForCode(MetaOnActivityCode.VideoUnscramble, "Fallback")).toBe("Unscramble");
   });
 
+  it("maps STRC02 to the existing Sentence Record renderer while preserving the video-record code from Book data", () => {
+    expect(resolveActTypeFromActivityCode(MetaOnActivityCode.VideoSentenceRecord)).toBe(ActType.SentenceShadowingSpace);
+    expect(canonicalActivityCodeForActType(ActType.SentenceShadowingSpace, MetaOnActivityCode.VideoSentenceRecord))
+      .toBe(MetaOnActivityCode.VideoSentenceRecord);
+    expect(activityTitleForCode(MetaOnActivityCode.VideoSentenceRecord, "Fallback")).toBe("Sentence Record");
+  });
+
   it("can route EBOOK01 to the old Reading renderer when the API marks it as reading-only", () => {
     expect(resolveActTypeFromActivityCode(MetaOnActivityCode.ListenRead, { category: "reading", title: "Read" })).toBe(ActType.Reading);
   });

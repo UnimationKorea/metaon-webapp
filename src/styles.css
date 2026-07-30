@@ -5133,6 +5133,187 @@ button.image-page-control:hover:not(:disabled) {
   bottom: 0;
 }
 
+/* STRC02 keeps STRC01's native-voice, recording, and review behavior while
+   placing it in the shared video scene. A Book-provided MP4 takes precedence;
+   this Figma-exported image is only used while a video is unavailable. */
+.sentence-record-renewal-shell.strc02-video-sentence-record-shell {
+  background-color: #33287e;
+  background-image: none;
+}
+
+.sentence-record-renewal-shell.strc02-video-sentence-record-shell.is-video-background-unavailable {
+  background-image: url("/metaon-assets/activity/strc02/sentence-record-fallback.png");
+}
+
+.strc02-background-video,
+.strc02-background-scrim {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.strc02-background-video {
+  object-fit: cover;
+}
+
+.strc02-background-scrim {
+  z-index: 1;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.strc02-video-sentence-record-shell .sentence-record-renewal-panel {
+  z-index: 4;
+  top: 14.44%;
+  right: 9.375%;
+  bottom: auto;
+  left: 9.375%;
+  width: 81.25%;
+  height: 71.11%;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 2px solid #8e8e8e;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.32);
+  box-shadow: 0 20px 46px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(4px);
+}
+
+.strc02-video-sentence-record-shell .sentence-record-meta {
+  z-index: 5;
+  top: 5.2%;
+  left: 3.2%;
+}
+
+.strc02-video-sentence-record-shell .sentence-record-meta > span {
+  min-height: 34px;
+  border-color: #e1e1e1;
+  background: rgba(245, 245, 245, 0.2);
+  color: #fafafa;
+  backdrop-filter: blur(6px);
+}
+
+.strc02-video-sentence-record-shell .sentence-record-meta svg {
+  color: #45b8ff;
+}
+
+.strc02-video-sentence-record-shell .sentence-record-meta > span + span svg {
+  color: #ff9d51;
+}
+
+.strc02-video-sentence-record-shell .sentence-record-prompt {
+  z-index: 4;
+  top: 39%;
+  right: 8%;
+  left: 8%;
+  min-height: 64px;
+  color: #fafafa;
+  font-size: clamp(18px, 2.5cqw, 32px);
+  line-height: 1.625;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.48);
+}
+
+.strc02-video-sentence-record-shell .sentence-record-blank {
+  min-height: 64px;
+  border-width: 3px;
+  border-color: #ffce1f;
+  background: #1f1f1f;
+}
+
+.strc02-video-sentence-record-shell .sentence-record-media {
+  z-index: 5;
+  right: 14%;
+  bottom: 13.5%;
+  left: 14%;
+  height: 64px;
+}
+
+.strc02-video-sentence-record-shell .sentence-record-track {
+  background: rgba(238, 239, 241, 0.2);
+  backdrop-filter: blur(5px);
+}
+
+.strc02-video-sentence-record-shell .sentence-record-progress {
+  background: #bbe5a4;
+}
+
+.strc02-video-sentence-record-shell .sentence-record-media.is-record-ready .sentence-record-progress,
+.strc02-video-sentence-record-shell .sentence-record-media.is-recording .sentence-record-progress {
+  background: #f0aba8;
+}
+
+.strc02-video-sentence-record-shell .sentence-record-media.is-review .sentence-record-progress {
+  background: #7ec8fb;
+}
+
+.strc02-video-sentence-record-shell .sentence-record-main-control {
+  width: 64px;
+  background: #65d335;
+}
+
+.strc02-video-sentence-record-shell .sentence-record-media.is-record-ready .sentence-record-main-control,
+.strc02-video-sentence-record-shell .sentence-record-media.is-recording .sentence-record-main-control {
+  background: #ff6269;
+}
+
+.strc02-video-sentence-record-shell .sentence-record-media.is-review .sentence-record-main-control {
+  background: #079cec;
+}
+
+.strc02-video-sentence-record-shell .sentence-record-status-label {
+  bottom: calc(100% + 18px);
+  color: #f7f9fb;
+  background: #191c1e;
+}
+
+.strc02-video-sentence-record-shell .sentence-record-step-check {
+  right: 0;
+  bottom: calc(100% + 12px);
+  background: #6851f5;
+}
+
+.strc02-video-sentence-record-shell .sentence-record-waveform {
+  right: 9%;
+  left: 13%;
+}
+
+.strc02-video-sentence-record-shell .activity-question-edge-nav {
+  z-index: 13;
+  top: 50%;
+  width: 64px;
+  height: 64px;
+  padding: 0 !important;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none;
+}
+
+.strc02-video-sentence-record-shell .activity-question-edge-nav.previous {
+  left: 3.125%;
+}
+
+.strc02-video-sentence-record-shell .activity-question-edge-nav.next {
+  right: 3.125%;
+}
+
+.strc02-video-sentence-record-shell .activity-question-edge-nav:hover:not(:disabled) {
+  filter: brightness(1.16);
+  transform: translateY(calc(-50% - 2px));
+}
+
+.strc02-video-sentence-record-shell .video-activity-page-indicator {
+  z-index: 14;
+}
+
+.activity-layout:has(.strc02-video-sentence-record-shell) .hub-activity-complete-button {
+  right: 3.125%;
+  bottom: 0;
+}
+
 @media (max-width: 700px), (max-height: 500px) {
   .wdbl02-video-word-blank-shell::before {
     border-radius: 28px;
@@ -5192,6 +5373,48 @@ button.image-page-control:hover:not(:disabled) {
   }
 
   .activity-layout:has(.stsc02-video-unscramble-shell) .hub-activity-complete-button {
+    right: 10px;
+    bottom: 6px;
+  }
+
+  .strc02-video-sentence-record-shell .sentence-record-renewal-panel {
+    border-radius: 12px;
+  }
+
+  .strc02-video-sentence-record-shell .sentence-record-meta {
+    top: 3%;
+    left: 3%;
+  }
+
+  .strc02-video-sentence-record-shell .sentence-record-meta > span {
+    min-height: 27px;
+    padding: 0 8px;
+    font-size: 12px;
+  }
+
+  .strc02-video-sentence-record-shell .sentence-record-prompt {
+    top: 41%;
+    right: 6%;
+    left: 6%;
+  }
+
+  .strc02-video-sentence-record-shell .sentence-record-media {
+    right: 10%;
+    bottom: 11%;
+    left: 10%;
+    height: 48px;
+  }
+
+  .strc02-video-sentence-record-shell .sentence-record-main-control {
+    width: 48px;
+  }
+
+  .strc02-video-sentence-record-shell .activity-question-edge-nav {
+    width: 46px;
+    height: 46px;
+  }
+
+  .activity-layout:has(.strc02-video-sentence-record-shell) .hub-activity-complete-button {
     right: 10px;
     bottom: 6px;
   }
