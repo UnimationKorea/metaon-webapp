@@ -3305,6 +3305,10 @@ button.image-page-control:hover:not(:disabled) {
 }
 
 .wdca02-video-flashcard-shell {
+  background-image: none;
+}
+
+.wdca02-video-flashcard-shell.is-video-background-unavailable {
   background-image: url("/metaon-assets/activity/wdca02/video-word-card-fallback.png");
 }
 
@@ -4104,6 +4108,16 @@ button.image-page-control:hover:not(:disabled) {
   animation: renewal-sound-pulse 900ms ease-in-out infinite;
 }
 
+/* Video Activities use image-only controls. The generic sound pulse draws a
+   purple shadow underneath the PNG and makes the button look like a second
+   shape, so keep playback feedback inside the supplied button artwork. */
+.wdca02-video-flashcard-shell .renewal-sound-button.is-playing,
+.wdqu03-video-quiz-shell .renewal-sound-button.is-playing,
+.wdbl02-video-word-blank-shell .renewal-sound-button.is-playing {
+  animation: none;
+  box-shadow: none;
+}
+
 .renewal-sound-button:disabled {
   cursor: default;
   opacity: 0.45;
@@ -4403,6 +4417,10 @@ button.image-page-control:hover:not(:disabled) {
    cached Book package; the exported Figma scene is only the no-video fallback. */
 .wdqu03-video-quiz-shell {
   background-color: #171247;
+  background-image: none;
+}
+
+.wdqu03-video-quiz-shell.is-video-background-unavailable {
   background-image: url("/metaon-assets/activity/wdqu03/word-quiz-fallback.png");
 }
 
@@ -4579,6 +4597,10 @@ button.image-page-control:hover:not(:disabled) {
    shown while that resource is unavailable. */
 .word-blank-renewal-shell.wdbl02-video-word-blank-shell {
   background-color: #171247;
+  background-image: none;
+}
+
+.word-blank-renewal-shell.wdbl02-video-word-blank-shell.is-video-background-unavailable {
   background-image: url("/metaon-assets/activity/wdbl02/word-blank-fallback.png");
 }
 

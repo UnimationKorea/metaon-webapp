@@ -379,16 +379,19 @@ function collectListeningResources(day: UnknownRecord, virtualBase: string, reso
 }
 
 function collectVideoWordActivityResources(day: UnknownRecord, virtualBase: string, resources: Map<string, BookResource>): void {
-  arrayValue(day.activities).forEach((rawActivity, index) => {
+  const videoActivities = arrayValue(day.activities).map((rawActivity, index) => {
     const activity = asRecord(rawActivity);
     const activityCode = normalizeActivityCode(activity.act_code ?? activity.actCode ?? activity.activity_code ?? activity.activityCode);
     const videoFolder =
       activityCode === MetaOnActivityCode.VideoWordCard ? "wdca02" :
       activityCode === MetaOnActivityCode.VideoWordQuiz ? "wdqu03" :
       activityCode === MetaOnActivityCode.VideoWordBlank ? "wdbl02" : "";
-    if (!videoFolder) return;
+    if (!videoFolder) return undefined;
 
-    const sourcePath = firstResourcePath(
+    return {
+      index,
+      videoFolder,
+      sourcePath: firstResourcePath(
       activity.background_video,
       activity.backgroundVideo,
       activity.bg_video,
@@ -397,9 +400,35 @@ function collectVideoWordActivityResources(day: UnknownRecord, virtualBase: stri
       activity.videoPath,
       activity.video_url,
       activity.videoUrl
-    );
-    if (!sourcePath) return;
+      )
+    };
+  }).filter((activity): activity is { index: number; videoFolder: string; sourcePath: string } => Boolean(activity));
 
+  // MetaOn3 can expose one Movie per Day instead of a background_video field
+  // on each video activity. Cache it once and use it as the shared fallback.
+  const movie = asRecord(day.movie);
+  const sharedSourcePath = firstResourcePath(
+    day.background_video,
+    day.backgroundVideo,
+    day.bg_video,
+    day.bgVideo,
+    day.video_path,
+    day.videoPath,
+    day.video_url,
+    day.videoUrl,
+    movie.mp4,
+    movie.video,
+    movie.video_path,
+    movie.videoPath,
+    movie.video_url,
+    movie.videoUrl
+  );
+  if (sharedSourcePath && videoActivities.some((activity) => !activity.sourcePath)) {
+    addResource(resources, `${virtualBase}/video/${videoBackgroundFileName(sharedSourcePath, 0)}`, sharedSourcePath, "video-background");
+  }
+
+  videoActivities.forEach(({ index, videoFolder, sourcePath }) => {
+    if (!sourcePath) return;
     addResource(resources, `${virtualBase}/${videoFolder}/video/${videoBackgroundFileName(sourcePath, index)}`, sourcePath, videoFolder);
   });
 }

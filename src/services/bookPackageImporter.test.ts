@@ -109,6 +109,33 @@ describe("downloadAndCacheBookPackage", () => {
     await expect(getCachedPackage(book)).resolves.toBeUndefined();
   });
 
+  it("stores a video Blob with the manifest MIME type when S3 uses a generic response type", async () => {
+    const manifest: BookResourceManifest = {
+      key: "book:6710",
+      book,
+      lessonDays: [],
+      generatedFiles: [],
+      resources: [
+        {
+          path: "Lessons/L1/D1/video/movie.mp4",
+          sourcePath: "/13/173/648/8159/1512/1512/movie/movie.mp4",
+          url: "https://metaon.s3.ap-northeast-2.amazonaws.com/MetaOn3/BookData/13/173/648/8159/1512/1512/movie/movie.mp4",
+          mimeType: "video/mp4",
+          category: "video-background"
+        }
+      ]
+    };
+    vi.mocked(getBookResourceManifest).mockResolvedValue(manifest);
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(new Uint8Array([1, 2, 3]), { status: 200 })));
+
+    await downloadAndCacheBookPackage(book);
+
+    const savedFile = vi.mocked(indexedDbStorage.savePackage).mock.calls[0][1]
+      .find((file) => file.path === "Lessons/L1/D1/video/movie.mp4");
+    expect(savedFile?.mimeType).toBe("video/mp4");
+    expect(savedFile?.blob.type).toBe("video/mp4");
+  });
+
   it("downloads MP3 assets referenced by cached npcqhk/script.json", async () => {
     const manifest: BookResourceManifest = {
       key: "book:6710",

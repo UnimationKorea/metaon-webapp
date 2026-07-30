@@ -1988,16 +1988,19 @@ function collectBookInfoResources(day, virtualBase, resources) {
 }
 
 function collectVideoWordActivityBookInfoResources(day, virtualBase, resources) {
-  firstArray(day.activities).forEach((rawActivity, index) => {
+  const videoActivities = firstArray(day.activities).map((rawActivity, index) => {
     const activity = recordValue(rawActivity);
     const activityCode = normalizeActivityCodeValue(activity.act_code ?? activity.actCode ?? activity.activity_code ?? activity.activityCode);
     const videoFolder =
       activityCode === METAON_ACTIVITY_CODE.videoWordCard ? "wdca02" :
       activityCode === METAON_ACTIVITY_CODE.videoWordQuiz ? "wdqu03" :
       activityCode === METAON_ACTIVITY_CODE.videoWordBlank ? "wdbl02" : "";
-    if (!videoFolder) return;
+    if (!videoFolder) return null;
 
-    const sourcePath = firstBookInfoResourcePath(
+    return {
+      index,
+      videoFolder,
+      sourcePath: firstBookInfoResourcePath(
       activity.background_video,
       activity.backgroundVideo,
       activity.bg_video,
@@ -2006,9 +2009,41 @@ function collectVideoWordActivityBookInfoResources(day, virtualBase, resources) 
       activity.videoPath,
       activity.video_url,
       activity.videoUrl
-    );
-    if (!sourcePath) return;
+      )
+    };
+  }).filter(Boolean);
 
+  // The current getBookInfo contract puts the background movie on the Day rather
+  // than on each WDCA02/WDQU03/WDBL02 activity. Store that shared MP4 once and
+  // let every video activity in the Day use it when it has no explicit override.
+  const movie = recordValue(day.movie);
+  const sharedSourcePath = firstBookInfoResourcePath(
+    day.background_video,
+    day.backgroundVideo,
+    day.bg_video,
+    day.bgVideo,
+    day.video_path,
+    day.videoPath,
+    day.video_url,
+    day.videoUrl,
+    movie.mp4,
+    movie.video,
+    movie.video_path,
+    movie.videoPath,
+    movie.video_url,
+    movie.videoUrl
+  );
+  if (sharedSourcePath && videoActivities.some((activity) => !activity.sourcePath)) {
+    addBookInfoResource(
+      resources,
+      `${virtualBase}/video/${videoBackgroundFileName(sharedSourcePath, 0)}`,
+      sharedSourcePath,
+      "video-background"
+    );
+  }
+
+  videoActivities.forEach(({ index, videoFolder, sourcePath }) => {
+    if (!sourcePath) return;
     addBookInfoResource(
       resources,
       `${virtualBase}/${videoFolder}/video/${videoBackgroundFileName(sourcePath, index)}`,
@@ -2629,8 +2664,7 @@ function readBookId(value) {
 function assetUrl(value) {
   if (!value) return "";
   if (/^https?:\/\//i.test(value)) return value;
-  if (value.startsWith("/")) return `${BOOKDATA_BASE}${value}`;
-  return value;
+  return `${BOOKDATA_BASE}/${value.replace(/^\/+/, "")}`;
 }
 
 function readBrandId(value) {

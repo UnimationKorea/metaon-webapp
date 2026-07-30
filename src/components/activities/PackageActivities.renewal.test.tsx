@@ -213,17 +213,33 @@ describe("Figma renewal activities", () => {
     const video = await waitFor(() => {
       const element = container.querySelector<HTMLVideoElement>(".wdca02-background-video");
       expect(element).toBeInTheDocument();
-      return element;
+      return element as HTMLVideoElement;
     });
     expect(video).toHaveAttribute("loop");
     expect(video?.muted).toBe(true);
     expect(video).toHaveAttribute("playsinline");
-    expect(container.querySelector(".wdca02-video-flashcard-shell")).toBeInTheDocument();
+    expect(container.querySelector(".wdca02-video-flashcard-shell")).not.toHaveClass("is-video-background-unavailable");
+    fireEvent.canPlay(video);
+    expect(HTMLMediaElement.prototype.play).toHaveBeenCalled();
     await screen.findByRole("button", { name: /flip word card bridge/i });
     expect(screen.getByRole("status", { name: "Page 1 of 6" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Previous word card" }).querySelector(".video-activity-page-arrow")).toBeInTheDocument();
     expect(screen.getByRole("switch", { name: /more info/i })).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: /flip word card bridge/i })).toBeInTheDocument();
+
+    fireEvent.error(video);
+    await waitFor(() => expect(container.querySelector(".wdca02-video-flashcard-shell")).toHaveClass("is-video-background-unavailable"));
+  });
+
+  it("uses the shared Day movie path when the API does not provide a WDCA02-specific video", async () => {
+    const backgroundVideoPath = `${basePath}/video/movie.mp4`;
+    mockRenewalPackage(sentences, [backgroundVideoPath]);
+
+    const { container } = render(
+      <FlashCardActivity context={activityContext(ActType.FlashCardSpace, "WDCA02")} label="Word Card" />
+    );
+
+    await waitFor(() => expect(container.querySelector<HTMLVideoElement>(".wdca02-background-video")).toBeInTheDocument());
   });
 
   it("renders WDQU03 as a video Word Quiz with the Figma text-choice layout", async () => {

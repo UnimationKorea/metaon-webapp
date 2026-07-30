@@ -1434,6 +1434,7 @@ export function FlashCardActivity({
   const [index, setIndex] = useState(0);
   const [showBack, setShowBack] = useState(false);
   const [showMoreInfo, setShowMoreInfo] = useState(false);
+  const [videoUnavailable, setVideoUnavailable] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastAudioRequestAt = useRef(Number.NEGATIVE_INFINITY);
   const word = words[index];
@@ -1442,9 +1443,10 @@ export function FlashCardActivity({
   const activityCode = normalizeActivityCode(context.activity?.activityCode);
   const usesVideoBackground = activityCode === MetaOnActivityCode.VideoWordCard;
   const wdca02VideoPaths = usePackagePathList(context, `${dayBase(context)}/wdca02/video/`);
+  const dayVideoPaths = usePackagePathList(context, `${dayBase(context)}/video/`);
   const wdca02VideoPath = useMemo(
-    () => wdca02VideoPaths.find((path) => /\.(?:mp4|webm|m4v|mov)$/i.test(path)),
-    [wdca02VideoPaths]
+    () => [...wdca02VideoPaths, ...dayVideoPaths].find((path) => /\.(?:mp4|webm|m4v|mov)$/i.test(path)),
+    [wdca02VideoPaths, dayVideoPaths]
   );
   const wdca02VideoUrl = usePackageUrl(context, wdca02VideoPath);
   const usesWdcaDesign =
@@ -1457,6 +1459,10 @@ export function FlashCardActivity({
     flipCountRef.current = 0;
     if (index >= words.length) setIndex(0);
   }, [index, words.length]);
+
+  useEffect(() => {
+    setVideoUnavailable(false);
+  }, [wdca02VideoUrl]);
 
   useEffect(() => {
     return () => {
@@ -1550,21 +1556,10 @@ export function FlashCardActivity({
   if (usesWdcaDesign) {
     return (
       <ActivityFrame context={context} actionLabel={label} className="wdca-flashcard-frame">
-        <div className={usesVideoBackground ? "wdca-flashcard-shell wdca02-video-flashcard-shell" : "wdca-flashcard-shell"}>
+        <div className={usesVideoBackground ? `wdca-flashcard-shell wdca02-video-flashcard-shell${videoUnavailable ? " is-video-background-unavailable" : ""}` : "wdca-flashcard-shell"}>
           {usesVideoBackground ? (
             <>
-              {wdca02VideoUrl ? (
-                <video
-                  aria-hidden="true"
-                  autoPlay
-                  className="wdca02-background-video"
-                  loop
-                  muted
-                  playsInline
-                  preload="auto"
-                  src={wdca02VideoUrl}
-                />
-              ) : null}
+              <VideoActivityBackground className="wdca02-background-video" onUnavailable={() => setVideoUnavailable(true)} url={wdca02VideoUrl} />
               <span aria-hidden="true" className="wdca02-background-scrim" />
             </>
           ) : null}
@@ -1713,6 +1708,55 @@ export function FlashCardActivity({
         </div>
       </div>
     </ActivityFrame>
+  );
+}
+
+function VideoActivityBackground({
+  className,
+  onUnavailable,
+  url
+}: {
+  className: string;
+  onUnavailable: () => void;
+  url?: string;
+}) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  const startPlayback = (video: HTMLVideoElement | null) => {
+    if (!video) return;
+    video.muted = true;
+    video.defaultMuted = true;
+    try {
+      void video.play().catch(() => undefined);
+    } catch {
+      // Autoplay can still require a gesture in embedded WebViews. The one-shot
+      // pointer listener below retries without showing the static fallback.
+    }
+  };
+
+  useEffect(() => {
+    if (!url) return;
+    const retryOnFirstGesture = () => startPlayback(videoRef.current);
+    window.addEventListener("pointerdown", retryOnFirstGesture, { capture: true, once: true });
+    return () => window.removeEventListener("pointerdown", retryOnFirstGesture, { capture: true });
+  }, [url]);
+
+  if (!url) return null;
+
+  return (
+    <video
+      aria-hidden="true"
+      autoPlay
+      className={className}
+      loop
+      muted
+      onCanPlay={(event) => startPlayback(event.currentTarget)}
+      onError={onUnavailable}
+      playsInline
+      preload="auto"
+      ref={videoRef}
+      src={url}
+    />
   );
 }
 
@@ -2094,13 +2138,15 @@ export function WordBlankActivity({
   const [shuffleSeed] = useState(createShuffleSeed);
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<string>();
+  const [videoUnavailable, setVideoUnavailable] = useState(false);
   const feedbackTimerRef = useRef<number | undefined>(undefined);
   const activityCode = normalizeActivityCode(context.activity?.activityCode);
   const usesVideoBackground = activityCode === MetaOnActivityCode.VideoWordBlank;
   const wdbl02VideoPaths = usePackagePathList(context, `${dayBase(context)}/wdbl02/video/`);
+  const dayVideoPaths = usePackagePathList(context, `${dayBase(context)}/video/`);
   const wdbl02VideoPath = useMemo(
-    () => wdbl02VideoPaths.find((path) => /\.(?:mp4|webm|m4v|mov)$/i.test(path)),
-    [wdbl02VideoPaths]
+    () => [...wdbl02VideoPaths, ...dayVideoPaths].find((path) => /\.(?:mp4|webm|m4v|mov)$/i.test(path)),
+    [wdbl02VideoPaths, dayVideoPaths]
   );
   const wdbl02VideoUrl = usePackageUrl(context, wdbl02VideoPath);
   const target = words[current];
@@ -2131,6 +2177,10 @@ export function WordBlankActivity({
     },
     []
   );
+
+  useEffect(() => {
+    setVideoUnavailable(false);
+  }, [wdbl02VideoUrl]);
 
   useEffect(() => {
     if (!target || !question.answer) return;
@@ -2191,21 +2241,10 @@ export function WordBlankActivity({
 
   return (
     <ActivityFrame context={context} actionLabel={label} className="figma-renewal-frame">
-      <div className={`figma-renewal-shell word-blank-renewal-shell${usesVideoBackground ? " wdbl02-video-word-blank-shell" : ""}`}>
+      <div className={`figma-renewal-shell word-blank-renewal-shell${usesVideoBackground ? ` wdbl02-video-word-blank-shell${videoUnavailable ? " is-video-background-unavailable" : ""}` : ""}`}>
         {usesVideoBackground ? (
           <>
-            {wdbl02VideoUrl ? (
-              <video
-                aria-hidden="true"
-                autoPlay
-                className="wdbl02-background-video"
-                loop
-                muted
-                playsInline
-                preload="auto"
-                src={wdbl02VideoUrl}
-              />
-            ) : null}
+            <VideoActivityBackground className="wdbl02-background-video" onUnavailable={() => setVideoUnavailable(true)} url={wdbl02VideoUrl} />
             <span aria-hidden="true" className="wdbl02-background-scrim" />
           </>
         ) : null}
@@ -3084,13 +3123,15 @@ function VocaQuizChoiceActivity({
   const [shuffleSeed] = useState(createShuffleSeed);
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<string>();
+  const [videoUnavailable, setVideoUnavailable] = useState(false);
   const feedbackTimerRef = useRef<number | undefined>(undefined);
   const activityCode = normalizeActivityCode(context.activity?.activityCode);
   const usesVideoBackground = activityCode === MetaOnActivityCode.VideoWordQuiz;
   const wdqu03VideoPaths = usePackagePathList(context, `${dayBase(context)}/wdqu03/video/`);
+  const dayVideoPaths = usePackagePathList(context, `${dayBase(context)}/video/`);
   const wdqu03VideoPath = useMemo(
-    () => wdqu03VideoPaths.find((path) => /\.(?:mp4|webm|m4v|mov)$/i.test(path)),
-    [wdqu03VideoPaths]
+    () => [...wdqu03VideoPaths, ...dayVideoPaths].find((path) => /\.(?:mp4|webm|m4v|mov)$/i.test(path)),
+    [wdqu03VideoPaths, dayVideoPaths]
   );
   const wdqu03VideoUrl = usePackageUrl(context, wdqu03VideoPath);
   const target = words[current];
@@ -3122,6 +3163,10 @@ function VocaQuizChoiceActivity({
     },
     []
   );
+
+  useEffect(() => {
+    setVideoUnavailable(false);
+  }, [wdqu03VideoUrl]);
 
   useEffect(() => {
     if (!target) return;
@@ -3180,23 +3225,12 @@ function VocaQuizChoiceActivity({
   return (
     <ActivityFrame context={context} actionLabel="Word Quiz" className="figma-renewal-frame">
       <div
-        className={`figma-renewal-shell voca-quiz-renewal-shell${usesVideoBackground ? " wdqu03-video-quiz-shell" : ""}`}
+        className={`figma-renewal-shell voca-quiz-renewal-shell${usesVideoBackground ? ` wdqu03-video-quiz-shell${videoUnavailable ? " is-video-background-unavailable" : ""}` : ""}`}
         data-quiz-mode={`${promptKind}-${optionKind}`}
       >
         {usesVideoBackground ? (
           <>
-            {wdqu03VideoUrl ? (
-              <video
-                aria-hidden="true"
-                autoPlay
-                className="wdqu03-background-video"
-                loop
-                muted
-                playsInline
-                preload="auto"
-                src={wdqu03VideoUrl}
-              />
-            ) : null}
+            <VideoActivityBackground className="wdqu03-background-video" onUnavailable={() => setVideoUnavailable(true)} url={wdqu03VideoUrl} />
             <span aria-hidden="true" className="wdqu03-background-scrim" />
           </>
         ) : null}

@@ -5,7 +5,7 @@ import { packageKeyFor } from "./packageKeys";
 import type { StoredPackageFile } from "../types/ports";
 import type { BookData, BookPackage, BookResource, DownloadProgress } from "../types/metaonTypes";
 
-export const BOOK_PACKAGE_CACHE_VERSION = 6;
+export const BOOK_PACKAGE_CACHE_VERSION = 7;
 
 export async function downloadAndCacheBookPackage(
   book: BookData,
@@ -70,13 +70,17 @@ export async function downloadAndCacheBookPackage(
       if (isNpcResource(resource)) return skipOptionalResource(path);
       throw new Error(`Failed to download ${resource.sourcePath}: ${response.status} ${response.statusText}`);
     }
-    const blob = await response.blob();
+    const responseBlob = await response.blob();
+    // IndexedDB persists the Blob's MIME type. Keep the manifest type when S3
+    // returns a generic response type so cached video still decodes as media.
+    const mimeType = resource.mimeType || responseBlob.type || "application/octet-stream";
+    const blob = responseBlob.type === mimeType ? responseBlob : new Blob([responseBlob], { type: mimeType });
     downloadedFiles.push({
       packageKey: key,
       path,
       blob,
       size: blob.size,
-      mimeType: resource.mimeType || blob.type || "application/octet-stream"
+      mimeType
     });
     downloadedFileMap.set(path, downloadedFiles[downloadedFiles.length - 1]);
     loadedFiles += 1;

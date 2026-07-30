@@ -255,4 +255,40 @@ describe("normalizeBookResourceManifest", () => {
       { audioIndex: 0, text: "We can learn about the food they ate and the gods they worshipped." }
     ]);
   });
+
+  it("uses a Day movie as the shared cached background for video activities without an explicit path", () => {
+    const manifest = normalizeBookResourceManifest({
+      resultCode: 1,
+      book: {
+        book_idx: 8159,
+        book_code: "STU01L01",
+        title: "Boat fun",
+        lessons: [
+          {
+            lesson_idx: 1512,
+            num: 1,
+            days: [
+              {
+                day_idx: 1512,
+                num: 1,
+                movie: { mp4: "/13/173/648/8159/1512/1512/movie/movie.mp4" },
+                activities: [
+                  { act_idx: 21009, num: 2, act_code: "WDCA02", act_name: "Word Card" },
+                  { act_idx: 21010, num: 3, act_code: "WDQU03", act_name: "Word Quiz" },
+                  { act_idx: 21011, num: 4, act_code: "WDBL02", act_name: "Word Blank" }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    });
+
+    expect(manifest.resources).toContainEqual(expect.objectContaining({
+      path: "Lessons/L1/D1/video/movie.mp4",
+      sourcePath: "/13/173/648/8159/1512/1512/movie/movie.mp4",
+      mimeType: "video/mp4",
+      category: "video-background"
+    }));
+  });
 });
