@@ -1519,11 +1519,6 @@ export function FlashCardActivity({
 
   function flipCard() {
     if (!word) return;
-    if (ignoredClickAfterSwipeRef.current) {
-      ignoredClickAfterSwipeRef.current = false;
-      return;
-    }
-
     clearFlipResetTimer();
     const fromSide = showBack ? "word" : "image";
     flipCountRef.current += 1;
@@ -1578,12 +1573,24 @@ export function FlashCardActivity({
   function handleCardPointerDown(event: ReactPointerEvent<HTMLButtonElement>) {
     ignoredClickAfterSwipeRef.current = false;
     swipeStartRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
-    playWordAudio();
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // Pointer capture is unavailable in some embedded WebViews. The gesture
+      // still works while the pointer remains inside the card.
+    }
   }
 
   function handleCardPointerUp(event: ReactPointerEvent<HTMLButtonElement>) {
     const start = swipeStartRef.current;
     swipeStartRef.current = undefined;
+    try {
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    } catch {
+      // Ignore browsers that do not expose pointer capture state.
+    }
     if (!start || start.pointerId !== event.pointerId) return;
 
     const deltaX = event.clientX - start.x;
@@ -1596,6 +1603,15 @@ export function FlashCardActivity({
 
   function cancelCardSwipe() {
     swipeStartRef.current = undefined;
+  }
+
+  function handleCardClick() {
+    if (ignoredClickAfterSwipeRef.current) {
+      ignoredClickAfterSwipeRef.current = false;
+      return;
+    }
+    playWordAudio();
+    flipCard();
   }
 
   if (usesWdcaDesign) {
@@ -1657,7 +1673,7 @@ export function FlashCardActivity({
             aria-label={showBack ? `Show image for ${word?.eng || "word"}` : `Flip word card ${word?.eng || ""}`}
             className={showBack ? "flashcard-display wdca-flashcard-display flipped" : "flashcard-display wdca-flashcard-display"}
             disabled={!word}
-            onClick={flipCard}
+            onClick={handleCardClick}
             onKeyDown={(event) => {
               if (event.key === "Enter" || event.key === " ") playWordAudio();
             }}
@@ -1705,7 +1721,7 @@ export function FlashCardActivity({
           aria-label={showBack ? `Word card ${word?.eng || ""}` : `Flip word card ${word?.eng || ""}`}
           className={showBack ? "flashcard-display flipped" : "flashcard-display"}
           disabled={!word}
-          onClick={flipCard}
+          onClick={handleCardClick}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") {
               playWordAudio();

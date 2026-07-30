@@ -168,7 +168,6 @@ describe("FlashCardActivity WDCA01", () => {
     expect(card).toHaveClass("flipped");
 
     await waitFor(() => expect(container.querySelector("audio")).toBeInTheDocument());
-    fireEvent.pointerDown(card);
     expect(play).toHaveBeenCalledTimes(1);
   });
 
