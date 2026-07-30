@@ -193,6 +193,11 @@ describe("FlashCardActivity WDCA01", () => {
     fireEvent.pointerDown(card, { pointerId: 7, clientX: 280, clientY: 160 });
     fireEvent.pointerUp(card, { pointerId: 7, clientX: 120, clientY: 162 });
     expect(screen.getByRole("button", { name: /flip word card swim/i })).toBeInTheDocument();
+
+    const nextCard = screen.getByRole("button", { name: /flip word card swim/i });
+    fireEvent.touchStart(nextCard, { changedTouches: [{ identifier: 11, clientX: 110, clientY: 160 }] });
+    fireEvent.touchEnd(nextCard, { changedTouches: [{ identifier: 11, clientX: 290, clientY: 162 }] });
+    expect(screen.getByRole("button", { name: /flip word card float/i })).toBeInTheDocument();
   });
 });
 

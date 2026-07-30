@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject, type TouchEvent as ReactTouchEvent } from "react";
 import { BarChart3, BookOpen, Check, ChevronLeft, ChevronRight, Flag, Gauge, ImageOff, Keyboard, Mic, Pause, Play, RotateCcw, Square, Star, Trophy, Volume2, Wrench, X } from "lucide-react";
 import { uploadLearnRecording } from "../../api/uniplanetApi";
 import { ActivityHintImage, ActivityListeningImage, ActivityPageArrowImage, ActivitySoundImage, ActivityTimerBadge, videoActivityControlAssets, VideoActivityPageArrow, VideoActivityPageIndicator } from "../ActivityImageControls";
@@ -1439,6 +1439,7 @@ export function FlashCardActivity({
   const lastAudioRequestAt = useRef(Number.NEGATIVE_INFINITY);
   const flipResetTimerRef = useRef<number | undefined>(undefined);
   const swipeStartRef = useRef<{ pointerId: number; x: number; y: number }>();
+  const touchSwipeStartRef = useRef<{ identifier: number; x: number; y: number }>();
   const ignoredClickAfterSwipeRef = useRef(false);
   const word = words[index];
   const cardViewKeyRef = useRef("");
@@ -1571,6 +1572,7 @@ export function FlashCardActivity({
   }
 
   function handleCardPointerDown(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (event.pointerType === "touch") return;
     ignoredClickAfterSwipeRef.current = false;
     swipeStartRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
     try {
@@ -1582,6 +1584,7 @@ export function FlashCardActivity({
   }
 
   function handleCardPointerUp(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (event.pointerType === "touch") return;
     const start = swipeStartRef.current;
     swipeStartRef.current = undefined;
     try {
@@ -1603,6 +1606,33 @@ export function FlashCardActivity({
 
   function cancelCardSwipe() {
     swipeStartRef.current = undefined;
+  }
+
+  function handleCardTouchStart(event: ReactTouchEvent<HTMLButtonElement>) {
+    const touch = event.changedTouches[0];
+    if (!touch) return;
+    ignoredClickAfterSwipeRef.current = false;
+    touchSwipeStartRef.current = { identifier: touch.identifier, x: touch.clientX, y: touch.clientY };
+  }
+
+  function handleCardTouchEnd(event: ReactTouchEvent<HTMLButtonElement>) {
+    const start = touchSwipeStartRef.current;
+    touchSwipeStartRef.current = undefined;
+    if (!start) return;
+    const touch = Array.from(event.changedTouches).find((item) => item.identifier === start.identifier);
+    if (!touch) return;
+
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    if (Math.abs(deltaX) < 48 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+
+    event.preventDefault();
+    ignoredClickAfterSwipeRef.current = true;
+    moveCard(deltaX < 0 ? 1 : -1);
+  }
+
+  function cancelCardTouchSwipe() {
+    touchSwipeStartRef.current = undefined;
   }
 
   function handleCardClick() {
@@ -1680,6 +1710,9 @@ export function FlashCardActivity({
             onPointerCancel={cancelCardSwipe}
             onPointerDown={handleCardPointerDown}
             onPointerUp={handleCardPointerUp}
+            onTouchCancel={cancelCardTouchSwipe}
+            onTouchEnd={handleCardTouchEnd}
+            onTouchStart={handleCardTouchStart}
             type="button"
           >
             <span className="flashcard-face flashcard-front wdca-flashcard-face wdca-flashcard-front">
@@ -1730,6 +1763,9 @@ export function FlashCardActivity({
           onPointerCancel={cancelCardSwipe}
           onPointerDown={handleCardPointerDown}
           onPointerUp={handleCardPointerUp}
+          onTouchCancel={cancelCardTouchSwipe}
+          onTouchEnd={handleCardTouchEnd}
+          onTouchStart={handleCardTouchStart}
           type="button"
         >
           <span className="flashcard-face flashcard-front">
