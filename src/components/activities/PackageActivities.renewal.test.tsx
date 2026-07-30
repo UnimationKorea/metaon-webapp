@@ -516,6 +516,34 @@ describe("Figma renewal activities", () => {
     expect(next.closest(".sentence-renewal-panel")).toBeNull();
   });
 
+  it("renders STBL02 in the shared video frame with its cached background video", async () => {
+    const backgroundVideoPath = `${basePath}/stbl02/video/sentence-loop.mp4`;
+    mockRenewalPackage(sentences, [backgroundVideoPath]);
+
+    const { container } = render(
+      <SentenceBlankActivity context={activityContext(ActType.SentenceCheckSpace, "STBL02")} />
+    );
+
+    const video = await waitFor(() => {
+      const element = container.querySelector<HTMLVideoElement>(".stbl02-background-video");
+      expect(element).toBeInTheDocument();
+      return element;
+    });
+    expect(video).toHaveAttribute("loop");
+    expect(video?.muted).toBe(true);
+    expect(video).toHaveAttribute("playsinline");
+    expect(container.querySelector(".stbl02-video-sentence-blank-shell")).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Page 1 of 1" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Previous question" }).querySelector(".video-activity-page-arrow")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Play sentence 1" }).querySelector("img")).toHaveAttribute(
+      "src",
+      "/metaon-assets/activity/common-controls/sound.png"
+    );
+
+    fireEvent.error(video as HTMLVideoElement);
+    expect(container.querySelector(".stbl02-video-sentence-blank-shell")).toHaveClass("is-video-background-unavailable");
+  });
+
   it("uses bracketed Slice content when the API does not provide a blank index", async () => {
     mockRenewalPackage([
       { Sentence_Idx: 7618, Eng: "Over the log.", Mean: "통나무 위로 폴짝.", Slice: "Over/[the log].", Blank_Index: -1 },
@@ -568,6 +596,43 @@ describe("Figma renewal activities", () => {
     expect(next.closest(".unscramble-renewal-shell")).not.toBeNull();
     expect(previous.closest(".sentence-renewal-panel")).toBeNull();
     expect(next.closest(".sentence-renewal-panel")).toBeNull();
+  });
+
+  it("renders STSC02 in the shared video frame with its cached background video", async () => {
+    const backgroundVideoPath = `${basePath}/stsc02/video/unscramble-loop.mp4`;
+    mockRenewalPackage([
+      {
+        ...sentences[0],
+        Slice: "to/see/how/strong/each",
+        Blank_Index: 0
+      }
+    ], [backgroundVideoPath]);
+
+    const { container } = render(
+      <SentenceUnscrambleActivity context={activityContext(ActType.SentenceUnscrambleSpace, "STSC02")} />
+    );
+
+    const video = await waitFor(() => {
+      const element = container.querySelector<HTMLVideoElement>(".stsc02-background-video");
+      expect(element).toBeInTheDocument();
+      return element;
+    });
+    expect(video).toHaveAttribute("loop");
+    expect(video?.muted).toBe(true);
+    expect(video).toHaveAttribute("playsinline");
+    expect(container.querySelector(".stsc02-video-unscramble-shell")).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Page 1 of 1" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Previous question" }).querySelector(".video-activity-page-arrow")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Play sentence 1" }).querySelector("img")).toHaveAttribute(
+      "src",
+      "/metaon-assets/activity/common-controls/sound.png"
+    );
+    await waitFor(() => {
+      expect(container.querySelectorAll(".stsc02-video-unscramble-shell .unscramble-renewal-slot").length).toBeGreaterThan(0);
+    });
+
+    fireEvent.error(video as HTMLVideoElement);
+    expect(container.querySelector(".stsc02-video-unscramble-shell")).toHaveClass("is-video-background-unavailable");
   });
 
   it("limits long Sentence Unscramble questions to ten choices and prefills the remaining words", async () => {

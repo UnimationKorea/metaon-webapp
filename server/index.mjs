@@ -1835,7 +1835,9 @@ const METAON_ACTIVITY_CODE = {
   matchingGame: "WDPL01",
   memoryCard: "WDPL02",
   sentenceBlank: "STBL01",
+  videoSentenceBlank: "STBL02",
   unscramble: "STSC01",
+  videoUnscramble: "STSC02",
   sentenceRecord: "STRC01",
   quickCheck: "QCHK01",
   npcQuickCheck: "QCNP01",
@@ -1852,7 +1854,9 @@ const actTypeByActivityCode = new Map([
   [METAON_ACTIVITY_CODE.matchingGame, 8],
   [METAON_ACTIVITY_CODE.memoryCard, 15],
   [METAON_ACTIVITY_CODE.sentenceBlank, 1006],
+  [METAON_ACTIVITY_CODE.videoSentenceBlank, 1006],
   [METAON_ACTIVITY_CODE.unscramble, 1007],
+  [METAON_ACTIVITY_CODE.videoUnscramble, 1007],
   [METAON_ACTIVITY_CODE.sentenceRecord, 1009],
   [METAON_ACTIVITY_CODE.quickCheck, 65],
   [METAON_ACTIVITY_CODE.npcQuickCheck, 65],
@@ -1893,7 +1897,9 @@ const titleByActivityCode = new Map([
   [METAON_ACTIVITY_CODE.matchingGame, "Matching Game"],
   [METAON_ACTIVITY_CODE.memoryCard, "Memory Card"],
   [METAON_ACTIVITY_CODE.sentenceBlank, "Sentence Blank"],
+  [METAON_ACTIVITY_CODE.videoSentenceBlank, "Sentence Blank"],
   [METAON_ACTIVITY_CODE.unscramble, "Unscramble"],
+  [METAON_ACTIVITY_CODE.videoUnscramble, "Unscramble"],
   [METAON_ACTIVITY_CODE.sentenceRecord, "Sentence Record"],
   [METAON_ACTIVITY_CODE.quickCheck, "Quick Check"],
   [METAON_ACTIVITY_CODE.npcQuickCheck, "NPC Quick Check"],
@@ -1994,7 +2000,9 @@ function collectVideoWordActivityBookInfoResources(day, virtualBase, resources) 
     const videoFolder =
       activityCode === METAON_ACTIVITY_CODE.videoWordCard ? "wdca02" :
       activityCode === METAON_ACTIVITY_CODE.videoWordQuiz ? "wdqu03" :
-      activityCode === METAON_ACTIVITY_CODE.videoWordBlank ? "wdbl02" : "";
+      activityCode === METAON_ACTIVITY_CODE.videoWordBlank ? "wdbl02" :
+      activityCode === METAON_ACTIVITY_CODE.videoSentenceBlank ? "stbl02" :
+      activityCode === METAON_ACTIVITY_CODE.videoUnscramble ? "stsc02" : "";
     if (!videoFolder) return null;
 
     return {
@@ -2014,7 +2022,7 @@ function collectVideoWordActivityBookInfoResources(day, virtualBase, resources) 
   }).filter(Boolean);
 
   // The current getBookInfo contract puts the background movie on the Day rather
-  // than on each WDCA02/WDQU03/WDBL02 activity. Store that shared MP4 once and
+  // than on each WDCA02/WDQU03/WDBL02/STBL02/STSC02 activity. Store that shared MP4 once and
   // let every video activity in the Day use it when it has no explicit override.
   const movie = recordValue(day.movie);
   const sharedSourcePath = firstBookInfoResourcePath(

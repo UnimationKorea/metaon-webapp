@@ -64,7 +64,9 @@ export function ActivityPage() {
   const isVideoActivity =
     normalizedActivityCode === MetaOnActivityCode.VideoWordCard ||
     normalizedActivityCode === MetaOnActivityCode.VideoWordQuiz ||
-    normalizedActivityCode === MetaOnActivityCode.VideoWordBlank;
+    normalizedActivityCode === MetaOnActivityCode.VideoWordBlank ||
+    normalizedActivityCode === MetaOnActivityCode.VideoSentenceBlank ||
+    normalizedActivityCode === MetaOnActivityCode.VideoUnscramble;
   const activityLayoutStyle = {
     "--unity-activity-bg": `url("${getActivityBackgroundUrl(activity?.actType)}")`
   } as CSSProperties;

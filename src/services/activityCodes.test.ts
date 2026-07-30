@@ -52,6 +52,20 @@ describe("MetaOn activity code mapping", () => {
     expect(activityTitleForCode(MetaOnActivityCode.VideoWordBlank, "Fallback")).toBe("Word Blank");
   });
 
+  it("maps STBL02 to the existing Sentence Blank renderer while preserving the video-blank code from Book data", () => {
+    expect(resolveActTypeFromActivityCode(MetaOnActivityCode.VideoSentenceBlank)).toBe(ActType.SentenceCheckSpace);
+    expect(canonicalActivityCodeForActType(ActType.SentenceCheckSpace, MetaOnActivityCode.VideoSentenceBlank))
+      .toBe(MetaOnActivityCode.VideoSentenceBlank);
+    expect(activityTitleForCode(MetaOnActivityCode.VideoSentenceBlank, "Fallback")).toBe("Sentence Blank");
+  });
+
+  it("maps STSC02 to the existing Unscramble renderer while preserving the video-unscramble code from Book data", () => {
+    expect(resolveActTypeFromActivityCode(MetaOnActivityCode.VideoUnscramble)).toBe(ActType.SentenceUnscrambleSpace);
+    expect(canonicalActivityCodeForActType(ActType.SentenceUnscrambleSpace, MetaOnActivityCode.VideoUnscramble))
+      .toBe(MetaOnActivityCode.VideoUnscramble);
+    expect(activityTitleForCode(MetaOnActivityCode.VideoUnscramble, "Fallback")).toBe("Unscramble");
+  });
+
   it("can route EBOOK01 to the old Reading renderer when the API marks it as reading-only", () => {
     expect(resolveActTypeFromActivityCode(MetaOnActivityCode.ListenRead, { category: "reading", title: "Read" })).toBe(ActType.Reading);
   });

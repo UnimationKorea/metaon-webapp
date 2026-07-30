@@ -50,6 +50,22 @@ describe("normalizeBookResourceManifest", () => {
                     act_name: "Word Blank",
                     category: "word",
                     background_video: "/11/160/591/6710/978/978/wdbl02/video/blank-loop.mp4"
+                  },
+                  {
+                    act_idx: 12887,
+                    num: 7,
+                    act_code: "STBL02",
+                    act_name: "Sentence Blank",
+                    category: "sentence",
+                    background_video: "/11/160/591/6710/978/978/stbl02/video/sentence-loop.mp4"
+                  },
+                  {
+                    act_idx: 12888,
+                    num: 8,
+                    act_code: "STSC02",
+                    act_name: "Unscramble",
+                    category: "sentence",
+                    background_video: "/11/160/591/6710/978/978/stsc02/video/unscramble-loop.mp4"
                   }
                 ],
                 word: [
@@ -115,7 +131,9 @@ describe("normalizeBookResourceManifest", () => {
       { actIdx: 12883, activityCode: "WDCA01", actType: 1017, category: "word", title: "Word Card" },
       { actIdx: 12884, activityCode: "WDCA02", actType: 1017, category: "word", title: "Word Card" },
       { actIdx: 12885, activityCode: "WDQU03", actType: 1004, category: "word", title: "Word Quiz" },
-      { actIdx: 12886, activityCode: "WDBL02", actType: 1005, category: "word", title: "Word Blank" }
+      { actIdx: 12886, activityCode: "WDBL02", actType: 1005, category: "word", title: "Word Blank" },
+      { actIdx: 12887, activityCode: "STBL02", actType: 1006, category: "sentence", title: "Sentence Blank" },
+      { actIdx: 12888, activityCode: "STSC02", actType: 1007, category: "sentence", title: "Unscramble" }
     ]);
     expect(manifest.generatedFiles.map((file) => file.path)).toEqual([
       "Lessons/L1/D1/word/info_word.json",
@@ -145,6 +163,8 @@ describe("normalizeBookResourceManifest", () => {
     expect(manifest.resources.map((resource) => resource.path)).toContain("Lessons/L1/D1/wdca02/video/night-loop.mp4");
     expect(manifest.resources.map((resource) => resource.path)).toContain("Lessons/L1/D1/wdqu03/video/quiz-loop.mp4");
     expect(manifest.resources.map((resource) => resource.path)).toContain("Lessons/L1/D1/wdbl02/video/blank-loop.mp4");
+    expect(manifest.resources.map((resource) => resource.path)).toContain("Lessons/L1/D1/stbl02/video/sentence-loop.mp4");
+    expect(manifest.resources.map((resource) => resource.path)).toContain("Lessons/L1/D1/stsc02/video/unscramble-loop.mp4");
     expect(manifest.resources[0].url).toMatch(/^https:\/\/metaon\.s3\.ap-northeast-2\.amazonaws\.com\/MetaOn3\/BookData\//);
   });
 
@@ -275,7 +295,9 @@ describe("normalizeBookResourceManifest", () => {
                 activities: [
                   { act_idx: 21009, num: 2, act_code: "WDCA02", act_name: "Word Card" },
                   { act_idx: 21010, num: 3, act_code: "WDQU03", act_name: "Word Quiz" },
-                  { act_idx: 21011, num: 4, act_code: "WDBL02", act_name: "Word Blank" }
+                  { act_idx: 21011, num: 4, act_code: "WDBL02", act_name: "Word Blank" },
+                  { act_idx: 21012, num: 5, act_code: "STBL02", act_name: "Sentence Blank" },
+                  { act_idx: 21013, num: 6, act_code: "STSC02", act_name: "Unscramble" }
                 ]
               }
             ]

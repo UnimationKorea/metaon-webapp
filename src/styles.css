@@ -4781,6 +4781,358 @@ button.image-page-control:hover:not(:disabled) {
   bottom: 0;
 }
 
+/* STBL02 is the video counterpart of Sentence Blank. It reuses the STBL01
+   question flow while keeping the Figma scene visible through the translucent
+   question panel. The cached Book MP4 always takes precedence over this image. */
+.sentence-blank-renewal-shell.stbl02-video-sentence-blank-shell {
+  background-color: #171247;
+  background-image: none;
+}
+
+.sentence-blank-renewal-shell.stbl02-video-sentence-blank-shell.is-video-background-unavailable {
+  background-image: url("/metaon-assets/activity/stbl02/sentence-blank-fallback.png");
+}
+
+.stbl02-background-video,
+.stbl02-background-scrim {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.stbl02-background-video {
+  object-fit: cover;
+}
+
+.stbl02-background-scrim {
+  z-index: 1;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.stbl02-video-sentence-blank-shell::before {
+  position: absolute;
+  z-index: 2;
+  top: 14.44%;
+  left: 9.375%;
+  width: 81.25%;
+  height: 71.11%;
+  box-sizing: border-box;
+  border: 2px solid #8e8e8e;
+  border-radius: 48px;
+  background: rgba(0, 0, 0, 0.32);
+  box-shadow: 0 20px 46px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(4px);
+  content: "";
+  pointer-events: none;
+}
+
+.stbl02-video-sentence-blank-shell .sentence-renewal-panel {
+  z-index: 4;
+  top: 14.44%;
+  left: 9.375%;
+  width: 81.25%;
+  height: 71.11%;
+  overflow: hidden;
+  border: 0;
+  border-radius: 48px;
+  background: transparent;
+}
+
+.stbl02-video-sentence-blank-shell .sentence-renewal-sound-button {
+  z-index: 5;
+  top: 8.5%;
+}
+
+.stbl02-video-sentence-blank-shell .sentence-renewal-question {
+  z-index: 4;
+  top: 27%;
+  left: 6%;
+  right: 6%;
+  min-height: 27%;
+  color: #ffffff;
+}
+
+.stbl02-video-sentence-blank-shell .sentence-renewal-question p {
+  font-size: clamp(17px, 2.5cqw, 32px);
+  line-height: 1.4;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.48);
+  text-wrap: balance;
+}
+
+.stbl02-video-sentence-blank-shell .renewal-sentence-blank {
+  border-width: 3px;
+  border-color: #ffce1f;
+  background: rgba(0, 0, 0, 0.1);
+  color: #ffffff;
+}
+
+.stbl02-video-sentence-blank-shell .renewal-sentence-blank.is-correct {
+  border-color: #ffce1f;
+  background: rgba(255, 206, 31, 0.24);
+}
+
+.stbl02-video-sentence-blank-shell .renewal-sentence-blank.is-wrong {
+  border-color: #ff9aac;
+  background: rgba(255, 154, 172, 0.2);
+}
+
+.stbl02-video-sentence-blank-shell .sentence-renewal-options {
+  z-index: 5;
+  width: 81%;
+  bottom: 9.5%;
+  gap: 16px 24px;
+}
+
+.stbl02-video-sentence-blank-shell .sentence-renewal-options .renewal-option-button {
+  min-height: 64px;
+  border: 2px solid #fafafa;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  box-shadow: none;
+  backdrop-filter: blur(8px);
+}
+
+.stbl02-video-sentence-blank-shell .sentence-renewal-options .renewal-option-button:hover:not(:disabled) {
+  border-color: #ffffff;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.stbl02-video-sentence-blank-shell .sentence-renewal-options .renewal-option-button.is-selected,
+.stbl02-video-sentence-blank-shell .sentence-renewal-options .renewal-option-button.is-correct {
+  border-color: #ffce1f;
+  background: rgba(255, 206, 31, 0.38);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.stbl02-video-sentence-blank-shell .sentence-renewal-options .renewal-option-button.is-wrong {
+  border-color: #ff9aac;
+  background: rgba(255, 154, 172, 0.28);
+  color: #ffffff;
+}
+
+.stbl02-video-sentence-blank-shell .renewal-feedback {
+  display: none;
+}
+
+.stbl02-video-sentence-blank-shell .activity-question-edge-nav {
+  z-index: 13;
+  top: 50%;
+  width: 64px;
+  height: 64px;
+  padding: 0 !important;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none;
+}
+
+.stbl02-video-sentence-blank-shell .activity-question-edge-nav.previous {
+  left: 3.125%;
+}
+
+.stbl02-video-sentence-blank-shell .activity-question-edge-nav.next {
+  right: 3.125%;
+}
+
+.stbl02-video-sentence-blank-shell .activity-question-edge-nav:hover:not(:disabled) {
+  filter: brightness(1.16);
+  transform: translateY(calc(-50% - 2px));
+}
+
+.stbl02-video-sentence-blank-shell .video-activity-page-indicator {
+  z-index: 14;
+}
+
+.activity-layout:has(.stbl02-video-sentence-blank-shell) .hub-activity-complete-button {
+  right: 3.125%;
+  bottom: 0;
+}
+
+/* STSC02 is the video counterpart of Unscramble. The selection and answer
+   ordering stay in the STSC01 renderer; this branch only supplies its moving
+   background and the Figma forest-library presentation. */
+.unscramble-renewal-shell.stsc02-video-unscramble-shell {
+  background-color: #1c1713;
+  background-image: none;
+}
+
+.unscramble-renewal-shell.stsc02-video-unscramble-shell.is-video-background-unavailable {
+  background-image: url("/metaon-assets/activity/stsc02/unscramble-fallback.png");
+}
+
+.stsc02-background-video,
+.stsc02-background-scrim {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.stsc02-background-video {
+  object-fit: cover;
+}
+
+.stsc02-background-scrim {
+  z-index: 1;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.stsc02-video-unscramble-shell::before {
+  position: absolute;
+  z-index: 2;
+  top: 14.44%;
+  left: 9.375%;
+  width: 81.25%;
+  height: 71.11%;
+  box-sizing: border-box;
+  border: 2px solid #8e8e8e;
+  border-radius: 48px;
+  background: rgba(0, 0, 0, 0.32);
+  box-shadow: 0 20px 46px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(4px);
+  content: "";
+  pointer-events: none;
+}
+
+.stsc02-video-unscramble-shell .sentence-renewal-panel {
+  z-index: 4;
+  top: 14.44%;
+  left: 9.375%;
+  width: 81.25%;
+  height: 71.11%;
+  overflow: hidden;
+  border: 0;
+  border-radius: 48px;
+  background: transparent;
+}
+
+.stsc02-video-unscramble-shell .sentence-renewal-sound-button {
+  z-index: 5;
+  top: 8.5%;
+}
+
+.stsc02-video-unscramble-shell .unscramble-renewal-workspace {
+  z-index: 4;
+  top: 21%;
+  right: 5%;
+  bottom: 10%;
+  left: 5%;
+  grid-template-rows: minmax(0, 1.25fr) minmax(0, 0.55fr);
+  gap: 24px;
+}
+
+.stsc02-video-unscramble-shell .unscramble-renewal-sentence {
+  padding: 0;
+  overflow: hidden;
+  color: #fafafa;
+  font-size: clamp(16px, 2.5cqw, 32px);
+  line-height: 1.6;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.48);
+  touch-action: manipulation;
+}
+
+.stsc02-video-unscramble-shell .unscramble-renewal-slot {
+  width: var(--stsc02-slot-width, 115px);
+  min-width: var(--stsc02-slot-width, 115px);
+  min-height: 64px;
+  padding: 0 24px;
+  border: 3px dashed #ffce1f;
+  border-radius: 16px;
+  background: #1f1f1f;
+  color: #fafafa;
+}
+
+.stsc02-video-unscramble-shell .unscramble-renewal-slot.is-filled {
+  border-style: solid;
+  border-color: #ffce1f;
+  background: #ffce1f;
+  color: #1a1c1c;
+}
+
+.stsc02-video-unscramble-shell .unscramble-renewal-bank {
+  min-height: 64px;
+  justify-content: center;
+  align-content: flex-start;
+  gap: 16px 24px;
+  padding: 0;
+  overflow-y: auto;
+  border: 0;
+  background: transparent;
+  touch-action: pan-y;
+}
+
+.stsc02-video-unscramble-shell .unscramble-renewal-bank .renewal-option-button {
+  flex: 0 1 auto;
+  min-height: 64px;
+  padding: 0 24px;
+  border: 2px solid #fafafa;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fafafa;
+  box-shadow: none;
+  font-size: clamp(15px, 2.5cqw, 32px);
+  backdrop-filter: blur(8px);
+}
+
+.stsc02-video-unscramble-shell .unscramble-renewal-bank .renewal-option-button:hover:not(:disabled) {
+  border-color: #ffffff;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.stsc02-video-unscramble-shell .unscramble-renewal-bank .renewal-option-button:disabled {
+  border-color: #fafafa;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fafafa;
+  opacity: 0.4;
+}
+
+.stsc02-video-unscramble-shell .renewal-feedback {
+  display: none;
+}
+
+.stsc02-video-unscramble-shell .activity-question-edge-nav {
+  z-index: 13;
+  top: 50%;
+  width: 64px;
+  height: 64px;
+  padding: 0 !important;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none;
+}
+
+.stsc02-video-unscramble-shell .activity-question-edge-nav.previous {
+  left: 3.125%;
+}
+
+.stsc02-video-unscramble-shell .activity-question-edge-nav.next {
+  right: 3.125%;
+}
+
+.stsc02-video-unscramble-shell .activity-question-edge-nav:hover:not(:disabled) {
+  filter: brightness(1.16);
+  transform: translateY(calc(-50% - 2px));
+}
+
+.stsc02-video-unscramble-shell .video-activity-page-indicator {
+  z-index: 14;
+}
+
+.activity-layout:has(.stsc02-video-unscramble-shell) .hub-activity-complete-button {
+  right: 3.125%;
+  bottom: 0;
+}
+
 @media (max-width: 700px), (max-height: 500px) {
   .wdbl02-video-word-blank-shell::before {
     border-radius: 28px;
@@ -4797,6 +5149,49 @@ button.image-page-control:hover:not(:disabled) {
   }
 
   .activity-layout:has(.wdbl02-video-word-blank-shell) .hub-activity-complete-button {
+    right: 10px;
+    bottom: 6px;
+  }
+
+  .stbl02-video-sentence-blank-shell::before,
+  .stbl02-video-sentence-blank-shell .sentence-renewal-panel {
+    border-radius: 28px;
+  }
+
+  .stbl02-video-sentence-blank-shell .activity-question-edge-nav {
+    width: 46px;
+    height: 46px;
+  }
+
+  .activity-layout:has(.stbl02-video-sentence-blank-shell) .hub-activity-complete-button {
+    right: 10px;
+    bottom: 6px;
+  }
+
+  .stsc02-video-unscramble-shell::before,
+  .stsc02-video-unscramble-shell .sentence-renewal-panel {
+    border-radius: 28px;
+  }
+
+  .stsc02-video-unscramble-shell .unscramble-renewal-workspace {
+    top: 20%;
+    right: 7%;
+    bottom: 8%;
+    left: 7%;
+    gap: 10px;
+  }
+
+  .stsc02-video-unscramble-shell .unscramble-renewal-slot,
+  .stsc02-video-unscramble-shell .unscramble-renewal-bank .renewal-option-button {
+    min-height: 44px;
+  }
+
+  .stsc02-video-unscramble-shell .activity-question-edge-nav {
+    width: 46px;
+    height: 46px;
+  }
+
+  .activity-layout:has(.stsc02-video-unscramble-shell) .hub-activity-complete-button {
     right: 10px;
     bottom: 6px;
   }

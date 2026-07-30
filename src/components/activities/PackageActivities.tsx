@@ -3636,6 +3636,16 @@ export function SentenceBlankActivity({
   const [shuffleSeed] = useState(createShuffleSeed);
   const [index, setIndex] = useState(0);
   const sentence = sentences[index];
+  const [videoUnavailable, setVideoUnavailable] = useState(false);
+  const activityCode = normalizeActivityCode(context.activity?.activityCode);
+  const usesVideoBackground = activityCode === MetaOnActivityCode.VideoSentenceBlank;
+  const stbl02VideoPaths = usePackagePathList(context, `${dayBase(context)}/stbl02/video/`);
+  const dayVideoPaths = usePackagePathList(context, `${dayBase(context)}/video/`);
+  const stbl02VideoPath = useMemo(
+    () => [...stbl02VideoPaths, ...dayVideoPaths].find((path) => /\.(?:mp4|webm|m4v|mov)$/i.test(path)),
+    [stbl02VideoPaths, dayVideoPaths]
+  );
+  const stbl02VideoUrl = usePackageUrl(context, stbl02VideoPath);
   const parsed = parseSentenceTokens(sentence);
   const resolvedBlank = resolveClozeAnswer(parsed, words);
   const answer = resolvedBlank.answer;
@@ -3666,6 +3676,10 @@ export function SentenceBlankActivity({
     },
     []
   );
+
+  useEffect(() => {
+    setVideoUnavailable(!stbl02VideoUrl);
+  }, [stbl02VideoUrl]);
 
   useEffect(() => {
     if (!sentence || !answer) return;
@@ -3728,10 +3742,19 @@ export function SentenceBlankActivity({
 
   return (
     <ActivityFrame context={context} actionLabel={label} className="figma-renewal-frame">
-      <div className="figma-renewal-shell sentence-blank-renewal-shell">
-        <ActivityQuestionNavigation current={index} total={sentences.length} onChange={setIndex} />
+      <div className={`figma-renewal-shell sentence-blank-renewal-shell${usesVideoBackground ? ` stbl02-video-sentence-blank-shell${videoUnavailable ? " is-video-background-unavailable" : ""}` : ""}`}>
+        {usesVideoBackground ? (
+          <>
+            <VideoActivityBackground className="stbl02-background-video" onUnavailable={() => setVideoUnavailable(true)} url={stbl02VideoUrl} />
+            <span aria-hidden="true" className="stbl02-background-scrim" />
+          </>
+        ) : null}
+        {usesVideoBackground ? (
+          <VideoActivityProgress currentIndex={index} total={sentences.length} />
+        ) : null}
+        <ActivityQuestionNavigation current={index} total={sentences.length} onChange={setIndex} variant={usesVideoBackground ? "video" : "standard"} />
         <div className="sentence-renewal-panel">
-          <RenewalCounter current={sentences.length === 0 ? 0 : index + 1} total={sentences.length} className="sentence-renewal-counter" />
+          {usesVideoBackground ? null : <RenewalCounter current={sentences.length === 0 ? 0 : index + 1} total={sentences.length} className="sentence-renewal-counter" />}
           <RenewalSoundButton
             src={sentence?.audioUrl}
             label={`Play sentence ${index + 1}`}
@@ -3800,7 +3823,17 @@ export function SentenceUnscrambleActivity({
   const sentences = prototypeData?.sentences ?? loadedSentences;
   const [index, setIndex] = useState(0);
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
+  const [videoUnavailable, setVideoUnavailable] = useState(false);
   const feedbackTimerRef = useRef<number | undefined>(undefined);
+  const activityCode = normalizeActivityCode(context.activity?.activityCode);
+  const usesVideoBackground = activityCode === MetaOnActivityCode.VideoUnscramble;
+  const stsc02VideoPaths = usePackagePathList(context, `${dayBase(context)}/stsc02/video/`);
+  const dayVideoPaths = usePackagePathList(context, `${dayBase(context)}/video/`);
+  const stsc02VideoPath = useMemo(
+    () => [...stsc02VideoPaths, ...dayVideoPaths].find((path) => /\.(?:mp4|webm|m4v|mov)$/i.test(path)),
+    [stsc02VideoPaths, dayVideoPaths]
+  );
+  const stsc02VideoUrl = usePackageUrl(context, stsc02VideoPath);
   const sentence = sentences[index];
   const parsed = parseSentenceTokens(sentence);
   const completeAnswerTokens = parsed.tokens.filter((token) => !isPunctuationToken(token));
@@ -3831,6 +3864,10 @@ export function SentenceUnscrambleActivity({
     },
     []
   );
+
+  useEffect(() => {
+    setVideoUnavailable(!stsc02VideoUrl);
+  }, [stsc02VideoUrl]);
 
   useEffect(() => {
     if (!sentence || answerTokens.length === 0) return;
@@ -3897,10 +3934,19 @@ export function SentenceUnscrambleActivity({
 
   return (
     <ActivityFrame context={context} actionLabel={label} className="figma-renewal-frame">
-      <div className="figma-renewal-shell unscramble-renewal-shell">
-        <ActivityQuestionNavigation current={index} total={sentences.length} onChange={setIndex} />
+      <div className={`figma-renewal-shell unscramble-renewal-shell${usesVideoBackground ? ` stsc02-video-unscramble-shell${videoUnavailable ? " is-video-background-unavailable" : ""}` : ""}`}>
+        {usesVideoBackground ? (
+          <>
+            <VideoActivityBackground className="stsc02-background-video" onUnavailable={() => setVideoUnavailable(true)} url={stsc02VideoUrl} />
+            <span aria-hidden="true" className="stsc02-background-scrim" />
+          </>
+        ) : null}
+        {usesVideoBackground ? (
+          <VideoActivityProgress currentIndex={index} total={sentences.length} />
+        ) : null}
+        <ActivityQuestionNavigation current={index} total={sentences.length} onChange={setIndex} variant={usesVideoBackground ? "video" : "standard"} />
         <div className="sentence-renewal-panel unscramble-renewal-panel">
-          <RenewalCounter current={sentences.length === 0 ? 0 : index + 1} total={sentences.length} className="sentence-renewal-counter" />
+          {usesVideoBackground ? null : <RenewalCounter current={sentences.length === 0 ? 0 : index + 1} total={sentences.length} className="sentence-renewal-counter" />}
           <RenewalSoundButton
             src={sentence?.audioUrl}
             label={`Play sentence ${index + 1}`}
@@ -3923,8 +3969,12 @@ export function SentenceUnscrambleActivity({
                   return <span className={item.punctuation ? "is-punctuation" : ""} key={`static:${itemIndex}`}>{item.text}</span>;
                 }
                 const selectedToken = selectedTokens[item.answerIndex];
+                const expectedToken = answerTokens[item.answerIndex] || "";
+                const slotStyle = usesVideoBackground
+                  ? ({ "--stsc02-slot-width": `${Math.max(115, expectedToken.length * 14 + 64)}px` } as CSSProperties)
+                  : undefined;
                 return (
-                  <span className={selectedToken ? "unscramble-renewal-slot is-filled" : "unscramble-renewal-slot"} key={`slot:${item.answerIndex}`}>
+                  <span className={selectedToken ? "unscramble-renewal-slot is-filled" : "unscramble-renewal-slot"} key={`slot:${item.answerIndex}`} style={slotStyle}>
                     {selectedToken || ""}
                   </span>
                 );

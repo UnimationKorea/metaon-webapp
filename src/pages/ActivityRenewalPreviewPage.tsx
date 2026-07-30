@@ -57,6 +57,21 @@ const sentenceUnscrambleData: PrototypeActivityData = {
   ]
 };
 
+const videoUnscrambleData: PrototypeActivityData = {
+  words: previewWords,
+  sentences: [
+    {
+      index: 0,
+      sentenceIdx: 206,
+      eng: "Let's use rocks to see how strong each bridge is.",
+      mean: "돌을 사용해 각각의 다리가 얼마나 튼튼한지 살펴봅시다.",
+      slice: "to/see/how/strong/each",
+      blankIndex: 0,
+      audioUrl: silentAudio
+    }
+  ]
+};
+
 const sentenceUnscrambleLongData: PrototypeActivityData = {
   words: previewWords,
   sentences: [
@@ -124,7 +139,7 @@ export function ActivityRenewalPreviewPage() {
   const navigate = useNavigate();
   const { kind } = useParams();
   const [previewComplete, setPreviewComplete] = useState(false);
-  const isVideoActivity = kind === "video-flashcard" || kind === "video-voca-quiz" || kind === "video-word-blank";
+  const isVideoActivity = kind === "video-flashcard" || kind === "video-voca-quiz" || kind === "video-word-blank" || kind === "video-sentence-blank" || kind === "video-unscramble";
 
   if (!import.meta.env.DEV) return <Navigate replace to="/" />;
 
@@ -163,8 +178,14 @@ export function ActivityRenewalPreviewPage() {
     case "sentence-blank":
       activity = <SentenceBlankActivity context={previewContext(ActType.SentenceCheckSpace, "STBL01")} prototypeData={sentenceBlankData} />;
       break;
+    case "video-sentence-blank":
+      activity = <SentenceBlankActivity context={previewContext(ActType.SentenceCheckSpace, "STBL02")} prototypeData={sentenceBlankData} />;
+      break;
     case "unscramble":
       activity = <SentenceUnscrambleActivity context={previewContext(ActType.SentenceUnscrambleSpace, "STSC01")} prototypeData={sentenceUnscrambleData} />;
+      break;
+    case "video-unscramble":
+      activity = <SentenceUnscrambleActivity context={previewContext(ActType.SentenceUnscrambleSpace, "STSC02")} prototypeData={videoUnscrambleData} />;
       break;
     case "unscramble-long":
       activity = <SentenceUnscrambleActivity context={previewContext(ActType.SentenceUnscrambleSpace, "STSC01")} prototypeData={sentenceUnscrambleLongData} />;
