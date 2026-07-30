@@ -1437,6 +1437,9 @@ export function FlashCardActivity({
   const [videoUnavailable, setVideoUnavailable] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastAudioRequestAt = useRef(Number.NEGATIVE_INFINITY);
+  const flipResetTimerRef = useRef<number | undefined>(undefined);
+  const swipeStartRef = useRef<{ pointerId: number; x: number; y: number }>();
+  const ignoredClickAfterSwipeRef = useRef(false);
   const word = words[index];
   const cardViewKeyRef = useRef("");
   const flipCountRef = useRef(0);
@@ -1455,6 +1458,7 @@ export function FlashCardActivity({
     context.activity?.actType === ActType.FlashCardSpace;
 
   useEffect(() => {
+    clearFlipResetTimer();
     setShowBack(false);
     flipCountRef.current = 0;
     if (index >= words.length) setIndex(0);
@@ -1466,6 +1470,7 @@ export function FlashCardActivity({
 
   useEffect(() => {
     return () => {
+      clearFlipResetTimer();
       audioRef.current?.pause();
     };
   }, []);
@@ -1514,10 +1519,15 @@ export function FlashCardActivity({
 
   function flipCard() {
     if (!word) return;
+    if (ignoredClickAfterSwipeRef.current) {
+      ignoredClickAfterSwipeRef.current = false;
+      return;
+    }
+
+    clearFlipResetTimer();
     const fromSide = showBack ? "word" : "image";
-    const toSide = showBack ? "image" : "word";
     flipCountRef.current += 1;
-    setShowBack((value) => !value);
+    setShowBack(true);
     recordLearnEvent(context, {
       action: "card_flip",
       item_type: "word",
@@ -1526,10 +1536,15 @@ export function FlashCardActivity({
         word: word.eng,
         index,
         from_side: fromSide,
-        to_side: toSide,
-        flip_count: flipCountRef.current
+        to_side: "word",
+        flip_count: flipCountRef.current,
+        auto_return_ms: 2000
       }
     });
+    flipResetTimerRef.current = window.setTimeout(() => {
+      setShowBack(false);
+      flipResetTimerRef.current = undefined;
+    }, 2000);
   }
 
   function toggleMoreInfo() {
@@ -1549,8 +1564,38 @@ export function FlashCardActivity({
 
   function moveCard(direction: -1 | 1) {
     if (words.length < 2) return;
+    clearFlipResetTimer();
     setShowBack(false);
     setIndex((current) => (current + direction + words.length) % words.length);
+  }
+
+  function clearFlipResetTimer() {
+    if (flipResetTimerRef.current === undefined) return;
+    window.clearTimeout(flipResetTimerRef.current);
+    flipResetTimerRef.current = undefined;
+  }
+
+  function handleCardPointerDown(event: ReactPointerEvent<HTMLButtonElement>) {
+    ignoredClickAfterSwipeRef.current = false;
+    swipeStartRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+    playWordAudio();
+  }
+
+  function handleCardPointerUp(event: ReactPointerEvent<HTMLButtonElement>) {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = undefined;
+    if (!start || start.pointerId !== event.pointerId) return;
+
+    const deltaX = event.clientX - start.x;
+    const deltaY = event.clientY - start.y;
+    if (Math.abs(deltaX) < 48 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+
+    ignoredClickAfterSwipeRef.current = true;
+    moveCard(deltaX < 0 ? 1 : -1);
+  }
+
+  function cancelCardSwipe() {
+    swipeStartRef.current = undefined;
   }
 
   if (usesWdcaDesign) {
@@ -1616,7 +1661,9 @@ export function FlashCardActivity({
             onKeyDown={(event) => {
               if (event.key === "Enter" || event.key === " ") playWordAudio();
             }}
-            onPointerDown={playWordAudio}
+            onPointerCancel={cancelCardSwipe}
+            onPointerDown={handleCardPointerDown}
+            onPointerUp={handleCardPointerUp}
             type="button"
           >
             <span className="flashcard-face flashcard-front wdca-flashcard-face wdca-flashcard-front">
@@ -1664,9 +1711,9 @@ export function FlashCardActivity({
               playWordAudio();
             }
           }}
-          onMouseDown={playWordAudio}
-          onPointerDown={playWordAudio}
-          onTouchStart={playWordAudio}
+          onPointerCancel={cancelCardSwipe}
+          onPointerDown={handleCardPointerDown}
+          onPointerUp={handleCardPointerUp}
           type="button"
         >
           <span className="flashcard-face flashcard-front">

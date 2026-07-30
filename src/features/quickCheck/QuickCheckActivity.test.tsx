@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getQuickCheckQuiz, submitQuickCheck } from "../../api/uniplanetApi";
+import { createLearnEventRecorder } from "../../services/learnEventRecorder";
 import type { ActivityRendererContext } from "../../types/metaonTypes";
 import { QuickCheckActivity } from "./QuickCheckActivity";
 
@@ -49,6 +50,22 @@ describe("QuickCheckActivity", () => {
     expect(screen.getByRole("heading", { name: "Second question" })).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("Answer question 2 before submitting.");
     expect(submitQuickCheckMock).not.toHaveBeenCalled();
+  });
+
+  it("records an incorrect selection and the subsequent corrected selection as separate attempts", async () => {
+    const learnEventRecorder = createLearnEventRecorder();
+    render(<QuickCheckActivity context={{ ...context, learnEventRecorder }} />);
+    await screen.findByRole("heading", { name: "First question" });
+
+    fireEvent.click(screen.getByRole("button", { name: /A Alpha/ }));
+    fireEvent.click(screen.getByRole("button", { name: /B Beta/ }));
+
+    const attempts = learnEventRecorder.snapshot().filter((event) => event.action === "answer_result");
+    expect(attempts).toHaveLength(2);
+    expect(attempts.map((event) => event.correct)).toEqual([0, 1]);
+    expect(attempts.map((event) => event.attempts)).toEqual([1, 2]);
+    expect(attempts.map((event) => (event.extra?.answer as { selected_index?: number }).selected_index)).toEqual([0, 1]);
+    expect(attempts[0].extra?.incorrect_attempt).toBe(true);
   });
 
   it("keeps result and review correctness aligned with the common scorer", async () => {

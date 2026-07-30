@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { indexedDbStorage } from "../../services/indexedDbStorage";
 import { ActType, type ActivityRendererContext } from "../../types/metaonTypes";
@@ -29,6 +29,7 @@ vi.mock("../../services/indexedDbStorage", () => ({
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 const videoPaths = [
@@ -169,6 +170,30 @@ describe("FlashCardActivity WDCA01", () => {
     await waitFor(() => expect(container.querySelector("audio")).toBeInTheDocument());
     fireEvent.pointerDown(card);
     expect(play).toHaveBeenCalledTimes(1);
+  });
+
+  it("automatically returns the card after two seconds and changes cards by horizontal swipe", async () => {
+    const prototypeData: PrototypeActivityData = {
+      words: [
+        { index: 1, wordIdx: 501, eng: "float", mean: "뜨다.", sentence: "Wood floats on water.", wordClass: "verb" },
+        { index: 2, wordIdx: 502, eng: "swim", mean: "수영하다.", sentence: "Fish swim in water.", wordClass: "verb" }
+      ]
+    };
+
+    render(<FlashCardActivity context={flashCardContext} label="Word Card" prototypeData={prototypeData} />);
+    const card = await screen.findByRole("button", { name: /flip word card float/i });
+
+    vi.useFakeTimers();
+    fireEvent.click(card);
+    expect(card).toHaveClass("flipped");
+    act(() => vi.advanceTimersByTime(1999));
+    expect(card).toHaveClass("flipped");
+    act(() => vi.advanceTimersByTime(1));
+    expect(card).not.toHaveClass("flipped");
+
+    fireEvent.pointerDown(card, { pointerId: 7, clientX: 280, clientY: 160 });
+    fireEvent.pointerUp(card, { pointerId: 7, clientX: 120, clientY: 162 });
+    expect(screen.getByRole("button", { name: /flip word card swim/i })).toBeInTheDocument();
   });
 });
 

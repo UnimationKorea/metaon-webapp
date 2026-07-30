@@ -1138,7 +1138,7 @@ code {
   border: 0;
   background: transparent;
   filter: drop-shadow(0 8px 12px rgba(12, 39, 52, 0.2));
-  touch-action: manipulation;
+  touch-action: pan-y;
   transition: transform 160ms ease, filter 160ms ease, opacity 160ms ease;
 }
 

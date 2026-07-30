@@ -46,6 +46,7 @@ export function QuickCheckActivity({ context }: { context: ActivityRendererConte
   const submitLockRef = useRef(false);
   const loadStartedAtRef = useRef(Date.now());
   const answerMetadataRef = useRef<Record<string, { timeMs: number; answeredAt: string }>>({});
+  const attemptedAnswerSignaturesRef = useRef<Record<string, string>>({});
   const dayIdx = context.day?.dayIdx;
 
   useEffect(() => {
@@ -61,6 +62,7 @@ export function QuickCheckActivity({ context }: { context: ActivityRendererConte
     setMode("answering");
     submitLockRef.current = false;
     answerMetadataRef.current = {};
+    attemptedAnswerSignaturesRef.current = {};
     loadStartedAtRef.current = Date.now();
 
     if (!dayIdx) {
@@ -115,12 +117,48 @@ export function QuickCheckActivity({ context }: { context: ActivityRendererConte
 
   function updateAnswer(question: QuickCheckQuestion, nextAnswer: QuickCheckAnswer) {
     if (mode !== "answering") return;
-    answerMetadataRef.current[question.id] = {
+    const metadata = {
       timeMs: Math.max(0, Date.now() - loadStartedAtRef.current),
       answeredAt: new Date().toISOString()
     };
+    answerMetadataRef.current[question.id] = metadata;
     setAnswers((current) => ({ ...current, [question.id]: nextAnswer }));
+    recordAnswerAttempt(question, nextAnswer, metadata, "selection");
     setStatus("");
+  }
+
+  function recordAnswerAttempt(
+    question: QuickCheckQuestion,
+    answer: QuickCheckAnswer,
+    metadata: { timeMs: number; answeredAt: string },
+    source: "selection" | "submit"
+  ) {
+    if (!isQuickCheckAnswerComplete(question, answer)) return;
+    // Text input fires for every keystroke. Its answer is recorded once at final submission.
+    if (question.kind === "sentence-input" && source === "selection") return;
+
+    const signature = quickCheckAnswerSignature(answer);
+    if (attemptedAnswerSignaturesRef.current[question.id] === signature) return;
+    attemptedAnswerSignaturesRef.current[question.id] = signature;
+
+    const correct = scoreQuickCheckAnswer(question, answer);
+    context.learnEventRecorder?.record({
+      action: "answer_result",
+      item_type: "quick_check",
+      item_idx: question.qIdx,
+      correct: correct ? 1 : 0,
+      time_ms: metadata.timeMs,
+      extra: {
+        source: "quick_check",
+        attempt_id: attemptId,
+        attempt_key: `quick_check:${attemptId || "pending"}:${question.qIdx}`,
+        answer: answerForLearnEvent(answer),
+        answered_at: metadata.answeredAt,
+        question_kind: question.kind,
+        unity_type: question.unityType,
+        recorded_from: source
+      }
+    });
   }
 
   function goToQuestion(nextIndex: number) {
@@ -149,6 +187,14 @@ export function QuickCheckActivity({ context }: { context: ActivityRendererConte
     setIsSubmitting(true);
     setStatus("");
     try {
+      questions.forEach((question) => {
+        const answer = answers[question.id] ?? createEmptyQuickCheckAnswer(question);
+        const metadata = answerMetadataRef.current[question.id] || {
+          timeMs: Math.max(0, Date.now() - loadStartedAtRef.current),
+          answeredAt: new Date().toISOString()
+        };
+        recordAnswerAttempt(question, answer, metadata, "submit");
+      });
       const submittedAnswers: QuickCheckSubmissionAnswer[] = questions.map((question) => {
         const metadata = answerMetadataRef.current[question.id];
         return {
@@ -653,6 +699,16 @@ function updateCompositeAnswer(
   const selectedIndexes = [...answer.selectedIndexes];
   selectedIndexes[itemIndex] = selectedIndex;
   return { mode: "composite", selectedIndexes };
+}
+
+function answerForLearnEvent(answer: QuickCheckAnswer): Record<string, unknown> {
+  if (answer.mode === "text") return { mode: "text", value: answer.value };
+  if (answer.mode === "single") return { mode: "single", selected_index: answer.selectedIndex };
+  return { mode: "composite", selected_indexes: answer.selectedIndexes };
+}
+
+function quickCheckAnswerSignature(answer: QuickCheckAnswer): string {
+  return JSON.stringify(answerForLearnEvent(answer));
 }
 
 function correctAnswerLabel(question: QuickCheckQuestion): string {

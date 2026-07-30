@@ -242,11 +242,12 @@ export function NpcQuickCheckActivity({ context }: { context: ActivityRendererCo
         feedbackRef.current[question.id] = feedback;
         recordQuestionEvent(context, activeBundle.attemptId, question, "answer_submit", {
           time_ms: timeMs,
-          extra: { answer_mode: answer.mode }
+          extra: { answer: answerForLearnEvent(answer), answer_mode: answer.mode }
         });
         recordQuestionEvent(context, activeBundle.attemptId, question, "answer_result", {
           correct: correct ? 1 : 0,
-          time_ms: timeMs
+          time_ms: timeMs,
+          extra: { answer: answerForLearnEvent(answer) }
         });
         recordContentMasteryEvents(context, activeBundle.attemptId, question, answer, correct, timeMs);
         return feedback;
@@ -452,6 +453,12 @@ function eventExtra(attemptId: string, itemId: string, action: string, detail: R
     client_event_id: npcQuickCheckClientEventId(attemptId, itemId, action),
     ...detail
   };
+}
+
+function answerForLearnEvent(answer: QuickCheckAnswer): Record<string, unknown> {
+  if (answer.mode === "text") return { mode: "text", value: answer.value };
+  if (answer.mode === "single") return { mode: "single", selected_index: answer.selectedIndex };
+  return { mode: "composite", selected_indexes: answer.selectedIndexes };
 }
 
 function recordEvent(
