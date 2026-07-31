@@ -229,11 +229,14 @@ export async function releaseMetaOnProfile(): Promise<MetaOnAuthState> {
 }
 
 export async function releaseStoredMetaOnProfileOnStartup(): Promise<void> {
+  const storedSessionId = localStorage.getItem(SESSION_ID_KEY);
+  if (!storedSessionId) return;
+
   try {
     const response = await fetch("/api/auth/startup-release", {
       method: "POST",
       credentials: "same-origin",
-      headers: { ...sessionHeaders(), "Content-Type": "application/json" },
+      headers: { ...clientHeaders(), "X-MetaOn-Session-Id": storedSessionId, "Content-Type": "application/json" },
       body: "{}"
     });
     await readJsonResponse(response);

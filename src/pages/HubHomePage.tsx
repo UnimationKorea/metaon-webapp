@@ -3,7 +3,7 @@ import { type CSSProperties, type MouseEvent, type ReactNode, useEffect, useMemo
 import { Link, useNavigate } from "react-router-dom";
 import { EmptyState } from "../components/EmptyState";
 import { HomeDepthScene, HomeMotionRoot } from "../components/HomeMotion";
-import { HomeLoadingScreen } from "../components/HomeLoadingScreen";
+import { AppLoadingScreen } from "../components/AppLoadingScreen";
 import { useAuth } from "../hooks/useAuth";
 import { useCatalog } from "../hooks/useCatalog";
 import { useHubState, type HubProgress, type HubRecentBook } from "../hooks/useHubState";
@@ -71,7 +71,7 @@ export function HubHomePage() {
   } as CSSProperties;
 
   if (isLoading) {
-    return <HomeLoadingScreen backgroundImage={heroTheme.image} backgroundPosition={heroTheme.position} themeId={heroTheme.id} />;
+    return <AppLoadingScreen />;
   }
 
   if (!selectedBook && !isAuthenticated) {

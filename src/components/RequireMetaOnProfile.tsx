@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
+import { AppLoadingScreen } from "./AppLoadingScreen";
 import { useAuth } from "../hooks/useAuth";
 
 export function RequireMetaOnProfile({ children }: { children: ReactNode }) {
@@ -7,7 +8,7 @@ export function RequireMetaOnProfile({ children }: { children: ReactNode }) {
   const { isAccountAuthenticated, isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
-    return <div className="hub-route-loading" role="status">세션을 확인하고 있습니다.</div>;
+    return <AppLoadingScreen />;
   }
 
   if (isAuthenticated) return <>{children}</>;

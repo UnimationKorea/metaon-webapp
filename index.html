@@ -4,9 +4,25 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MetaOn Web</title>
+    <link rel="preload" as="image" href="/metaon-assets/activity/loading/loading-book.png" fetchpriority="high" />
+    <link rel="preload" as="image" href="/metaon-assets/activity/loading/loading-star-orbit.png" fetchpriority="high" />
+    <style>
+      html, body, #root { min-height: 100%; margin: 0; }
+      .metaon-bootstrap-loader { position: fixed; inset: 0; display: grid; place-items: center; overflow: hidden; background: #eef5fb; isolation: isolate; }
+      .metaon-bootstrap-loader img { position: absolute; display: block; pointer-events: none; user-select: none; }
+      .metaon-bootstrap-loader .orbit { z-index: 1; width: min(312px, 72vw); animation: metaon-bootstrap-orbit 4s linear infinite; }
+      .metaon-bootstrap-loader .book { z-index: 2; width: min(184px, 43vw); filter: drop-shadow(0 8px 14px rgba(14, 19, 52, .26)); }
+      @keyframes metaon-bootstrap-orbit { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) { .metaon-bootstrap-loader .orbit { animation: none; } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="metaon-bootstrap-loader" role="status" aria-label="MetaOn 화면을 준비하고 있습니다">
+        <img class="orbit" src="/metaon-assets/activity/loading/loading-star-orbit.png" alt="" aria-hidden="true" />
+        <img class="book" src="/metaon-assets/activity/loading/loading-book.png" alt="" aria-hidden="true" />
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

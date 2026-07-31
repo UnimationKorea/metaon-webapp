@@ -1,12 +1,13 @@
 type ActivityLoadingVisualProps = {
+  ariaLabel?: string;
   className?: string;
 };
 
 /** Shared transparent loading surface for activity routes and in-activity resources. */
-export function ActivityLoadingVisual({ className = "" }: ActivityLoadingVisualProps) {
+export function ActivityLoadingVisual({ ariaLabel = "Loading activity", className = "" }: ActivityLoadingVisualProps) {
   return (
     <div
-      aria-label="Loading activity"
+      aria-label={ariaLabel}
       aria-live="polite"
       className={`activity-loading-visual${className ? ` ${className}` : ""}`}
       role="status"

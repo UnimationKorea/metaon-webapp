@@ -934,6 +934,24 @@ code {
   min-height: inherit;
 }
 
+/* App bootstrap and lazy route boundaries share the Activity book/orbit mark. */
+.app-loading-screen.activity-loading-visual {
+  min-height: 100svh;
+  background: #eef5fb;
+}
+
+.app-loading-screen.activity-loading-visual::after {
+  background: rgba(248, 252, 255, 0.2);
+}
+
+.app-loading-screen .activity-loading-visual-book {
+  width: clamp(112px, 14vw, 184px);
+}
+
+.app-loading-screen .activity-loading-visual-orbit {
+  width: clamp(196px, 22vw, 312px);
+}
+
 .activity-loading-visual::after {
   position: absolute;
   z-index: 0;

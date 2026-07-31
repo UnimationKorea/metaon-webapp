@@ -83,6 +83,15 @@ describe("MetaOn profile selection API", () => {
     expect(localStorage.getItem("metaon-session-id")).toBeNull();
   });
 
+  it("does not block a fresh startup with a release request when no Session-Id is stored", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await releaseStoredMetaOnProfileOnStartup();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("discards a saved Session-Id even when the startup release request fails", async () => {
     localStorage.setItem("metaon-session-id", "expired-session");
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
