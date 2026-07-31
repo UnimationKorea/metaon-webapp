@@ -896,7 +896,7 @@ code {
   display: grid;
   min-height: 100%;
   overflow: hidden;
-  background: #061331;
+  background: transparent;
 }
 
 .activity-resource-loading {
@@ -907,14 +907,15 @@ code {
 
 .activity-loading-visual {
   position: relative;
-  display: block;
+  display: grid;
+  place-items: center;
   width: 100%;
   min-width: 0;
   min-height: 0;
   height: 100%;
   overflow: hidden;
   isolation: isolate;
-  background: #061331;
+  background: transparent;
 }
 
 /* This selector must win over the base visual's relative positioning. */
@@ -928,62 +929,51 @@ code {
   min-height: inherit;
 }
 
-.activity-loading-visual-art {
-  position: absolute;
-  z-index: -2;
-  inset: -3%;
-  display: block;
-  background: url("/metaon-assets/activity/loading/story-book-portal.png") center / cover no-repeat;
-  transform-origin: center;
-  animation: activity-loading-portal-drift 7s ease-in-out infinite alternate;
-}
-
 .activity-loading-visual::after {
   position: absolute;
-  z-index: -1;
+  z-index: 0;
   inset: 0;
   content: "";
-  background: rgba(2, 10, 35, 0.18);
+  background: rgba(2, 10, 35, 0.06);
   pointer-events: none;
 }
 
-.activity-loading-visual-sparkles,
-.activity-loading-visual-sparkles i {
+.activity-loading-visual-book,
+.activity-loading-visual-orbit {
   position: absolute;
-  inset: 0;
   display: block;
   pointer-events: none;
+  user-select: none;
 }
 
-.activity-loading-visual-sparkles i {
-  inset: auto;
-  width: clamp(5px, 0.8cqw, 11px);
-  aspect-ratio: 1;
-  background: #fff4b5;
-  clip-path: polygon(50% 0%, 62% 37%, 100% 50%, 62% 63%, 50% 100%, 38% 63%, 0% 50%, 38% 37%);
-  filter: drop-shadow(0 0 7px rgba(255, 221, 121, 0.9));
-  animation: activity-loading-star-twinkle 1.8s ease-in-out infinite alternate;
+.activity-loading-visual-book {
+  z-index: 2;
+  width: clamp(94px, 11vw, 164px);
+  max-width: 58%;
+  filter: drop-shadow(0 8px 14px rgba(14, 19, 52, 0.26));
 }
 
-.activity-loading-visual-sparkles i:nth-child(1) { top: 20%; left: 29%; animation-delay: -0.3s; }
-.activity-loading-visual-sparkles i:nth-child(2) { top: 28%; right: 25%; animation-delay: -1.1s; }
-.activity-loading-visual-sparkles i:nth-child(3) { bottom: 22%; left: 32%; animation-delay: -0.8s; }
-.activity-loading-visual-sparkles i:nth-child(4) { bottom: 17%; right: 29%; animation-delay: -1.5s; }
-.activity-loading-visual-sparkles i:nth-child(5) { top: 50%; left: 50%; animation-delay: -0.6s; }
-
-@keyframes activity-loading-portal-drift {
-  from { transform: scale(1.01) translate3d(-0.35%, 0.2%, 0); }
-  to { transform: scale(1.06) translate3d(0.35%, -0.25%, 0); }
+.activity-loading-visual-orbit {
+  z-index: 1;
+  width: clamp(160px, 18vw, 286px);
+  max-width: 78%;
+  filter: drop-shadow(0 0 8px rgba(255, 216, 103, 0.42));
+  transform-origin: center;
+  animation: activity-loading-orbit-spin 4s linear infinite;
 }
 
-@keyframes activity-loading-star-twinkle {
-  from { opacity: 0.25; transform: scale(0.7) rotate(0deg); }
-  to { opacity: 1; transform: scale(1.2) rotate(45deg); }
+.activity-loading-visual-book,
+.activity-loading-visual-orbit {
+  height: auto;
+  pointer-events: none;
+}
+
+@keyframes activity-loading-orbit-spin {
+  to { transform: rotate(360deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .activity-loading-visual-art,
-  .activity-loading-visual-sparkles i {
+  .activity-loading-visual-orbit {
     animation: none;
   }
 }

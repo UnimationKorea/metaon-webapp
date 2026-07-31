@@ -2,7 +2,7 @@ type ActivityLoadingVisualProps = {
   className?: string;
 };
 
-/** Shared image-only loading surface for activity routes and in-activity resources. */
+/** Shared transparent loading surface for activity routes and in-activity resources. */
 export function ActivityLoadingVisual({ className = "" }: ActivityLoadingVisualProps) {
   return (
     <div
@@ -11,14 +11,20 @@ export function ActivityLoadingVisual({ className = "" }: ActivityLoadingVisualP
       className={`activity-loading-visual${className ? ` ${className}` : ""}`}
       role="status"
     >
-      <span aria-hidden="true" className="activity-loading-visual-art" />
-      <span aria-hidden="true" className="activity-loading-visual-sparkles">
-        <i />
-        <i />
-        <i />
-        <i />
-        <i />
-      </span>
+      <img
+        alt=""
+        aria-hidden="true"
+        className="activity-loading-visual-orbit"
+        draggable="false"
+        src="/metaon-assets/activity/loading/loading-star-orbit.png"
+      />
+      <img
+        alt=""
+        aria-hidden="true"
+        className="activity-loading-visual-book"
+        draggable="false"
+        src="/metaon-assets/activity/loading/loading-book.png"
+      />
     </div>
   );
 }
