@@ -153,6 +153,7 @@ describe("FlashCardActivity WDCA01", () => {
     });
 
     const { container } = render(<FlashCardActivity context={flashCardContext} label="Word Card" />);
+    await waitFor(() => expect(container.querySelector(".activity-frame")).toHaveAttribute("aria-busy", "false"));
     const card = await screen.findByRole("button", { name: /flip word card float/i });
     const moreInfo = screen.getByRole("switch", { name: /more info/i });
     expect(moreInfo).toHaveAttribute("aria-checked", "false");
@@ -507,7 +508,7 @@ describe("ListeningActivity", () => {
 
     fireEvent.click(screen.getByLabelText("Video 2"));
 
-    expect(screen.getByLabelText("Video 2")).toHaveAttribute("aria-current", "true");
+    expect(await screen.findByLabelText("Video 2")).toHaveAttribute("aria-current", "true");
     await waitFor(() =>
       expect(indexedDbStorage.getFileBlob).toHaveBeenCalledWith("book:6710", "Lessons/L1/D1/listening/01/video/video_02.mp4")
     );

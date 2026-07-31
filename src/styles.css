@@ -925,6 +925,11 @@ code {
   min-height: 0;
 }
 
+/* Resource fallbacks are meaningful only after the cache check settles. */
+.activity-frame.is-resource-loading .resource-missing {
+  visibility: hidden;
+}
+
 .activity-route-loading > .activity-loading-visual {
   min-height: inherit;
 }

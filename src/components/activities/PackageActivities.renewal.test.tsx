@@ -10,6 +10,7 @@ import {
   SentenceUnscrambleActivity,
   VocaQuizActivity,
   WordBlankActivity,
+  WordChoiceActivity,
   WordSearchActivity
 } from "./PackageActivities";
 
@@ -234,6 +235,37 @@ describe("Figma renewal activities", () => {
 
     await waitFor(() => expect(container.querySelector(".activity-frame")).toHaveAttribute("aria-busy", "false"));
     expect(screen.queryByText("No word")).not.toBeInTheDocument();
+  });
+
+  it("keeps the legacy word-choice activity behind the shared loader until its word assets are ready", async () => {
+    let resolveFiles: ((files: Array<{ packageKey: string; path: string; blob: Blob; size: number; mimeType: string }>) => void) | undefined;
+    const delayedFiles = new Promise<Array<{ packageKey: string; path: string; blob: Blob; size: number; mimeType: string }>>((resolve) => {
+      resolveFiles = resolve;
+    });
+    vi.mocked(indexedDbStorage.listFiles).mockReturnValueOnce(delayedFiles);
+
+    const { container } = render(
+      <WordChoiceActivity context={activityContext(ActType.GameSpace, "WDSC01")} label="Space Game" />
+    );
+
+    expect(screen.getByRole("status", { name: "Loading activity" })).toBeInTheDocument();
+    expect(container.querySelector(".activity-frame")).toHaveAttribute("aria-busy", "true");
+
+    resolveFiles?.(
+      words.flatMap((word, index) => [
+        `${basePath}/word/img/word_${String(index + 1).padStart(2, "0")}.png`,
+        `${basePath}/word/snd/snd_word_${String(index + 1).padStart(2, "0")}.mp3`
+      ]).map((path) => ({
+        packageKey,
+        path,
+        blob: new Blob([path]),
+        size: path.length,
+        mimeType: path.endsWith(".png") ? "image/png" : "audio/mpeg"
+      }))
+    );
+
+    await waitFor(() => expect(container.querySelector(".activity-frame")).toHaveAttribute("aria-busy", "false"));
+    expect(await screen.findByRole("img", { name: "bridge" })).toBeInTheDocument();
   });
 
   it("keeps Sentence Blank behind the activity loader until sentence data is ready", async () => {

@@ -503,10 +503,11 @@ function recordLearnEvent(context: ActivityRendererContext, event: LearnEventInp
   context.learnEventRecorder?.record(event);
 }
 
-function ImmersiveVideoFrame({ children }: { children: ReactNode }) {
+function ImmersiveVideoFrame({ children, loading = false }: { children: ReactNode; loading?: boolean }) {
   return (
-    <section className="activity-frame unity-activity-frame immersive-video-frame">
+    <section aria-busy={loading} className={`activity-frame unity-activity-frame immersive-video-frame${loading ? " is-resource-loading" : ""}`}>
       <div className="immersive-video-activity">{children}</div>
+      {loading ? <ActivityResourceLoading /> : null}
     </section>
   );
 }
@@ -514,22 +515,27 @@ function ImmersiveVideoFrame({ children }: { children: ReactNode }) {
 export function BookPageActivity({ context }: { context: ActivityRendererContext }) {
   const base = dayBase(context);
   const folder = paramFolder(context.activity);
-  const pageInfo = usePackageJson<BookPageInfo>(context, `${base}/bookpage/${folder}/info_bookpage.json`);
-  const paths = usePackagePathList(context, `${base}/bookpage/${folder}/`);
+  const pageInfoState = usePackageJsonState<BookPageInfo>(context, `${base}/bookpage/${folder}/info_bookpage.json`);
+  const pageInfo = pageInfoState.data;
+  const pathState = usePackagePathListState(context, `${base}/bookpage/${folder}/`);
+  const paths = pathState.paths;
   const pagePaths = useMemo(
     () => paths.filter((path) => /\/img\/img_page\.png$/i.test(path)).sort(),
     [paths]
   );
-  const pageUrls = usePackageUrls(context, pagePaths);
+  const pageUrlState = usePackageUrlsState(context, pagePaths);
+  const pageUrls = pageUrlState.urls;
   const [page, setPage] = useState(0);
   const visibleUrl = pageUrls[pagePaths[page]];
+  const isVisibleImageDecoded = useDecodedImageUrls([visibleUrl]);
+  const isResourceLoading = isCachedResourceLoading(context, pageInfoState, pathState, pageUrlState) || !isVisibleImageDecoded;
 
   useEffect(() => {
     if (page >= pagePaths.length) setPage(0);
   }, [page, pagePaths.length]);
 
   return (
-    <ActivityFrame context={context} actionLabel="Preview">
+    <ActivityFrame context={context} actionLabel="Preview" loading={isResourceLoading}>
       <div className="package-viewer">
         <div className="package-stage">
           {visibleUrl ? (
@@ -569,7 +575,9 @@ export function BookPageActivity({ context }: { context: ActivityRendererContext
 
 export function ReadingActivity({ context }: { context: ActivityRendererContext }) {
   const reading = useReadingAssets(context);
-  const words = useWords(context);
+  const wordResource = useWordsState(context);
+  const words = wordResource.words;
+  const isResourceLoading = reading.status === "loading" || wordResource.status === "loading";
   const [page, setPage] = useState(0);
   const [wordPanelSide, setWordPanelSide] = useState<"left" | "right">();
   const [readMode, setReadMode] = useState<"auto" | "manual">("auto");
@@ -676,7 +684,7 @@ export function ReadingActivity({ context }: { context: ActivityRendererContext 
   }
 
   return (
-    <ActivityFrame context={context} actionLabel="Read Record">
+    <ActivityFrame context={context} actionLabel="Read Record" loading={isResourceLoading}>
       <div className="read-record-shell" data-mode={readMode}>
         <div className="read-record-room" aria-hidden="true">
           <span className="read-record-shelf left" />
@@ -835,12 +843,14 @@ export function ListeningActivity({ context }: { context: ActivityRendererContex
   const base = dayBase(context);
   const folder = paramFolder(context.activity);
   const listenEbook = useListenEbookAssets(context);
-  const paths = usePackagePathList(context, `${base}/listening/${folder}/video/`);
+  const videoPathState = usePackagePathListState(context, `${base}/listening/${folder}/video/`);
+  const paths = videoPathState.paths;
   const videoPaths = useMemo(() => paths.filter((path) => /\.mp4$/i.test(path)).sort(naturalPathCompare), [paths]);
   const [videoIndex, setVideoIndex] = useState(0);
   const safeVideoIndex = Math.min(videoIndex, Math.max(videoPaths.length - 1, 0));
   const videoPath = videoPaths[safeVideoIndex];
-  const videoUrl = usePackageUrl(context, videoPath);
+  const videoUrlState = usePackageUrlsState(context, videoPath ? [videoPath] : []);
+  const videoUrl = videoPath ? videoUrlState.urls[videoPath] : undefined;
   const videoViewKeyRef = useRef("");
 
   useEffect(() => {
@@ -869,10 +879,10 @@ export function ListeningActivity({ context }: { context: ActivityRendererContex
     return <ListeningViewerActivity context={context} assets={listenEbook} />;
   }
 
-  if (!listenEbook.checked) {
+  if (!listenEbook.checked || isCachedResourceLoading(context, videoPathState, videoUrlState)) {
     return (
-      <ImmersiveVideoFrame>
-        <div className="listen-ebook-loading">Loading Listen activity...</div>
+      <ImmersiveVideoFrame loading>
+        <span aria-hidden="true" />
       </ImmersiveVideoFrame>
     );
   }
@@ -1034,9 +1044,8 @@ function ListeningViewerActivity({ context, assets }: { context: ActivityRendere
   }
 
   return (
-    <ImmersiveVideoFrame>
+    <ImmersiveVideoFrame loading={!ready}>
       <div className="listen-viewer-frame-shell">
-        {!ready ? <div className="listen-viewer-loading">Loading E-book viewer...</div> : null}
         <iframe
           ref={iframeRef}
           className="listen-viewer-frame"
@@ -1424,16 +1433,19 @@ function LegacyMovieActivity({
 }) {
 
   const base = dayBase(context);
-  const info = usePackageJson<MovieInfo>(context, `${base}/movie/info_movie.json`);
+  const infoState = usePackageJsonState<MovieInfo>(context, `${base}/movie/info_movie.json`);
+  const info = infoState.data;
   const movieIndex = paramIndex(context.activity);
   const movie = info?.movie?.[movieIndex] || info?.movie?.[0];
   const localPath = movie && !movie.is_url && movie.video_path ? `video/movie/${movie.video_path}` : undefined;
-  const localUrl = usePackageUrl(context, localPath);
+  const localUrlState = usePackageUrlsState(context, localPath ? [localPath] : []);
+  const localUrl = localPath ? localUrlState.urls[localPath] : undefined;
   const videoUrl = movie?.is_url ? movie.video_path?.replaceAll(" ", "_") : localUrl;
+  const isResourceLoading = isCachedResourceLoading(context, infoState, localUrlState);
 
   if (immersive) {
     return (
-      <ImmersiveVideoFrame>
+      <ImmersiveVideoFrame loading={isResourceLoading}>
         {videoUrl ? (
           <video className="activity-video immersive-activity-video" src={videoUrl} controls playsInline />
         ) : (
@@ -1444,7 +1456,7 @@ function LegacyMovieActivity({
   }
 
   return (
-    <ActivityFrame context={context} actionLabel={label}>
+    <ActivityFrame context={context} actionLabel={label} loading={isResourceLoading}>
       <div className="video-activity">
         {videoUrl ? <video className="activity-video" src={videoUrl} controls playsInline /> : <ResourceMissing label="movie video" />}
         <div className="activity-side-panel">
@@ -1461,15 +1473,21 @@ type MovieLearningMode = "movie" | "script" | "movie-script";
 
 function Movie01Activity({ context }: { context: ActivityRendererContext }) {
   const base = dayBase(context);
-  const info = usePackageJson<MovieInfo>(context, `${base}/movie/info_movie.json`);
-  const moviePaths = usePackagePathList(context, `${base}/movie/video/`);
+  const infoState = usePackageJsonState<MovieInfo>(context, `${base}/movie/info_movie.json`);
+  const info = infoState.data;
+  const moviePathState = usePackagePathListState(context, `${base}/movie/video/`);
+  const moviePaths = moviePathState.paths;
   const selectedMovie = info?.movie?.[paramIndex(context.activity)] || info?.movie?.[0];
   const configuredVideoPath = selectedMovie?.videoPath || selectedMovie?.video_path;
   const videoPath = configuredVideoPath || moviePaths.filter((path) => /\.(mp4|webm|m3u8)$/i.test(path)).sort(naturalPathCompare)[0];
-  const videoUrl = usePackageUrl(context, videoPath);
-  const scriptAudioUrl = usePackageUrl(context, selectedMovie?.audioPath);
+  const videoUrlState = usePackageUrlsState(context, videoPath ? [videoPath] : []);
+  const videoUrl = videoPath ? videoUrlState.urls[videoPath] : undefined;
+  const scriptAudioPath = selectedMovie?.audioPath;
+  const scriptAudioUrlState = usePackageUrlsState(context, scriptAudioPath ? [scriptAudioPath] : []);
+  const scriptAudioUrl = scriptAudioPath ? scriptAudioUrlState.urls[scriptAudioPath] : undefined;
   const captionPaths = selectedMovie?.captionPaths || [];
   const captionTextByPath = usePackageTextList(context, captionPaths);
+  const isResourceLoading = isCachedResourceLoading(context, infoState, moviePathState, videoUrlState, scriptAudioUrlState);
   const modeVideoRef = useRef<HTMLVideoElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -1563,7 +1581,7 @@ function Movie01Activity({ context }: { context: ActivityRendererContext }) {
   }
 
   return (
-    <ActivityFrame context={context} actionLabel="Movie" className="movie01-frame">
+    <ActivityFrame context={context} actionLabel="Movie" loading={isResourceLoading} className="movie01-frame">
       <section className={`movie01-shell${mode ? " is-player" : " is-mode-select"}${mode === "script" ? " is-script-mode" : ""}`}>
         {mode ? (
           <>
@@ -1700,19 +1718,25 @@ export function EbookActivity({ context }: { context: ActivityRendererContext })
 export function StoryCheckActivity({ context }: { context: ActivityRendererContext }) {
   const base = dayBase(context);
   const folder = paramFolder(context.activity);
-  const quizInfo = usePackageJson<QuizInfo>(context, `${base}/reading_1201/${folder}/info_read_quiz.json`);
-  const paths = usePackagePathList(context, `${base}/reading_1201/${folder}/img/`);
+  const quizInfoState = usePackageJsonState<QuizInfo>(context, `${base}/reading_1201/${folder}/info_read_quiz.json`);
+  const quizInfo = quizInfoState.data;
+  const pathState = usePackagePathListState(context, `${base}/reading_1201/${folder}/img/`);
+  const paths = pathState.paths;
   const imagePaths = useMemo(() => paths.filter((path) => /\.png$/i.test(path)).sort(), [paths]);
-  const imageUrls = usePackageUrls(context, imagePaths);
+  const imageUrlState = usePackageUrlsState(context, imagePaths);
+  const imageUrls = imageUrlState.urls;
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<number>();
+  const visibleImageUrl = imageUrls[imagePaths[index]];
+  const isVisibleImageDecoded = useDecodedImageUrls([visibleImageUrl]);
+  const isResourceLoading = isCachedResourceLoading(context, quizInfoState, pathState, imageUrlState) || !isVisibleImageDecoded;
   const quiz = quizInfo?.quizs?.[index];
   const quizCount = quizInfo?.quizs?.length ?? 0;
   const rightAnswer = quiz?.right_num || 1;
   const result = selected == null ? "" : selected === rightAnswer ? "Correct" : "Try again";
 
   return (
-    <ActivityFrame context={context} actionLabel="Story Check">
+    <ActivityFrame context={context} actionLabel="Story Check" loading={isResourceLoading}>
       <ActivityQuestionNavigation
         current={index}
         total={quizCount}
@@ -1747,10 +1771,12 @@ export function StoryCheckActivity({ context }: { context: ActivityRendererConte
 }
 
 export function WordBoxActivity({ context }: { context: ActivityRendererContext }) {
-  const words = useWords(context);
+  const wordResource = useWordsState(context);
+  const words = wordResource.words;
+  const isWordResourceLoading = wordResource.status === "loading";
 
   return (
-    <ActivityFrame context={context} actionLabel="Words">
+    <ActivityFrame context={context} actionLabel="Words" loading={isWordResourceLoading}>
       <div className="asset-grid">
         {words.length > 0 ? (
           words.map((word) => <WordCard key={`${word.index}:${word.eng}`} word={word} />)
@@ -2510,7 +2536,9 @@ export function WordChoiceActivity({
   label?: string;
   promptMode?: "image" | "audio";
 }) {
-  const words = useWords(context);
+  const wordResource = useWordsState(context);
+  const words = wordResource.words;
+  const isWordResourceLoading = wordResource.status === "loading";
   const [shuffleSeed] = useState(createShuffleSeed);
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<string>();
@@ -2528,7 +2556,7 @@ export function WordChoiceActivity({
   }, [current, words.length]);
 
   return (
-    <ActivityFrame context={context} actionLabel={label}>
+    <ActivityFrame context={context} actionLabel={label} loading={isWordResourceLoading}>
       <ActivityQuestionNavigation current={current} total={words.length} onChange={setCurrent} />
       <div className="quiz-shell package-quiz word-choice-shell">
         <div className="quiz-media">
@@ -2790,8 +2818,10 @@ export function MatchingGameActivity({
   label?: string;
   prototypeData?: PrototypeActivityData;
 }) {
-  const loadedWords = useWords(context);
+  const wordResource = useWordsState(context);
+  const loadedWords = wordResource.words;
   const words = prototypeData?.words ?? loadedWords;
+  const isWordResourceLoading = !prototypeData && wordResource.status === "loading";
   const [shuffleSeed] = useState(createShuffleSeed);
   const [restartNonce, setRestartNonce] = useState(0);
   const gameWords = words.slice(0, 5);
@@ -2892,7 +2922,7 @@ export function MatchingGameActivity({
   }
 
   return (
-    <ActivityFrame context={context} actionLabel={label} className="figma-renewal-frame">
+    <ActivityFrame context={context} actionLabel={label} loading={isWordResourceLoading} className="figma-renewal-frame">
       <div className="figma-renewal-shell matching-renewal-shell">
         <div className="matching-renewal-score" aria-label={`${matched.size} matched pairs`}>
           <Star aria-hidden="true" />
@@ -2975,8 +3005,10 @@ export function MemoryGameActivity({
   label?: string;
   prototypeData?: PrototypeActivityData;
 }) {
-  const loadedWords = useWords(context);
+  const wordResource = useWordsState(context);
+  const loadedWords = wordResource.words;
   const words = prototypeData?.words ?? loadedWords;
+  const isWordResourceLoading = !prototypeData && wordResource.status === "loading";
   const [shuffleSeed] = useState(createShuffleSeed);
   const [roundIndex, setRoundIndex] = useState(0);
   const [restartNonce, setRestartNonce] = useState(0);
@@ -3177,7 +3209,7 @@ export function MemoryGameActivity({
   }
 
   return (
-    <ActivityFrame context={context} actionLabel={label} className="figma-renewal-frame">
+    <ActivityFrame context={context} actionLabel={label} loading={isWordResourceLoading} className="figma-renewal-frame">
       <div
         className="figma-renewal-shell memory-renewal-shell"
         data-round={roundIndex + 1}
@@ -3261,7 +3293,9 @@ export function MemoryGameActivity({
 }
 
 export function WordPuzzleActivity({ context, label = "Word Puzzle" }: { context: ActivityRendererContext; label?: string }) {
-  const words = useWords(context);
+  const wordResource = useWordsState(context);
+  const words = wordResource.words;
+  const isWordResourceLoading = wordResource.status === "loading";
   const [index, setIndex] = useState(0);
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
   const [checked, setChecked] = useState(false);
@@ -3277,7 +3311,7 @@ export function WordPuzzleActivity({ context, label = "Word Puzzle" }: { context
   }, [index, words.length]);
 
   return (
-    <ActivityFrame context={context} actionLabel={label}>
+    <ActivityFrame context={context} actionLabel={label} loading={isWordResourceLoading}>
       <ActivityQuestionNavigation current={index} total={words.length} onChange={setIndex} />
       <div className="word-puzzle-shell">
         <div className="puzzle-prompt">
@@ -3330,8 +3364,10 @@ export function WordSearchActivity({
   label?: string;
   prototypeData?: PrototypeActivityData;
 }) {
-  const loadedWords = useWords(context);
+  const wordResource = useWordsState(context);
+  const loadedWords = wordResource.words;
   const words = prototypeData?.words ?? loadedWords;
+  const isWordResourceLoading = !prototypeData && wordResource.status === "loading";
   const [shuffleSeed] = useState(createShuffleSeed);
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<string>();
@@ -3414,7 +3450,7 @@ export function WordSearchActivity({
   }
 
   return (
-    <ActivityFrame context={context} actionLabel={label} className="figma-renewal-frame">
+    <ActivityFrame context={context} actionLabel={label} loading={isWordResourceLoading} className="figma-renewal-frame">
       <div className="figma-renewal-shell word-search-renewal-shell">
         <RenewalCounter current={words.length === 0 ? 0 : current + 1} total={words.length} className="word-search-counter" />
         <ActivityQuestionNavigation current={current} total={words.length} onChange={setCurrent} />
@@ -3491,7 +3527,9 @@ export function WordSearchActivity({
 }
 
 export function PeelingWordActivity({ context, label = "Peeling Word" }: { context: ActivityRendererContext; label?: string }) {
-  const words = useWords(context);
+  const wordResource = useWordsState(context);
+  const words = wordResource.words;
+  const isWordResourceLoading = wordResource.status === "loading";
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(1);
   const [value, setValue] = useState("");
@@ -3509,7 +3547,7 @@ export function PeelingWordActivity({ context, label = "Peeling Word" }: { conte
   }, [index, words.length]);
 
   return (
-    <ActivityFrame context={context} actionLabel={label}>
+    <ActivityFrame context={context} actionLabel={label} loading={isWordResourceLoading}>
       <ActivityQuestionNavigation current={index} total={words.length} onChange={setIndex} />
       <div className="peeling-word-shell">
         <div className="puzzle-prompt">
@@ -3929,13 +3967,15 @@ function VocaQuizSpellingActivity({
 export function ReadAndFlipActivity({ context }: { context: ActivityRendererContext }) {
   const base = dayBase(context);
   const folder = paramFolder(context.activity);
-  const info = usePackageJson<ReadFlipInfo>(context, `${base}/read_n_flip/${folder}/info_read_n_flip.json`);
+  const infoState = usePackageJsonState<ReadFlipInfo>(context, `${base}/read_n_flip/${folder}/info_read_n_flip.json`);
+  const info = infoState.data;
+  const isResourceLoading = isCachedResourceLoading(context, infoState);
   const [page, setPage] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const current = info?.pages?.[page];
 
   return (
-    <ActivityFrame context={context} actionLabel="Read & Flip">
+    <ActivityFrame context={context} actionLabel="Read & Flip" loading={isResourceLoading}>
       <div className="flip-shell">
         {(current?.Items || []).map((item, index) => (
           <p className="flip-line" key={index}>
@@ -4847,17 +4887,23 @@ export function ParaphraseMatchActivity({
 export function SequencingActivity({ context }: { context: ActivityRendererContext }) {
   const base = dayBase(context);
   const folder = paramFolder(context.activity);
-  const info = usePackageJson<ReadMatchInfo>(context, `${base}/reading_1501/${folder}/info_read_match.json`);
-  const paths = usePackagePathList(context, `${base}/reading_1501/${folder}/img/`);
-  const urls = usePackageUrls(context, paths.filter((path) => /\.png$/i.test(path)).sort());
+  const infoState = usePackageJsonState<ReadMatchInfo>(context, `${base}/reading_1501/${folder}/info_read_match.json`);
+  const info = infoState.data;
+  const pathState = usePackagePathListState(context, `${base}/reading_1501/${folder}/img/`);
+  const paths = pathState.paths;
+  const imagePaths = useMemo(() => paths.filter((path) => /\.png$/i.test(path)).sort(), [paths]);
+  const imageUrlState = usePackageUrlsState(context, imagePaths);
+  const urls = imageUrlState.urls;
   const tokens = info?.page?.[0]?.answers?.map((answer) => answer.text || "").filter(Boolean) || [];
   const [selected, setSelected] = useState<string[]>([]);
   const imageUrls = Object.values(urls);
+  const imagesDecoded = useDecodedImageUrls(imageUrls);
+  const isResourceLoading = isCachedResourceLoading(context, infoState, pathState, imageUrlState) || !imagesDecoded;
   const normalizedSelected = selected.join(" ").replace(/\s+([?.!,])/g, "$1");
   const target = tokens.join(" ").replace(/\s+([?.!,])/g, "$1");
 
   return (
-    <ActivityFrame context={context} actionLabel="Sequencing">
+    <ActivityFrame context={context} actionLabel="Sequencing" loading={isResourceLoading}>
       <div className="sequence-shell">
         {imageUrls.length > 0 ? (
           <div className="sequence-images">
@@ -4888,7 +4934,9 @@ export function SequencingActivity({ context }: { context: ActivityRendererConte
 }
 
 export function WriteWordActivity({ context }: { context: ActivityRendererContext }) {
-  const words = useWords(context);
+  const wordResource = useWordsState(context);
+  const words = wordResource.words;
+  const isWordResourceLoading = wordResource.status === "loading";
   const [index, setIndex] = useState(0);
   const [value, setValue] = useState("");
   const word = words[index];
@@ -4899,7 +4947,7 @@ export function WriteWordActivity({ context }: { context: ActivityRendererContex
   }, [index]);
 
   return (
-    <ActivityFrame context={context} actionLabel="Write Word">
+    <ActivityFrame context={context} actionLabel="Write Word" loading={isWordResourceLoading}>
       <ActivityQuestionNavigation current={index} total={words.length} onChange={setIndex} />
       <div className="write-word-shell">
         {word?.imageUrl ? <img src={word.imageUrl} alt={word.eng} /> : <ResourceMissing label="word image" />}
@@ -4912,7 +4960,9 @@ export function WriteWordActivity({ context }: { context: ActivityRendererContex
 }
 
 export function SpellingActivity({ context, label = "Spelling" }: { context: ActivityRendererContext; label?: string }) {
-  const words = useWords(context);
+  const wordResource = useWordsState(context);
+  const words = wordResource.words;
+  const isWordResourceLoading = wordResource.status === "loading";
   const [index, setIndex] = useState(0);
   const [value, setValue] = useState("");
   const [checked, setChecked] = useState(false);
@@ -4928,7 +4978,7 @@ export function SpellingActivity({ context, label = "Spelling" }: { context: Act
   }, [index, words.length]);
 
   return (
-    <ActivityFrame context={context} actionLabel={label}>
+    <ActivityFrame context={context} actionLabel={label} loading={isWordResourceLoading}>
       <ActivityQuestionNavigation current={index} total={words.length} onChange={setIndex} />
       <div className="spelling-shell">
         <div className="spelling-prompt">
@@ -4967,7 +5017,9 @@ export function SpellingActivity({ context, label = "Spelling" }: { context: Act
 }
 
 export function SpellingFishActivity({ context, label = "Spelling Fish" }: { context: ActivityRendererContext; label?: string }) {
-  const words = useWords(context);
+  const wordResource = useWordsState(context);
+  const words = wordResource.words;
+  const isWordResourceLoading = wordResource.status === "loading";
   const gameWords = useMemo(() => words.slice(0, Math.min(3, words.length)), [words]);
   const wordsSignature = buildWordsSignature(gameWords);
   const [index, setIndex] = useState(0);
@@ -5100,14 +5152,14 @@ export function SpellingFishActivity({ context, label = "Spelling Fish" }: { con
 
   if (!word) {
     return (
-      <ActivityFrame context={context} actionLabel={label}>
+      <ActivityFrame context={context} actionLabel={label} loading={isWordResourceLoading}>
         <ResourceMissing label="word list" />
       </ActivityFrame>
     );
   }
 
   return (
-    <ActivityFrame context={context} actionLabel={label}>
+    <ActivityFrame context={context} actionLabel={label} loading={isWordResourceLoading}>
       <ActivityQuestionNavigation current={index} total={gameWords.length} onChange={setIndex} />
       <div className="undersea-shell">
         <div
@@ -5213,12 +5265,14 @@ export function SpellingFishActivity({ context, label = "Spelling Fish" }: { con
 }
 
 export function ListenRecordActivity({ context }: { context: ActivityRendererContext }) {
-  const words = useWords(context);
+  const wordResource = useWordsState(context);
+  const words = wordResource.words;
+  const isWordResourceLoading = wordResource.status === "loading";
   const [index, setIndex] = useState(0);
   const word = words[index];
 
   return (
-    <ActivityFrame context={context} actionLabel="Listen & Record">
+    <ActivityFrame context={context} actionLabel="Listen & Record" loading={isWordResourceLoading}>
       <RecordPanel
         context={context}
         eventItemType="word"
@@ -5294,6 +5348,7 @@ export function SentenceRecordActivity({
       context={context}
       current={safeIndex}
       key={`${sentenceItemIdx(sentence) ?? sentence.index}:${safeIndex}`}
+      loading={isSentenceResourceLoading}
       onChange={setIndex}
       sentence={sentence}
       total={sentences.length}
@@ -5310,6 +5365,7 @@ type SentenceRecordMode = "native" | "record-ready" | "recording" | "review";
 function SentenceRecordRenewalPanel({
   context,
   current,
+  loading = false,
   onChange,
   sentence,
   total,
@@ -5320,6 +5376,7 @@ function SentenceRecordRenewalPanel({
 }: {
   context: ActivityRendererContext;
   current: number;
+  loading?: boolean;
   onChange: (nextIndex: number) => void;
   sentence: LoadedSentence;
   total: number;
@@ -5487,7 +5544,7 @@ function SentenceRecordRenewalPanel({
         : "";
 
   return (
-    <ActivityFrame context={context} actionLabel="Sentence Record" className="figma-renewal-frame">
+    <ActivityFrame context={context} actionLabel="Sentence Record" loading={loading} className="figma-renewal-frame">
       <div className={`figma-renewal-shell sentence-record-renewal-shell${usesVideoBackground ? ` strc02-video-sentence-record-shell${videoUnavailable ? " is-video-background-unavailable" : ""}` : ""}`}>
         {usesVideoBackground ? (
           <>
@@ -5889,10 +5946,13 @@ function useReadingAssets(context: ActivityRendererContext) {
   const base = dayBase(context);
   const folder = paramFolder(context.activity);
   const readingPrefix = `${base}/reading/${folder}/`;
-  const readingPaths = usePackagePathList(context, readingPrefix);
-  const info = usePackageJson<StoryInfo>(context, `${base}/story/info_story.json`);
+  const readingPathState = usePackagePathListState(context, readingPrefix);
+  const readingPaths = readingPathState.paths;
+  const infoState = usePackageJsonState<StoryInfo>(context, `${base}/story/info_story.json`);
+  const info = infoState.data;
   const scripts = info?.story?.scripts || [];
-  const storyPaths = usePackagePathList(context, `${base}/story/`);
+  const storyPathState = usePackagePathListState(context, `${base}/story/`);
+  const storyPaths = storyPathState.paths;
   const readingImagePaths = useMemo(
     () => readingPaths.filter((path) => /\/img\/img_\d+\.png$/i.test(path)).sort(naturalPathCompare),
     [readingPaths]
@@ -5917,8 +5977,12 @@ function useReadingAssets(context: ActivityRendererContext) {
   );
   const imagePaths = readingImagePaths.length > 0 ? readingImagePaths : storyImagePaths;
   const audioPaths = readingImagePaths.length > 0 ? readingAudioPaths : storyAudioPaths;
-  const imageMap = usePackageUrls(context, imagePaths);
-  const audioMap = usePackageUrls(context, audioPaths);
+  const imageState = usePackageUrlsState(context, imagePaths);
+  const audioState = usePackageUrlsState(context, audioPaths);
+  const imageMap = imageState.urls;
+  const audioMap = audioState.urls;
+  const imagesDecoded = useDecodedImageUrls(Object.values(imageMap));
+  const isLoading = isCachedResourceLoading(context, readingPathState, infoState, storyPathState, imageState, audioState) || !imagesDecoded;
 
   const pages: LoadedReadingPage[] = imagePaths.map((imagePath, index) => {
     const pageAudioPaths =
@@ -5936,6 +6000,7 @@ function useReadingAssets(context: ActivityRendererContext) {
   });
 
   return {
+    status: isLoading ? "loading" : imagePaths.length > 0 ? "ready" : "empty",
     pages,
     sourcePath: readingImagePaths.length > 0 ? readingPrefix : imagePaths.length > 0 ? `${base}/story/` : undefined
   };
@@ -5955,7 +6020,8 @@ function useListenEbookAssets(context: ActivityRendererContext): LoadedListenEbo
   const sentenceTexts = useMemo(() => sentenceInfoToCaptionTexts(sentenceInfo), [sentenceInfo]);
   const canonicalBook = canonicalState.data;
   const info = infoState.data;
-  const readingPaths = usePackagePathList(context, readingPrefix);
+  const readingPathState = usePackagePathListState(context, readingPrefix);
+  const readingPaths = readingPathState.paths;
   const sourcePages = useMemo<ListenEbookPageInfo[]>(() => {
     const canonicalPages = canonicalListenEbookPages(canonicalBook, ebookBase);
     if (canonicalPages.length > 0) return canonicalPages;
@@ -6025,8 +6091,11 @@ function useListenEbookAssets(context: ActivityRendererContext): LoadedListenEbo
   }, [bookTitle, canonicalBook, ebookBase, info, knownCaptionPages, readingPaths, sentenceTexts]);
   const imagePaths = useMemo(() => sourcePages.map((page) => page.imagePath).filter(Boolean) as string[], [sourcePages]);
   const audioPaths = useMemo(() => sourcePages.flatMap((page) => page.audioPaths || []), [sourcePages]);
-  const imageMap = usePackageUrls(context, imagePaths);
-  const audioMap = usePackageUrls(context, audioPaths);
+  const imageState = usePackageUrlsState(context, imagePaths);
+  const audioState = usePackageUrlsState(context, audioPaths);
+  const imageMap = imageState.urls;
+  const audioMap = audioState.urls;
+  const imagesDecoded = useDecodedImageUrls(Object.values(imageMap));
   const [parsedCaptionCues, setParsedCaptionCues] = useState<Record<string, ListenCaptionCue[]>>({});
 
   useEffect(() => {
@@ -6087,7 +6156,12 @@ function useListenEbookAssets(context: ActivityRendererContext): LoadedListenEbo
   );
 
   return {
-    checked: canonicalState.checked && (canonicalBook ? true : infoState.checked),
+    checked:
+      canonicalState.checked &&
+      (canonicalBook ? true : infoState.checked && readingPathState.checked) &&
+      imageState.checked &&
+      audioState.checked &&
+      imagesDecoded,
     pages,
     fallbackVideoPaths: info?.fallbackVideoPaths || []
   };
@@ -6283,6 +6357,44 @@ function decodeImage(url: string): Promise<void> {
   image.src = url;
   if (typeof image.decode !== "function") return Promise.resolve();
   return image.decode().catch(() => undefined);
+}
+
+/**
+ * The resource URL exists before the browser has decoded the bitmap. Keep the
+ * shared activity loader present until the visible image can be painted.
+ */
+function useDecodedImageUrls(urls: Array<string | undefined>): boolean {
+  const signature = useMemo(
+    () => Array.from(new Set(urls.filter((url): url is string => Boolean(url)))).join("|"),
+    [urls.join("|")]
+  );
+  const [decodedSignature, setDecodedSignature] = useState<string>();
+
+  useEffect(() => {
+    let active = true;
+    if (!signature || typeof Image === "undefined") {
+      setDecodedSignature(signature);
+      return undefined;
+    }
+
+    setDecodedSignature(undefined);
+    void Promise.all(signature.split("|").map((url) => decodeImage(url))).finally(() => {
+      if (active) setDecodedSignature(signature);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [signature]);
+
+  return !signature || decodedSignature === signature;
+}
+
+function isCachedResourceLoading(
+  context: ActivityRendererContext,
+  ...states: Array<{ checked: boolean } | undefined>
+): boolean {
+  return Boolean(context.packageMeta?.key) && states.some((state) => state != null && !state.checked);
 }
 
 function useSentences(context: ActivityRendererContext): LoadedSentence[] {
