@@ -153,7 +153,8 @@ describe("normalizeBookResourceManifest", () => {
     expect(manifest.generatedFiles.map((file) => file.path)).toEqual([
       "Lessons/L1/D1/word/info_word.json",
       "Lessons/L1/D1/sentence/info_sentence.json",
-      "Lessons/L1/D1/listening/01/info_listen_ebook.json"
+      "Lessons/L1/D1/listening/01/info_listen_ebook.json",
+      "Lessons/L1/D1/movie/info_movie.json"
     ]);
     const listenEbook = JSON.parse(
       manifest.generatedFiles.find((file) => file.path.endsWith("info_listen_ebook.json"))?.content || "{}"
@@ -328,5 +329,46 @@ describe("normalizeBookResourceManifest", () => {
       mimeType: "video/mp4",
       category: "video-background"
     }));
+    const movieInfo = JSON.parse(
+      manifest.generatedFiles.find((file) => file.path.endsWith("movie/info_movie.json"))?.content || "{}"
+    );
+    expect(movieInfo.movie[0]).toMatchObject({
+      videoPath: "Lessons/L1/D1/movie/video/movie.mp4"
+    });
+    expect(manifest.resources).toContainEqual(expect.objectContaining({
+      path: "Lessons/L1/D1/movie/video/movie.mp4",
+      sourcePath: "/13/173/648/8159/1512/1512/movie/movie.mp4",
+      category: "movie"
+    }));
+  });
+
+  it("maps MOVIE01 to the MoviePlay renderer and caches its dedicated movie resource", () => {
+    const manifest = normalizeBookResourceManifest({
+      book: {
+        book_idx: 8159,
+        book_code: "STU01L01",
+        title: "Boat fun",
+        lessons: [{
+          num: 1,
+          days: [{
+            num: 1,
+            activities: [{ act_idx: 21008, act_code: "MOVIE01", act_name: "Movie Play" }],
+            movie: { mp4: "/13/173/648/8159/1512/1512/movie/boat-fun.mp4", vtt: "/13/173/648/8159/1512/1512/movie/boat-fun.vtt" },
+            sentence: [{ sentence: "They go back on the boat.", meanings: [{ nation: "KR", meaning: "그들은 배로 돌아갑니다." }] }]
+          }]
+        }]
+      }
+    });
+
+    expect(manifest.lessonDays[0].activities[0]).toMatchObject({ activityCode: "MOVIE01", actType: 13, title: "Movie" });
+    expect(manifest.resources).toContainEqual(expect.objectContaining({
+      path: "Lessons/L1/D1/movie/video/boat-fun.mp4",
+      category: "movie"
+    }));
+    const movieInfo = JSON.parse(
+      manifest.generatedFiles.find((file) => file.path.endsWith("movie/info_movie.json"))?.content || "{}"
+    );
+    expect(movieInfo.movie[0].captionPaths).toContain("Lessons/L1/D1/listening/01/caption/movie_01_vtt.vtt");
+    expect(movieInfo.captions[0]).toMatchObject({ text: "They go back on the boat.", translation: "그들은 배로 돌아갑니다." });
   });
 });

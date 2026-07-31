@@ -19,6 +19,7 @@ describe("MetaOn activity code mapping", () => {
     [MetaOnActivityCode.SentenceBlank, ActType.SentenceCheckSpace, "Sentence Blank"],
     [MetaOnActivityCode.Unscramble, ActType.SentenceUnscrambleSpace, "Unscramble"],
     [MetaOnActivityCode.SentenceRecord, ActType.SentenceShadowingSpace, "Sentence Record"],
+    [MetaOnActivityCode.Movie, ActType.MoviePlay, "Movie"],
     [MetaOnActivityCode.QuickCheck, ActType.QuickCheck, "Quick Check"]
   ])("maps %s to renderer type %s", (activityCode, actType, title) => {
     expect(resolveActTypeFromActivityCode(activityCode)).toBe(actType);

@@ -1793,6 +1793,7 @@ function normalizeBookResourceManifest(raw) {
         })
       }));
       generatedFiles.push(jsonFile(`${virtualBase}/listening/01/info_listen_ebook.json`, toListenEbookInfo(day, virtualBase, book)));
+      generatedFiles.push(jsonFile(`${virtualBase}/movie/info_movie.json`, toMovieInfo(day, virtualBase)));
 
       collectBookInfoResources(day, virtualBase, resources);
       lessonDays.push({
@@ -1840,6 +1841,7 @@ const METAON_ACTIVITY_CODE = {
   videoUnscramble: "STSC02",
   sentenceRecord: "STRC01",
   videoSentenceRecord: "STRC02",
+  movie: "MOVIE01",
   quickCheck: "QCHK01",
   npcQuickCheck: "QCNP01",
   npcQuickCheck2: "NPCQHK02"
@@ -1860,6 +1862,7 @@ const actTypeByActivityCode = new Map([
   [METAON_ACTIVITY_CODE.videoUnscramble, 1007],
   [METAON_ACTIVITY_CODE.sentenceRecord, 1009],
   [METAON_ACTIVITY_CODE.videoSentenceRecord, 1009],
+  [METAON_ACTIVITY_CODE.movie, 13],
   [METAON_ACTIVITY_CODE.quickCheck, 65],
   [METAON_ACTIVITY_CODE.npcQuickCheck, 65],
   [METAON_ACTIVITY_CODE.npcQuickCheck2, 65]
@@ -1885,6 +1888,7 @@ const activityCodeByActType = new Map([
   [1007, METAON_ACTIVITY_CODE.unscramble],
   [9, METAON_ACTIVITY_CODE.sentenceRecord],
   [1009, METAON_ACTIVITY_CODE.sentenceRecord],
+  [13, METAON_ACTIVITY_CODE.movie],
   [65, METAON_ACTIVITY_CODE.quickCheck]
 ]);
 
@@ -1903,6 +1907,7 @@ const titleByActivityCode = new Map([
   [METAON_ACTIVITY_CODE.unscramble, "Unscramble"],
   [METAON_ACTIVITY_CODE.videoUnscramble, "Unscramble"],
   [METAON_ACTIVITY_CODE.sentenceRecord, "Sentence Record"],
+  [METAON_ACTIVITY_CODE.movie, "Movie"],
   [METAON_ACTIVITY_CODE.quickCheck, "Quick Check"],
   [METAON_ACTIVITY_CODE.npcQuickCheck, "NPC Quick Check"],
   [METAON_ACTIVITY_CODE.npcQuickCheck2, "NPC Quick Check"]
@@ -1989,6 +1994,7 @@ function collectBookInfoResources(day, virtualBase, resources) {
     addBookInfoResource(resources, `${virtualBase}/listening/01/video/video_${twoDigit(index + 1)}.mp4`, stringValue(listening.mp4), "listening");
     collectCaptionBookInfoResources(listening, virtualBase, index + 1, "listening", resources);
   });
+  collectMovieBookInfoResources(day, virtualBase, resources);
   collectEbookBookInfoResources(day, virtualBase, resources);
   collectVideoWordActivityBookInfoResources(day, virtualBase, resources);
   collectNpcQuickCheckBookInfoResources(day, virtualBase, resources);
@@ -2359,6 +2365,81 @@ function splitCaptionSentences(value) {
 
   const matches = normalized.match(/[^.!?。！？]+[.!?。！？]+|[^.!?。！？]+$/g) || [normalized];
   return matches.map((item) => item.trim()).filter(Boolean);
+}
+
+function toMovieInfo(day, virtualBase) {
+  const movie = movieBookInfoRecords(day);
+  const captions = firstArray(day.sentence).flatMap((rawSentence, sentenceIndex) => {
+    const sentence = recordValue(rawSentence);
+    const translation = firstMeaning(sentence);
+    return splitCaptionSentences(firstCaptionText(sentence.sentence, sentence.eng, sentence.Eng, sentence.script, sentence.text, sentence.caption)).map(
+      (text, textIndex) => ({
+        pageIndex: 0,
+        audioIndex: sentenceIndex,
+        startMs: (sentenceIndex + textIndex) * 60000,
+        endMs: (sentenceIndex + textIndex + 1) * 60000,
+        text,
+        translation
+      })
+    );
+  });
+
+  return {
+    version: 1,
+    source: "metaon3-movie",
+    movie: movie.map((item, index) => {
+      const videoSource = movieBookInfoVideoSource(item);
+      return {
+        videoPath: videoSource ? `${virtualBase}/movie/video/${movieBookInfoFileName(videoSource, index)}` : "",
+        captionPaths: captionBookInfoVirtualPaths(item, virtualBase, index + 1, "movie")
+      };
+    }),
+    captions
+  };
+}
+
+function movieBookInfoRecords(day) {
+  const dayMovie = day.movie;
+  const records = Array.isArray(dayMovie)
+    ? dayMovie.map(recordValue).filter((item) => Object.keys(item).length > 0)
+    : typeof dayMovie === "string" && dayMovie.trim()
+      ? [{ path: dayMovie.trim() }]
+      : Object.keys(recordValue(dayMovie)).length > 0
+        ? [recordValue(dayMovie)]
+        : [];
+  if (records.length > 0) return records;
+
+  return firstArray(day.activities)
+    .map(recordValue)
+    .filter((activity) => {
+      const code = normalizeActivityCodeValue(activity.act_code ?? activity.actCode ?? activity.activity_code ?? activity.activityCode);
+      return code === METAON_ACTIVITY_CODE.movie || code === "13";
+    });
+}
+
+function movieBookInfoVideoSource(movie) {
+  return firstBookInfoResourcePath(
+    movie.mp4,
+    movie.video,
+    movie.video_path,
+    movie.videoPath,
+    movie.video_url,
+    movie.videoUrl,
+    movie.path
+  );
+}
+
+function movieBookInfoFileName(sourcePath, index) {
+  const fileName = sourcePath.replace(/\\/g, "/").split("?")[0].split("/").filter(Boolean).pop();
+  return fileName || `movie_${twoDigit(index + 1)}.mp4`;
+}
+
+function collectMovieBookInfoResources(day, virtualBase, resources) {
+  movieBookInfoRecords(day).forEach((movie, index) => {
+    const videoSource = movieBookInfoVideoSource(movie);
+    addBookInfoResource(resources, `${virtualBase}/movie/video/${movieBookInfoFileName(videoSource, index)}`, videoSource, "movie");
+    collectCaptionBookInfoResources(movie, virtualBase, index + 1, "movie", resources);
+  });
 }
 
 function generatedListenCue(pageIndex, audioIndex, text, startMs = 0, endMs = 3600000) {

@@ -17,6 +17,7 @@ export const MetaOnActivityCode = {
   VideoUnscramble: "STSC02",
   SentenceRecord: "STRC01",
   VideoSentenceRecord: "STRC02",
+  Movie: "MOVIE01",
   QuickCheck: "QCHK01",
   NpcQuickCheck: "NPCQHK01",
   LegacyNpcQuickCheck: "QCNP01",
@@ -41,6 +42,7 @@ const actTypeByActivityCode = new Map<string, ActType>([
   [MetaOnActivityCode.VideoUnscramble, ActType.SentenceUnscrambleSpace],
   [MetaOnActivityCode.SentenceRecord, ActType.SentenceShadowingSpace],
   [MetaOnActivityCode.VideoSentenceRecord, ActType.SentenceShadowingSpace],
+  [MetaOnActivityCode.Movie, ActType.MoviePlay],
   [MetaOnActivityCode.QuickCheck, ActType.QuickCheck],
   [MetaOnActivityCode.NpcQuickCheck, ActType.QuickCheck],
   [MetaOnActivityCode.LegacyNpcQuickCheck, ActType.QuickCheck],
@@ -68,6 +70,7 @@ const activityCodeByActType = new Map<ActType, MetaOnActivityCode>([
   [ActType.SentenceUnscrambleSpace, MetaOnActivityCode.Unscramble],
   [ActType.SentenceShadowing, MetaOnActivityCode.SentenceRecord],
   [ActType.SentenceShadowingSpace, MetaOnActivityCode.SentenceRecord],
+  [ActType.MoviePlay, MetaOnActivityCode.Movie],
   [ActType.QuickCheck, MetaOnActivityCode.QuickCheck]
 ]);
 
@@ -88,6 +91,7 @@ const titleByActivityCode = new Map<MetaOnActivityCode, string>([
   [MetaOnActivityCode.VideoUnscramble, "Unscramble"],
   [MetaOnActivityCode.SentenceRecord, "Sentence Record"],
   [MetaOnActivityCode.VideoSentenceRecord, "Sentence Record"],
+  [MetaOnActivityCode.Movie, "Movie"],
   [MetaOnActivityCode.QuickCheck, "Quick Check"],
   [MetaOnActivityCode.NpcQuickCheck, "NPC Quick Check"],
   [MetaOnActivityCode.LegacyNpcQuickCheck, "NPC Quick Check"],

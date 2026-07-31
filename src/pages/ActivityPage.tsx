@@ -61,13 +61,15 @@ export function ActivityPage() {
     normalizedActivityCode === MetaOnActivityCode.NpcQuickCheck ||
     normalizedActivityCode === MetaOnActivityCode.LegacyNpcQuickCheck ||
     normalizedActivityCode === MetaOnActivityCode.NpcQuickCheck2;
+  const isMovie01 = normalizedActivityCode === MetaOnActivityCode.Movie;
   const isVideoActivity =
     normalizedActivityCode === MetaOnActivityCode.VideoWordCard ||
     normalizedActivityCode === MetaOnActivityCode.VideoWordQuiz ||
     normalizedActivityCode === MetaOnActivityCode.VideoWordBlank ||
     normalizedActivityCode === MetaOnActivityCode.VideoSentenceBlank ||
     normalizedActivityCode === MetaOnActivityCode.VideoUnscramble ||
-    normalizedActivityCode === MetaOnActivityCode.VideoSentenceRecord;
+    normalizedActivityCode === MetaOnActivityCode.VideoSentenceRecord ||
+    isMovie01;
   const activityLayoutStyle = {
     "--unity-activity-bg": `url("${getActivityBackgroundUrl(activity?.actType)}")`
   } as CSSProperties;
@@ -234,7 +236,7 @@ export function ActivityPage() {
         onExit: returnToBook
       })}
       {studyError ? <p className="activity-study-error">{studyError}</p> : null}
-      {!isNpcQuickCheck ? (
+      {!isNpcQuickCheck && !isMovie01 ? (
         <button
           aria-label={isComplete ? "Activity completion saved" : "Complete activity"}
           aria-pressed={isComplete}

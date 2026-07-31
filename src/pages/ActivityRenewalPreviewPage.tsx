@@ -6,6 +6,7 @@ import {
   FlashCardActivity,
   MatchingGameActivity,
   MemoryGameActivity,
+  MovieActivity,
   SentenceBlankActivity,
   SentenceRecordActivity,
   SentenceUnscrambleActivity,
@@ -139,7 +140,8 @@ export function ActivityRenewalPreviewPage() {
   const navigate = useNavigate();
   const { kind } = useParams();
   const [previewComplete, setPreviewComplete] = useState(false);
-  const isVideoActivity = kind === "video-flashcard" || kind === "video-voca-quiz" || kind === "video-word-blank" || kind === "video-sentence-blank" || kind === "video-unscramble" || kind === "video-sentence-record";
+  const isMovie01 = kind === "movie01";
+  const isVideoActivity = isMovie01 || kind === "video-flashcard" || kind === "video-voca-quiz" || kind === "video-word-blank" || kind === "video-sentence-blank" || kind === "video-unscramble" || kind === "video-sentence-record";
 
   if (!import.meta.env.DEV) return <Navigate replace to="/" />;
 
@@ -196,6 +198,9 @@ export function ActivityRenewalPreviewPage() {
     case "video-sentence-record":
       activity = <SentenceRecordActivity context={previewContext(ActType.SentenceShadowingSpace, "STRC02")} prototypeData={sentenceRecordData} />;
       break;
+    case "movie01":
+      activity = <MovieActivity context={previewContext(ActType.MoviePlay, "MOVIE01")} />;
+      break;
     default:
       return <Navigate replace to="/activity-preview/voca-text" />;
   }
@@ -213,7 +218,7 @@ export function ActivityRenewalPreviewPage() {
         variant={isVideoActivity ? "video" : "standard"}
       />
       {activity}
-      <button
+      {!isMovie01 ? <button
         aria-label="Complete activity"
         aria-pressed={previewComplete}
         className={`hub-activity-complete-button${isVideoActivity ? " video-activity-check" : ""}${previewComplete ? " is-complete" : ""}`}
@@ -225,7 +230,7 @@ export function ActivityRenewalPreviewPage() {
         ) : (
           <img aria-hidden="true" draggable={false} src={activityControlAssets.check} alt="" />
         )}
-      </button>
+      </button> : null}
     </div>
   );
 }

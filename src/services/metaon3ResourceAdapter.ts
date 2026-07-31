@@ -46,11 +46,13 @@ export function normalizeBookResourceManifest(raw: unknown): BookResourceManifes
       generatedFiles.push(jsonFile(`${virtualBase}/word/info_word.json`, toWordInfo(day)));
       generatedFiles.push(jsonFile(`${virtualBase}/sentence/info_sentence.json`, toSentenceInfo(day)));
       generatedFiles.push(jsonFile(`${virtualBase}/listening/01/info_listen_ebook.json`, toListenEbookInfo(day, virtualBase, book)));
+      generatedFiles.push(jsonFile(`${virtualBase}/movie/info_movie.json`, toMovieInfo(day, virtualBase)));
 
       collectWordResources(day, virtualBase, resources);
       collectSentenceResources(day, virtualBase, resources);
       collectReadingResources(day, virtualBase, resources);
       collectListeningResources(day, virtualBase, resources);
+      collectMovieResources(day, virtualBase, resources);
       collectVideoWordActivityResources(day, virtualBase, resources);
       collectEbookResources(day, virtualBase, resources);
       collectNpcQuickCheckResources(day, virtualBase, resources);
@@ -345,6 +347,74 @@ function splitCaptionSentences(value: string): string[] {
   return matches.map((item) => item.trim()).filter(Boolean);
 }
 
+function toMovieInfo(day: UnknownRecord, virtualBase: string) {
+  const movie = movieRecords(day);
+  const sentences = arrayValue(day.sentence).map(asRecord);
+  const captions = sentences.flatMap((sentence, sentenceIndex) => {
+    const translation = firstMeaning(sentence);
+    return splitCaptionSentences(firstText(sentence.sentence, sentence.eng, sentence.Eng, sentence.script, sentence.text, sentence.caption)).map(
+      (text, textIndex) => ({
+        pageIndex: 0,
+        audioIndex: sentenceIndex,
+        startMs: (sentenceIndex + textIndex) * 60000,
+        endMs: (sentenceIndex + textIndex + 1) * 60000,
+        text,
+        translation
+      })
+    );
+  });
+
+  return {
+    version: 1,
+    source: "metaon3-movie",
+    movie: movie.map((item, index) => {
+      const videoSource = movieVideoSource(item);
+      return {
+        videoPath: videoSource ? `${virtualBase}/movie/video/${movieFileName(videoSource, index)}` : "",
+        captionPaths: captionVirtualPaths(item, virtualBase, index + 1, "movie")
+      };
+    }),
+    captions
+  };
+}
+
+function movieRecords(day: UnknownRecord): UnknownRecord[] {
+  const dayMovie = day.movie;
+  const records = Array.isArray(dayMovie)
+    ? dayMovie.map(asRecord).filter((item) => Object.keys(item).length > 0)
+    : typeof dayMovie === "string" && dayMovie.trim()
+      ? [{ path: dayMovie.trim() }]
+      : Object.keys(asRecord(dayMovie)).length > 0
+        ? [asRecord(dayMovie)]
+        : [];
+
+  if (records.length > 0) return records;
+
+  return arrayValue(day.activities)
+    .map(asRecord)
+    .filter((activity) => {
+      const activityCode = normalizeActivityCode(activity.act_code ?? activity.actCode ?? activity.activity_code ?? activity.activityCode);
+      return activityCode === MetaOnActivityCode.Movie || activityCode === String(ActType.MoviePlay);
+    });
+}
+
+function movieVideoSource(movie: UnknownRecord): string {
+  return firstResourcePath(
+    movie.mp4,
+    movie.video,
+    movie.video_path,
+    movie.videoPath,
+    movie.video_url,
+    movie.videoUrl,
+    movie.path
+  );
+}
+
+function movieFileName(sourcePath: string, index: number): string {
+  const fileName = sourcePath.replace(/\\/g, "/").split("?")[0].split("/").filter(Boolean).pop();
+  return fileName || `movie_${twoDigit(index + 1)}.mp4`;
+}
+
 function collectWordResources(day: UnknownRecord, virtualBase: string, resources: Map<string, BookResource>): void {
   arrayValue(day.word).forEach((rawWord, index) => {
     const word = asRecord(rawWord);
@@ -375,6 +445,14 @@ function collectListeningResources(day: UnknownRecord, virtualBase: string, reso
     const listening = asRecord(rawListening);
     addResource(resources, `${virtualBase}/listening/01/video/video_${twoDigit(index + 1)}.mp4`, stringValue(listening.mp4), "listening");
     collectCaptionResources(listening, virtualBase, index + 1, "listening", resources);
+  });
+}
+
+function collectMovieResources(day: UnknownRecord, virtualBase: string, resources: Map<string, BookResource>): void {
+  movieRecords(day).forEach((movie, index) => {
+    const videoSource = movieVideoSource(movie);
+    addResource(resources, `${virtualBase}/movie/video/${movieFileName(videoSource, index)}`, videoSource, "movie");
+    collectCaptionResources(movie, virtualBase, index + 1, "movie", resources);
   });
 }
 
@@ -624,7 +702,7 @@ function collectCaptionResources(
   record: UnknownRecord,
   virtualBase: string,
   index: number,
-  source: "reading" | "listening",
+  source: "reading" | "listening" | "movie",
   resources: Map<string, BookResource>
 ): void {
   captionSourceEntries(record).forEach(({ key, value }) => {
@@ -633,13 +711,13 @@ function collectCaptionResources(
   });
 }
 
-function captionVirtualPaths(record: UnknownRecord, virtualBase: string, index: number, source: "reading" | "listening"): string[] {
+function captionVirtualPaths(record: UnknownRecord, virtualBase: string, index: number, source: "reading" | "listening" | "movie"): string[] {
   return captionSourceEntries(record)
     .filter(({ value }) => isResourcePath(value))
     .map(({ key, value }) => captionVirtualPath(virtualBase, index, source, key, value));
 }
 
-function captionVirtualPath(virtualBase: string, index: number, source: "reading" | "listening", key: string, sourcePath: string): string {
+function captionVirtualPath(virtualBase: string, index: number, source: "reading" | "listening" | "movie", key: string, sourcePath: string): string {
   const extension = sourcePath.split("?")[0].split(".").pop()?.toLowerCase() || "txt";
   return `${virtualBase}/listening/01/caption/${source}_${twoDigit(index)}_${key}.${extension}`;
 }

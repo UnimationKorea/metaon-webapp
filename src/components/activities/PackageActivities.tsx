@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject, type TouchEvent as ReactTouchEvent } from "react";
-import { BarChart3, BookOpen, Check, ChevronLeft, ChevronRight, Flag, Gauge, ImageOff, Keyboard, Mic, Pause, Play, RotateCcw, Square, Star, Trophy, Volume2, Wrench, X } from "lucide-react";
+import { BarChart3, BookOpen, Check, ChevronDown, ChevronLeft, ChevronRight, Flag, Gauge, ImageOff, Keyboard, Mic, Pause, Play, RotateCcw, Square, Star, Trophy, Volume2, Wrench, X } from "lucide-react";
 import { uploadLearnRecording } from "../../api/uniplanetApi";
 import { ActivityHintImage, ActivityListeningImage, ActivityPageArrowImage, ActivitySoundImage, ActivityTimerBadge, videoActivityControlAssets, VideoActivityPageArrow, VideoActivityPageIndicator } from "../ActivityImageControls";
 import { bffRecognitionPort } from "../../ports/bffRecognitionPort";
@@ -26,7 +26,20 @@ type SentenceInfo = {
 };
 
 type MovieInfo = {
-  movie?: Array<{ is_url?: boolean; video_path?: string; smi_path?: string }>;
+  version?: number;
+  source?: string;
+  movie?: Array<{
+    is_url?: boolean;
+    video_path?: string;
+    videoPath?: string;
+    smi_path?: string;
+    captionPaths?: string[];
+  }>;
+  captions?: MovieCaptionCue[];
+};
+
+type MovieCaptionCue = ListenCaptionCue & {
+  translation?: string;
 };
 
 type ListenEbookInfo = {
@@ -1308,7 +1321,19 @@ function ListenEbookActivity({ context, assets }: { context: ActivityRendererCon
   );
 }
 
-export function MovieActivity({
+export function MovieActivity(props: {
+  context: ActivityRendererContext;
+  label?: string;
+  immersive?: boolean;
+}) {
+  if (normalizeActivityCode(props.context.activity?.activityCode) === MetaOnActivityCode.Movie) {
+    return <Movie01Activity context={props.context} />;
+  }
+
+  return <LegacyMovieActivity {...props} />;
+}
+
+function LegacyMovieActivity({
   context,
   label = "Movie",
   immersive = false
@@ -1317,6 +1342,7 @@ export function MovieActivity({
   label?: string;
   immersive?: boolean;
 }) {
+
   const base = dayBase(context);
   const info = usePackageJson<MovieInfo>(context, `${base}/movie/info_movie.json`);
   const movieIndex = paramIndex(context.activity);
@@ -1348,6 +1374,199 @@ export function MovieActivity({
         </div>
       </div>
     </ActivityFrame>
+  );
+}
+
+type MovieLearningMode = "movie" | "script" | "movie-script";
+
+function Movie01Activity({ context }: { context: ActivityRendererContext }) {
+  const base = dayBase(context);
+  const info = usePackageJson<MovieInfo>(context, `${base}/movie/info_movie.json`);
+  const moviePaths = usePackagePathList(context, `${base}/movie/video/`);
+  const selectedMovie = info?.movie?.[paramIndex(context.activity)] || info?.movie?.[0];
+  const configuredVideoPath = selectedMovie?.videoPath || selectedMovie?.video_path;
+  const videoPath = configuredVideoPath || moviePaths.filter((path) => /\.(mp4|webm|m3u8)$/i.test(path)).sort(naturalPathCompare)[0];
+  const videoUrl = usePackageUrl(context, videoPath);
+  const captionPaths = selectedMovie?.captionPaths || [];
+  const captionTextByPath = usePackageTextList(context, captionPaths);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [mode, setMode] = useState<MovieLearningMode>();
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const [showKorean, setShowKorean] = useState(true);
+  const [showModeMenu, setShowModeMenu] = useState(false);
+  const [showSpeedMenu, setShowSpeedMenu] = useState(false);
+  const [currentMs, setCurrentMs] = useState(0);
+  const [durationMs, setDurationMs] = useState(0);
+
+  const parsedCaptionCues = useMemo(
+    () =>
+      Object.entries(captionTextByPath).flatMap(([path, source]) =>
+        parseCaptionCues(source, path).map((cue) => ({ ...cue, translation: "" }))
+      ),
+    [captionTextByPath]
+  );
+  const previewCues = useMemo<MovieCaptionCue[]>(
+    () =>
+      !context.packageMeta && import.meta.env.DEV
+        ? [
+            { pageIndex: 0, audioIndex: 0, startMs: 0, endMs: 4500, text: "They go back on the boat.", translation: "그들은 배로 돌아갑니다." },
+            { pageIndex: 0, audioIndex: 1, startMs: 4500, endMs: 9000, text: "It was a good trip.", translation: "즐거운 여행이었어요." }
+          ]
+        : [],
+    [context.packageMeta]
+  );
+  const scriptCues = useMemo(() => {
+    const source = parsedCaptionCues.length > 0 ? parsedCaptionCues : info?.captions?.length ? info.captions : previewCues;
+    return normalizeMovieCaptionCues(source, durationMs);
+  }, [durationMs, info?.captions, parsedCaptionCues, previewCues]);
+  const activeCueIndex = useMemo(() => findMovieCueIndex(scriptCues, currentMs), [currentMs, scriptCues]);
+  const visibleCues = useMemo(() => movieScriptWindow(scriptCues, activeCueIndex), [activeCueIndex, scriptCues]);
+  const isScriptMode = mode === "script" || mode === "movie-script";
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.playbackRate = playbackRate;
+  }, [playbackRate, mode, videoUrl]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !mode) return;
+    if (mode === "script") {
+      video.pause();
+      setIsPlaying(false);
+      return;
+    }
+    void video.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+  }, [mode, videoUrl]);
+
+  function selectMode(nextMode: MovieLearningMode) {
+    setMode(nextMode);
+    setShowModeMenu(false);
+    recordLearnEvent(context, {
+      action: "movie_mode_select",
+      item_type: "activity",
+      item_idx: context.activity?.actIdx ?? null,
+      extra: { mode: nextMode, video_path: videoPath || "" }
+    });
+  }
+
+  function togglePlayback() {
+    const video = videoRef.current;
+    if (!video || mode === "script") return;
+    if (video.paused) {
+      void video.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+    } else {
+      video.pause();
+    }
+  }
+
+  return (
+    <ActivityFrame context={context} actionLabel="Movie" className="movie01-frame">
+      <section className={`movie01-shell${mode ? " is-player" : " is-mode-select"}`}>
+        {mode ? (
+          <>
+            {videoUrl ? (
+              <video
+                className="movie01-video"
+                controls={false}
+                playsInline
+                preload="auto"
+                ref={videoRef}
+                src={videoUrl}
+                onClick={togglePlayback}
+                onLoadedMetadata={(event) => setDurationMs(Math.round(event.currentTarget.duration * 1000) || 0)}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                onTimeUpdate={(event) => setCurrentMs(Math.round(event.currentTarget.currentTime * 1000))}
+              />
+            ) : (
+              <img className="movie01-fallback-image" src="/metaon-assets/activity/movie01/figma-source/player-fallback-warm.png" alt="" />
+            )}
+            <span aria-hidden="true" className="movie01-player-scrim" />
+            <div className="movie01-controls" aria-label="Movie controls">
+              <div className="movie01-control-menu">
+                <button type="button" onClick={() => setShowModeMenu((value) => !value)}>
+                  Mode <ChevronDown size={18} aria-hidden="true" />
+                </button>
+                {showModeMenu ? (
+                  <div className="movie01-popover" role="menu">
+                    <button className={mode === "movie" ? "is-selected" : ""} type="button" onClick={() => selectMode("movie")}>Movie</button>
+                    <button className={mode === "script" ? "is-selected" : ""} type="button" onClick={() => selectMode("script")}>Script</button>
+                    <button className={mode === "movie-script" ? "is-selected" : ""} type="button" onClick={() => selectMode("movie-script")}>Movie+Script</button>
+                  </div>
+                ) : null}
+              </div>
+              <div className="movie01-control-menu">
+                <button type="button" onClick={() => setShowSpeedMenu((value) => !value)}>
+                  {playbackRate.toFixed(1)}x <ChevronDown size={18} aria-hidden="true" />
+                </button>
+                {showSpeedMenu ? (
+                  <div className="movie01-popover movie01-speed-popover" role="menu">
+                    {[0.75, 1, 1.25].map((rate) => (
+                      <button className={rate === playbackRate ? "is-selected" : ""} key={rate} type="button" onClick={() => { setPlaybackRate(rate); setShowSpeedMenu(false); }}>
+                        {rate.toFixed(2).replace(/0$/, "")}x
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+              <button className="movie01-korean-toggle" type="button" aria-pressed={showKorean} onClick={() => setShowKorean((value) => !value)}>
+                KOR {showKorean ? "ON" : "OFF"}
+              </button>
+            </div>
+            {isScriptMode ? (
+              <div className="movie01-script" aria-live="polite">
+                {visibleCues.length > 0 ? visibleCues.map(({ cue, index }) => (
+                  <div className={index === activeCueIndex ? "movie01-script-line is-active" : "movie01-script-line"} key={`${cue.startMs}:${cue.text}`}>
+                    <p>{highlightMovieCue(cue.text, index === activeCueIndex)}</p>
+                    {showKorean && cue.translation ? <span>{cue.translation}</span> : null}
+                  </div>
+                )) : (
+                  <div className="movie01-script-line is-active">
+                    <p>{videoUrl ? "Script resource is not available for this movie." : "Movie resource is not cached yet."}</p>
+                  </div>
+                )}
+              </div>
+            ) : null}
+            {mode !== "script" && videoUrl ? (
+              <button className="movie01-play-toggle" type="button" onClick={togglePlayback} aria-label={isPlaying ? "Pause movie" : "Play movie"}>
+                {isPlaying ? <Pause size={28} fill="currentColor" aria-hidden="true" /> : <Play size={28} fill="currentColor" aria-hidden="true" />}
+              </button>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <img className="movie01-mode-background" src="/metaon-assets/activity/movie01/figma-source/menu-background.png" alt="" />
+            <span aria-hidden="true" className="movie01-mode-scrim" />
+            <div className="movie01-mode-options" aria-label="Select learning mode">
+              <MovieModeCard icon="movie" label="Movie" description="영상만 감상" onClick={() => selectMode("movie")} />
+              <MovieModeCard icon="script" label="Script" description="멈춘 화면 + 따라읽기" onClick={() => selectMode("script")} />
+              <MovieModeCard icon="both" label="Movie+Script" description="영상 보며 + 따라읽기" onClick={() => selectMode("movie-script")} />
+            </div>
+            <img className="movie01-mode-character" src="/metaon-assets/activity/movie01/figma-source/menu-character.png" alt="" />
+          </>
+        )}
+      </section>
+    </ActivityFrame>
+  );
+}
+
+function MovieModeCard({ icon, label, description, onClick }: { icon: "movie" | "script" | "both"; label: string; description: string; onClick: () => void }) {
+  return (
+    <button className="movie01-mode-card" type="button" onClick={onClick}>
+      <span className="movie01-mode-icon" aria-hidden="true">
+        {icon === "both" ? (
+          <>
+            <img src="/metaon-assets/activity/movie01/figma-source/icon-movie.png" alt="" />
+            <img src="/metaon-assets/activity/movie01/figma-source/icon-script.png" alt="" />
+          </>
+        ) : <img src={`/metaon-assets/activity/movie01/figma-source/icon-${icon}.png`} alt="" />}
+      </span>
+      <strong>{label}</strong>
+      <span>{description}</span>
+    </button>
   );
 }
 
@@ -5880,6 +6099,77 @@ function useSentences(context: ActivityRendererContext): LoadedSentence[] {
     audioPath: audioPaths[index] || undefined,
     audioUrl: audioPaths[index] ? audioMap[audioPaths[index] as string] : undefined
   }));
+}
+
+function usePackageTextList(context: ActivityRendererContext, paths: string[]): Record<string, string> {
+  const key = context.packageMeta?.key;
+  const stablePaths = useMemo(() => Array.from(new Set(paths.filter(Boolean))).sort(), [paths.join("|")]);
+  const [texts, setTexts] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let active = true;
+    setTexts({});
+    if (!key || stablePaths.length === 0) return undefined;
+
+    Promise.all(
+      stablePaths.map(async (path) => {
+        const blob = await indexedDbStorage.getFileBlob(key, path);
+        return blob ? ([path, await readBlobText(blob)] as const) : undefined;
+      })
+    )
+      .then((entries) => {
+        if (!active) return;
+        setTexts(Object.fromEntries(entries.filter(Boolean) as Array<readonly [string, string]>));
+      })
+      .catch(() => {
+        if (active) setTexts({});
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [key, stablePaths]);
+
+  return texts;
+}
+
+function normalizeMovieCaptionCues(cues: MovieCaptionCue[], durationMs: number): MovieCaptionCue[] {
+  const sorted = cues
+    .filter((cue) => cue.text.trim())
+    .map((cue) => ({ ...cue, text: cue.text.replace(/\s+/g, " ").trim() }))
+    .sort((left, right) => left.startMs - right.startMs);
+  if (sorted.length === 0) return [];
+
+  const hasRealTiming = sorted.some((cue) => cue.startMs > 0 || cue.endMs < 59000);
+  if (hasRealTiming) return sorted;
+
+  const cueDuration = Math.max(2500, Math.floor((durationMs || sorted.length * 5000) / sorted.length));
+  return sorted.map((cue, index) => ({
+    ...cue,
+    startMs: index * cueDuration,
+    endMs: (index + 1) * cueDuration
+  }));
+}
+
+function findMovieCueIndex(cues: MovieCaptionCue[], currentMs: number): number {
+  if (cues.length === 0) return -1;
+  const exactIndex = cues.findIndex((cue) => currentMs >= cue.startMs && currentMs < cue.endMs);
+  if (exactIndex >= 0) return exactIndex;
+  return Math.max(0, cues.findIndex((cue) => cue.startMs > currentMs) - 1);
+}
+
+function movieScriptWindow(cues: MovieCaptionCue[], activeIndex: number): Array<{ cue: MovieCaptionCue; index: number }> {
+  if (activeIndex < 0) return cues.slice(0, 3).map((cue, index) => ({ cue, index }));
+  const start = Math.max(0, activeIndex - 1);
+  return cues.slice(start, start + 3).map((cue, offset) => ({ cue, index: start + offset }));
+}
+
+function highlightMovieCue(text: string, active: boolean): ReactNode {
+  if (!active) return text;
+  const tokens = text.split(/(\s+)/);
+  const target = tokens.findIndex((token) => /^[A-Za-z]{4,}$/.test(token.replace(/[^A-Za-z]/g, "")));
+  if (target < 0) return text;
+  return tokens.map((token, index) => index === target ? <mark key={`${token}:${index}`}>{token}</mark> : token);
 }
 
 function usePackageJson<T>(context: ActivityRendererContext, path?: string): T | undefined {
