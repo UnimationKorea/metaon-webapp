@@ -15,6 +15,7 @@ vi.mock("./indexedDbStorage", () => ({
     savePackage: vi.fn(),
     listPackages: vi.fn(),
     listFiles: vi.fn(),
+    listFilePaths: vi.fn(),
     getFileBlob: vi.fn(),
     deletePackage: vi.fn()
   }
@@ -93,6 +94,7 @@ describe("downloadAndCacheBookPackage", () => {
     const savedPackage = vi.mocked(indexedDbStorage.savePackage).mock.calls[0][0];
     expect(savedPackage.cacheVersion).toBe(BOOK_PACKAGE_CACHE_VERSION);
     expect(savedPackage.totalFiles).toBe(3);
+    expect(savedPackage.filePaths).toEqual(savedFiles);
   });
 
   it("invalidates package metadata created before the ebook cache schema", async () => {

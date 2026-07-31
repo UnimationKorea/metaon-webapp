@@ -162,6 +162,16 @@ export async function downloadAndCacheBookPackage(
     lessonDays: manifest.lessonDays,
     npcScriptPaths,
     mediaCachePaths: Array.from(mediaCachePaths),
+    // Persist only files that were successfully written or reused from IndexedDB.
+    // Optional resources can be absent from an API manifest, so the renderer must
+    // not treat every declared manifest path as locally available.
+    filePaths: Array.from(
+      new Set([
+        ...generatedFiles.map((file) => file.path),
+        ...downloadedFileMap.keys(),
+        ...cachedBlobMap.keys()
+      ])
+    ),
     manifest
   };
 

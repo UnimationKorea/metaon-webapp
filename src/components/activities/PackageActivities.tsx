@@ -384,32 +384,10 @@ async function warmActivityResources(
   context: ActivityRendererContext,
   metadataPaths: string[]
 ): Promise<void> {
-  const dayPrefix = `${dayBase(context)}/`.toLowerCase();
-  const files = await indexedDbStorage.listFiles(packageKey);
-  const wordImagePaths = files
-    .map((file) => file.path)
-    .filter((path) => {
-      const normalized = path.toLowerCase();
-      return normalized.startsWith(dayPrefix) && normalized.includes("/word/img/") && /\.(?:png|jpe?g|webp|gif)$/i.test(normalized);
-    });
-  const resourcePaths = Array.from(new Set([...metadataPaths, ...wordImagePaths]));
-
-  await Promise.all(
-    resourcePaths.map(async (path) => {
-      const blob = await indexedDbStorage.getFileBlob(packageKey, path);
-      if (blob && /\.(?:png|jpe?g|webp|gif)$/i.test(path)) await decodeImageBlob(blob);
-    })
-  );
-}
-
-async function decodeImageBlob(blob: Blob): Promise<void> {
-  if (typeof URL === "undefined" || typeof URL.createObjectURL !== "function") return;
-  const url = URL.createObjectURL(blob);
-  try {
-    await decodeImage(url);
-  } finally {
-    URL.revokeObjectURL(url);
-  }
+  // Resource hooks own their image/audio URL and decode lifecycle. Warming each
+  // word image here made every asset read and decode twice before the Activity
+  // became visible. Only verify the activity metadata that selects its assets.
+  await Promise.all(metadataPaths.map((path) => indexedDbStorage.getFileBlob(packageKey, path)));
 }
 
 function ActivityResourceLoading() {
@@ -6479,6 +6457,7 @@ function usePackagePathList(context: ActivityRendererContext, prefix: string): s
 
 function usePackagePathListState(context: ActivityRendererContext, prefix: string): { paths: string[]; checked: boolean; error: boolean } {
   const key = context.packageMeta?.key;
+  const storedPaths = context.packageMeta?.filePaths;
   const [paths, setPaths] = useState<string[]>([]);
   const [checked, setChecked] = useState(false);
   const [error, setError] = useState(false);
@@ -6493,9 +6472,8 @@ function usePackagePathListState(context: ActivityRendererContext, prefix: strin
       return undefined;
     }
 
-    indexedDbStorage
-      .listFiles(key)
-      .then((files) => files.map((file) => file.path).filter((path) => path.toLowerCase().startsWith(prefix.toLowerCase())))
+    getCachedPackagePaths(key, storedPaths)
+      .then((packagePaths) => packagePaths.filter((path) => path.toLowerCase().startsWith(prefix.toLowerCase())))
       .then((nextPaths) => {
         if (active) {
           setPaths(nextPaths);
@@ -6513,9 +6491,20 @@ function usePackagePathListState(context: ActivityRendererContext, prefix: strin
     return () => {
       active = false;
     };
-  }, [key, prefix]);
+  }, [key, prefix, storedPaths]);
 
   return { paths, checked, error };
+}
+
+async function getCachedPackagePaths(packageKey: string, storedPaths?: string[]): Promise<string[]> {
+  if (storedPaths && storedPaths.length > 0) return storedPaths;
+  const indexedPaths = await indexedDbStorage.listFilePaths(packageKey);
+  if (Array.isArray(indexedPaths)) return indexedPaths;
+
+  // Older injected storage ports used by integration shells only expose the
+  // original listFiles API. Production IndexedDB always takes the indexed path.
+  const files = await indexedDbStorage.listFiles(packageKey);
+  return files.map((file) => file.path);
 }
 
 function usePackageUrl(context: ActivityRendererContext, path?: string): string | undefined {
@@ -6541,7 +6530,6 @@ function usePackageUrlsState(
 
   useEffect(() => {
     let active = true;
-    const createdUrls: string[] = [];
     setUrls({});
     setChecked(false);
     setError(false);
@@ -6563,9 +6551,7 @@ function usePackageUrlsState(
 
         const blob = await indexedDbStorage.getFileBlob(key, path);
         if (!blob) return undefined;
-        const url = URL.createObjectURL(blob);
-        createdUrls.push(url);
-        return [path, url] as const;
+        return [path, getCachedObjectUrl(key, path, blob)] as const;
       })
     )
       .then((entries) => {
@@ -6573,8 +6559,6 @@ function usePackageUrlsState(
         if (active) {
           setUrls(nextUrls);
           setChecked(true);
-        } else {
-          Object.values(nextUrls).forEach((url) => URL.revokeObjectURL(url));
         }
       })
       .catch(() => {
@@ -6587,11 +6571,38 @@ function usePackageUrlsState(
 
     return () => {
       active = false;
-      createdUrls.forEach((url) => URL.revokeObjectURL(url));
     };
   }, [key, mediaCachePaths.join("|"), uniquePaths, videoMediaServiceWorkerControlled]);
 
   return { urls, checked, error };
+}
+
+const MAX_CACHED_OBJECT_URLS = 48;
+const cachedObjectUrls = new Map<string, { blob: Blob; url: string }>();
+
+function getCachedObjectUrl(packageKey: string, path: string, blob: Blob): string {
+  const key = `${packageKey}::${path}`;
+  const existing = cachedObjectUrls.get(key);
+  if (existing?.blob === blob) {
+    cachedObjectUrls.delete(key);
+    cachedObjectUrls.set(key, existing);
+    return existing.url;
+  }
+
+  if (existing) {
+    URL.revokeObjectURL(existing.url);
+    cachedObjectUrls.delete(key);
+  }
+
+  const entry = { blob, url: URL.createObjectURL(blob) };
+  cachedObjectUrls.set(key, entry);
+  while (cachedObjectUrls.size > MAX_CACHED_OBJECT_URLS) {
+    const oldest = cachedObjectUrls.entries().next().value as [string, { blob: Blob; url: string }] | undefined;
+    if (!oldest) break;
+    cachedObjectUrls.delete(oldest[0]);
+    URL.revokeObjectURL(oldest[1].url);
+  }
+  return entry.url;
 }
 
 function useVideoMediaServiceWorkerControlled(): boolean {

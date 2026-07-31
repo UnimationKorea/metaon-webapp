@@ -917,6 +917,13 @@ code {
   background: #061331;
 }
 
+/* This selector must win over the base visual's relative positioning. */
+.activity-resource-loading.activity-loading-visual {
+  position: absolute;
+  inset: 0;
+  min-height: 0;
+}
+
 .activity-route-loading > .activity-loading-visual {
   min-height: inherit;
 }

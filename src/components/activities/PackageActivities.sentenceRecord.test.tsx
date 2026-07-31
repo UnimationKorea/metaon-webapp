@@ -12,6 +12,7 @@ vi.mock("../../services/indexedDbStorage", () => ({
     savePackage: vi.fn(),
     listPackages: vi.fn(),
     listFiles: vi.fn(),
+    listFilePaths: vi.fn(),
     getFileBlob: vi.fn(),
     deletePackage: vi.fn()
   }

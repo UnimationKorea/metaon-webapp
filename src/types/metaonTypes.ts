@@ -170,6 +170,9 @@ export type BookPackage = {
   // Virtual paths whose full media responses also exist in Cache Storage. All
   // other resources keep using the IndexedDB Blob compatibility path.
   mediaCachePaths?: string[];
+  // Persisted paths let Activities locate their own resources without scanning
+  // every Blob record in the browser database.
+  filePaths?: string[];
   manifest?: unknown;
 };
 

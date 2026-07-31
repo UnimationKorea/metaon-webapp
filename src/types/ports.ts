@@ -14,6 +14,7 @@ export type StoragePort = {
   ) => Promise<void>;
   listPackages: () => Promise<import("./metaonTypes").BookPackage[]>;
   listFiles: (packageKey: string) => Promise<StoredPackageFile[]>;
+  listFilePaths: (packageKey: string) => Promise<string[]>;
   getFileBlob: (packageKey: string, path: string) => Promise<Blob | undefined>;
   deletePackage: (packageKey: string) => Promise<void>;
 };
