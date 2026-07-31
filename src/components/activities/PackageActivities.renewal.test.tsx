@@ -219,6 +219,7 @@ describe("Figma renewal activities", () => {
     expect(container.querySelector(".activity-frame")).toHaveAttribute("aria-busy", "true");
     expect(container.querySelector(".activity-loading-visual")).toBeInTheDocument();
     expect(screen.queryByText("Loading activity")).not.toBeInTheDocument();
+    expect(screen.queryByText("No word")).not.toBeInTheDocument();
 
     resolveFiles?.(
       words.flatMap((word, index) => [
@@ -283,6 +284,7 @@ describe("Figma renewal activities", () => {
     expect(container.querySelector(".activity-frame")).toHaveAttribute("aria-busy", "true");
     expect(container.querySelector(".activity-loading-visual")).toBeInTheDocument();
     expect(screen.queryByText("Loading activity")).not.toBeInTheDocument();
+    expect(screen.queryByText("No sentence data.")).not.toBeInTheDocument();
 
     resolveFiles?.([
       `${basePath}/sentence/snd/snd_sentence_01.mp3`,

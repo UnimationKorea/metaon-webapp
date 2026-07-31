@@ -2090,7 +2090,7 @@ export function FlashCardActivity({
             </span>
             <span className="flashcard-face flashcard-back wdca-flashcard-face wdca-flashcard-back">
               <span className={showMoreInfo ? "wdca-card-copy has-more-info" : "wdca-card-copy"}>
-                <AutoFitFlashCardWord compact={showMoreInfo} text={word?.eng || "No word"} />
+                <AutoFitFlashCardWord compact={showMoreInfo} text={word?.eng || (isWordResourceLoading ? "" : "No word")} />
                 {showMoreInfo ? (
                   <span className="wdca-card-more-info">
                     {word?.mean ? <strong className="wdca-card-meaning">{word.mean}</strong> : null}
@@ -2142,7 +2142,7 @@ export function FlashCardActivity({
             {word?.imageUrl ? <img src={word.imageUrl} alt={word.eng} /> : <ResourceMissing label="word image" />}
           </span>
           <span className="flashcard-face flashcard-back">
-            <strong>{word?.eng || "No word"}</strong>
+            <strong>{word?.eng || (isWordResourceLoading ? "" : "No word")}</strong>
           </span>
         </button>
         {word?.audioUrl ? <audio ref={audioRef} src={word.audioUrl} preload="auto" /> : null}
@@ -3557,7 +3557,7 @@ export function PeelingWordActivity({ context, label = "Peeling Word" }: { conte
             {word?.audioUrl ? <audio src={word.audioUrl} controls /> : null}
           </div>
         </div>
-        <div className="peeling-word">{masked || "No word"}</div>
+        <div className="peeling-word">{masked || (isWordResourceLoading ? "" : "No word")}</div>
         <input
           value={value}
           onChange={(event) => {
@@ -3732,7 +3732,7 @@ function VocaQuizChoiceActivity({
           {promptKind === "image" ? (
             target?.imageUrl ? <img src={target.imageUrl} alt={target.eng} /> : <ResourceMissing label="word image" />
           ) : null}
-          {promptKind === "text" ? <AutoFitVocaQuizText text={target?.eng || "No word"} variant="prompt" /> : null}
+          {promptKind === "text" ? <AutoFitVocaQuizText text={target?.eng || (loading ? "" : "No word")} variant="prompt" /> : null}
           {promptKind === "sound" ? (
             <RenewalSoundButton
               src={target?.audioUrl}
@@ -4175,7 +4175,7 @@ export function SentenceBlankActivity({
                 </span>
                 {sentenceSuffix ? <span className={/^[?.!,]/.test(sentenceSuffix) ? "is-punctuation" : ""}>{sentenceSuffix}</span> : null}
               </p>
-            ) : <span>No sentence data.</span>}
+            ) : isSentenceResourceLoading ? null : <span>No sentence data.</span>}
           </div>
           <UniformAutoFitTextGroup className="sentence-renewal-options" maximumSize={32} minimumSize={5}>
             {options.map((option) => (
@@ -5003,8 +5003,10 @@ export function SpellingActivity({ context, label = "Spelling" }: { context: Act
         />
         {checked ? (
           <p className={isCorrect ? "success-text" : "error-text"}>{isCorrect ? "Correct" : `Answer: ${expected}`}</p>
-        ) : (
-          <p className="muted">{expected ? `${expected.length} letters` : "No word data."}</p>
+        ) : expected ? (
+          <p className="muted">{expected.length} letters</p>
+        ) : isWordResourceLoading ? null : (
+          <p className="muted">No word data.</p>
         )}
         <div className="inline-actions">
           <button type="button" onClick={() => setChecked(true)} disabled={!word || value.trim().length === 0}>
