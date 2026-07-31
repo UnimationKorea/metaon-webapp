@@ -213,8 +213,10 @@ describe("Figma renewal activities", () => {
       <FlashCardActivity context={activityContext(ActType.FlashCardSpace, "WDCA01")} />
     );
 
-    expect(screen.getByRole("status")).toHaveTextContent("Loading activity");
+    expect(screen.getByRole("status")).toHaveAttribute("aria-label", "Loading activity");
     expect(container.querySelector(".activity-frame")).toHaveAttribute("aria-busy", "true");
+    expect(container.querySelector(".activity-loading-visual")).toBeInTheDocument();
+    expect(screen.queryByText("Loading activity")).not.toBeInTheDocument();
 
     resolveFiles?.(
       words.flatMap((word, index) => [
@@ -244,8 +246,10 @@ describe("Figma renewal activities", () => {
       <SentenceBlankActivity context={activityContext(ActType.SentenceCheckSpace, "STBL01")} />
     );
 
-    expect(screen.getByRole("status")).toHaveTextContent("Loading activity");
+    expect(screen.getByRole("status")).toHaveAttribute("aria-label", "Loading activity");
     expect(container.querySelector(".activity-frame")).toHaveAttribute("aria-busy", "true");
+    expect(container.querySelector(".activity-loading-visual")).toBeInTheDocument();
+    expect(screen.queryByText("Loading activity")).not.toBeInTheDocument();
 
     resolveFiles?.([
       `${basePath}/sentence/snd/snd_sentence_01.mp3`,

@@ -4,6 +4,7 @@ import { endStudy, startStudy } from "../api/uniplanetApi";
 import { activityControlAssets, VideoActivityCheckControl } from "../components/ActivityImageControls";
 import { ActivityCompletionCelebration } from "../components/ActivityCompletionCelebration";
 import { ActivityTopBar } from "../components/ActivityTopBar";
+import { ActivityLoadingVisual } from "../components/activities/ActivityLoadingVisual";
 import { EmptyState } from "../components/EmptyState";
 import { useBookPackage } from "../hooks/useBookPackage";
 import { useCatalog } from "../hooks/useCatalog";
@@ -116,7 +117,7 @@ export function ActivityPage() {
   }, [book, recordRecentBook]);
 
   if (isLoading) {
-    return <ActivityResourceLoadingScreen detail="Resolving book and package metadata." />;
+    return <ActivityResourceLoadingScreen />;
   }
 
   if (!book) {
@@ -124,7 +125,7 @@ export function ActivityPage() {
   }
 
   if (packageState.isCheckingCache) {
-    return <ActivityResourceLoadingScreen detail="Preparing cached learning resources." />;
+    return <ActivityResourceLoadingScreen />;
   }
 
   if (!packageState.packageMeta || !day || !activity) {
@@ -287,13 +288,10 @@ function pointsFromStudyEnd(value: unknown): unknown {
   );
 }
 
-function ActivityResourceLoadingScreen({ detail }: { detail: string }) {
+function ActivityResourceLoadingScreen() {
   return (
-    <main className="activity-route-loading" role="status" aria-live="polite">
-      <span className="activity-route-loading-orbit" aria-hidden="true" />
-      <strong>Loading activity</strong>
-      <p>{detail}</p>
-      <i aria-hidden="true"><b /></i>
+    <main className="activity-route-loading">
+      <ActivityLoadingVisual />
     </main>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperti
 import { BarChart3, BookOpen, Check, ChevronDown, ChevronLeft, ChevronRight, Flag, Gauge, ImageOff, Keyboard, Mic, Pause, Play, RotateCcw, Square, Star, Trophy, Volume2, Wrench, X } from "lucide-react";
 import { uploadLearnRecording } from "../../api/uniplanetApi";
 import { ActivityHintImage, ActivityListeningImage, ActivityPageArrowImage, ActivitySoundImage, ActivityTimerBadge, videoActivityControlAssets, VideoActivityPageArrow, VideoActivityPageIndicator } from "../ActivityImageControls";
+import { ActivityLoadingVisual } from "./ActivityLoadingVisual";
 import { bffRecognitionPort } from "../../ports/bffRecognitionPort";
 import { browserRecorderPort } from "../../ports/browserRecorderPort";
 import { getActTypeDefinition, getActTypeLabel } from "../../services/actTypeCatalog";
@@ -412,14 +413,7 @@ async function decodeImageBlob(blob: Blob): Promise<void> {
 }
 
 function ActivityResourceLoading() {
-  return (
-    <div className="activity-resource-loading" role="status" aria-live="polite">
-      <span className="activity-resource-loading-orbit" aria-hidden="true" />
-      <strong>Loading activity</strong>
-      <span>Preparing learning resources...</span>
-      <i aria-hidden="true"><b /></i>
-    </div>
-  );
+  return <ActivityLoadingVisual className="activity-resource-loading" />;
 }
 
 function activityMetadataPaths(context: ActivityRendererContext): string[] {
