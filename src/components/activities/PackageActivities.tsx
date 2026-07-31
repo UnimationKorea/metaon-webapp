@@ -10,9 +10,9 @@ import { MetaOnActivityCode, normalizeActivityCode } from "../../services/activi
 import { indexedDbStorage } from "../../services/indexedDbStorage";
 import { parseCaptionCues, type ListenCaptionCue } from "../../services/listenEbookCaptions";
 import {
-  hasCachedVideoMedia,
-  isVideoMediaServiceWorkerControlling,
-  videoMediaCacheUrl
+  bookMediaCacheUrl,
+  hasCachedBookMedia,
+  isBookMediaServiceWorkerControlling
 } from "../../services/videoMediaCache";
 import type { LearnEventInput } from "../../types/learnEvents";
 import { ActType, type Activity, type ActivityRendererContext } from "../../types/metaonTypes";
@@ -6640,7 +6640,7 @@ function usePackageUrlsState(
   const [urls, setUrls] = useState<Record<string, string>>({});
   const [checked, setChecked] = useState(false);
   const [error, setError] = useState(false);
-  const videoMediaServiceWorkerControlled = useVideoMediaServiceWorkerControlled();
+  const bookMediaServiceWorkerControlled = useBookMediaServiceWorkerControlled();
 
   useEffect(() => {
     let active = true;
@@ -6657,10 +6657,10 @@ function usePackageUrlsState(
         if (
           key &&
           mediaCachePaths.includes(path) &&
-          videoMediaServiceWorkerControlled &&
-          await hasCachedVideoMedia(key, path)
+          bookMediaServiceWorkerControlled &&
+          await hasCachedBookMedia(key, path)
         ) {
-          return [path, videoMediaCacheUrl(key, path)] as const;
+          return [path, bookMediaCacheUrl(key, path)] as const;
         }
 
         const blob = await indexedDbStorage.getFileBlob(key, path);
@@ -6686,7 +6686,7 @@ function usePackageUrlsState(
     return () => {
       active = false;
     };
-  }, [key, mediaCachePaths.join("|"), uniquePaths, videoMediaServiceWorkerControlled]);
+  }, [key, mediaCachePaths.join("|"), uniquePaths, bookMediaServiceWorkerControlled]);
 
   return { urls, checked, error };
 }
@@ -6719,12 +6719,12 @@ function getCachedObjectUrl(packageKey: string, path: string, blob: Blob): strin
   return entry.url;
 }
 
-function useVideoMediaServiceWorkerControlled(): boolean {
-  const [isControlled, setIsControlled] = useState(isVideoMediaServiceWorkerControlling);
+function useBookMediaServiceWorkerControlled(): boolean {
+  const [isControlled, setIsControlled] = useState(isBookMediaServiceWorkerControlling);
 
   useEffect(() => {
     if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return undefined;
-    const update = () => setIsControlled(isVideoMediaServiceWorkerControlling());
+    const update = () => setIsControlled(isBookMediaServiceWorkerControlling());
     navigator.serviceWorker.addEventListener("controllerchange", update);
     update();
     return () => navigator.serviceWorker.removeEventListener("controllerchange", update);

@@ -167,9 +167,12 @@ export type BookPackage = {
   // resources are missing. Undefined on packages cached before this was tracked (treat as "all
   // present" — those imports only succeeded because every resource downloaded).
   npcScriptPaths?: string[];
-  // Virtual paths whose full media responses also exist in Cache Storage. All
-  // other resources keep using the IndexedDB Blob compatibility path.
+  // Virtual paths whose image, audio, or video responses also exist in Cache
+  // Storage. Non-media resources keep using the IndexedDB Blob path.
   mediaCachePaths?: string[];
+  // Version of the Cache Storage media bridge. Existing IndexedDB-only Books
+  // hydrate their first and next Activity media without a second S3 download.
+  mediaCacheVersion?: number;
   // Persisted paths let Activities locate their own resources without scanning
   // every Blob record in the browser database.
   filePaths?: string[];

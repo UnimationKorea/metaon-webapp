@@ -2,12 +2,14 @@ import { getBookResourceManifest } from "../api/uniplanetApi";
 import { indexedDbStorage } from "./indexedDbStorage";
 import { guessMimeType } from "./mime";
 import { packageKeyFor } from "./packageKeys";
-import { cacheVideoMediaResponse } from "./videoMediaCache";
+import { planBookResourceDownload } from "./bookResourcePriority";
+import { cacheBookMediaResponse, isBookMediaCacheResource } from "./videoMediaCache";
 import type { StoredPackageFile } from "../types/ports";
-import type { BookData, BookPackage, BookResource, DownloadProgress } from "../types/metaonTypes";
+import type { BookData, BookPackage, BookResource, BookResourceManifest, DownloadProgress } from "../types/metaonTypes";
 
 // MOVIE01 now caches optional script audio and word-level caption timing files.
 export const BOOK_PACKAGE_CACHE_VERSION = 9;
+export const BOOK_MEDIA_CACHE_VERSION = 1;
 
 export async function downloadAndCacheBookPackage(
   book: BookData,
@@ -29,6 +31,7 @@ export async function downloadAndCacheBookPackage(
   const downloadedFileMap = new Map<string, StoredPackageFile>();
   const cachedBlobMap = new Map<string, Blob>();
   const mediaCachePaths = new Set<string>();
+  const downloadPlan = planBookResourceDownload(manifest.resources, manifest.lessonDays);
   const seenResourcePaths = new Set(manifest.resources.map((resource) => normalizePath(resource.path)));
   let totalFiles = manifest.resources.length;
   let loadedFiles = 0;
@@ -47,7 +50,7 @@ export async function downloadAndCacheBookPackage(
     const cached = await indexedDbStorage.getFileBlob(key, path);
     if (cached) {
       cachedBlobMap.set(path, cached);
-      const restoredToMediaCache = await cacheVideoMediaResponse(
+      const restoredToMediaCache = await cacheBookMediaResponse(
         key,
         { path, mimeType: resource.mimeType || cached.type, category: resource.category },
         new Response(cached, { headers: { "Content-Type": resource.mimeType || cached.type || "application/octet-stream" } })
@@ -79,9 +82,9 @@ export async function downloadAndCacheBookPackage(
       if (isNpcResource(resource)) return skipOptionalResource(path);
       throw new Error(`Failed to download ${resource.sourcePath}: ${response.status} ${response.statusText}`);
     }
-    // The complete response is additionally cached only for the video Activity
-    // allowlist. Cache Storage failure never fails the existing IndexedDB import.
-    const cacheMediaPromise = cacheVideoMediaResponse(
+    // Keep raw image, audio, and video responses in Cache Storage. Failure never
+    // fails the existing IndexedDB import, which remains the compatibility path.
+    const cacheMediaPromise = cacheBookMediaResponse(
       key,
       { path, mimeType: resource.mimeType, category: resource.category },
       response.clone()
@@ -123,7 +126,7 @@ export async function downloadAndCacheBookPackage(
     });
   }
 
-  for (const resource of manifest.resources) {
+  for (const resource of downloadPlan.orderedResources) {
     await downloadResource(resource);
   }
 
@@ -139,7 +142,8 @@ export async function downloadAndCacheBookPackage(
 
   if (newDiscoveredAssetResources.length > 0) {
     totalFiles += newDiscoveredAssetResources.length;
-    for (const resource of newDiscoveredAssetResources) {
+    const discoveredPlan = planBookResourceDownload(newDiscoveredAssetResources, manifest.lessonDays);
+    for (const resource of discoveredPlan.orderedResources) {
       await downloadResource(resource);
     }
   }
@@ -162,6 +166,7 @@ export async function downloadAndCacheBookPackage(
     lessonDays: manifest.lessonDays,
     npcScriptPaths,
     mediaCachePaths: Array.from(mediaCachePaths),
+    mediaCacheVersion: BOOK_MEDIA_CACHE_VERSION,
     // Persist only files that were successfully written or reused from IndexedDB.
     // Optional resources can be absent from an API manifest, so the renderer must
     // not treat every declared manifest path as locally available.
@@ -184,7 +189,48 @@ export async function downloadAndCacheBookPackage(
 
 export async function getCachedPackage(book: Pick<BookData, "bookIdx" | "seriesGroup" | "seriesIdx" | "bookId">): Promise<BookPackage | undefined> {
   const cached = await indexedDbStorage.getPackage(packageKeyFor(book));
-  return cached?.cacheVersion === BOOK_PACKAGE_CACHE_VERSION ? cached : undefined;
+  if (cached?.cacheVersion !== BOOK_PACKAGE_CACHE_VERSION) return undefined;
+  return hydratePriorityMediaCache(cached);
+}
+
+async function hydratePriorityMediaCache(packageMeta: BookPackage): Promise<BookPackage> {
+  if (packageMeta.mediaCacheVersion === BOOK_MEDIA_CACHE_VERSION || typeof caches === "undefined") return packageMeta;
+  if (!isBookResourceManifest(packageMeta.manifest)) return packageMeta;
+
+  const plan = planBookResourceDownload(packageMeta.manifest.resources, packageMeta.manifest.lessonDays);
+  const mediaCachePaths = new Set(packageMeta.mediaCachePaths || []);
+  let updated = false;
+
+  for (const resource of plan.immediateResources) {
+    if (!isBookMediaCacheResource(resource)) continue;
+    const path = normalizePath(resource.path);
+    const blob = await indexedDbStorage.getFileBlob(packageMeta.key, path);
+    if (!blob) continue;
+    const cached = await cacheBookMediaResponse(
+      packageMeta.key,
+      { path, mimeType: resource.mimeType || blob.type, category: resource.category },
+      new Response(blob, { headers: { "Content-Type": resource.mimeType || blob.type || "application/octet-stream" } })
+    );
+    if (cached) {
+      mediaCachePaths.add(path);
+      updated = true;
+    }
+  }
+
+  if (!updated) return packageMeta;
+  const nextPackage = {
+    ...packageMeta,
+    mediaCachePaths: Array.from(mediaCachePaths),
+    mediaCacheVersion: BOOK_MEDIA_CACHE_VERSION
+  };
+  await indexedDbStorage.savePackage(nextPackage, []);
+  return nextPackage;
+}
+
+function isBookResourceManifest(value: unknown): value is BookResourceManifest {
+  if (!value || typeof value !== "object") return false;
+  const manifest = value as Partial<BookResourceManifest>;
+  return Array.isArray(manifest.resources) && Array.isArray(manifest.lessonDays);
 }
 
 function normalizePath(path: string): string {

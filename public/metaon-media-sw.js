@@ -1,5 +1,5 @@
-const VIDEO_MEDIA_CACHE_NAME = "metaon-video-media-v1";
-const VIDEO_MEDIA_CACHE_PATH_PREFIX = "/__metaon-book-media/";
+const BOOK_MEDIA_CACHE_NAME = "metaon-book-media-v2";
+const BOOK_MEDIA_CACHE_PATH_PREFIX = "/__metaon-book-media/";
 
 self.addEventListener("install", () => {
   self.skipWaiting();
@@ -11,13 +11,13 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
-  if (url.origin !== self.location.origin || !url.pathname.startsWith(VIDEO_MEDIA_CACHE_PATH_PREFIX)) return;
+  if (url.origin !== self.location.origin || !url.pathname.startsWith(BOOK_MEDIA_CACHE_PATH_PREFIX)) return;
 
-  event.respondWith(fromVideoMediaCache(event.request));
+  event.respondWith(fromBookMediaCache(event.request));
 });
 
-async function fromVideoMediaCache(request) {
-  const cache = await caches.open(VIDEO_MEDIA_CACHE_NAME);
+async function fromBookMediaCache(request) {
+  const cache = await caches.open(BOOK_MEDIA_CACHE_NAME);
   const response = await cache.match(request.url);
   if (!response) {
     return new Response("Cached media resource is unavailable.", {

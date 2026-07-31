@@ -1,51 +1,44 @@
 import type { BookResource } from "../types/metaonTypes";
 
-export const VIDEO_MEDIA_CACHE_NAME = "metaon-video-media-v1";
-export const VIDEO_MEDIA_CACHE_PATH_PREFIX = "/__metaon-book-media/";
+export const BOOK_MEDIA_CACHE_NAME = "metaon-book-media-v2";
+export const BOOK_MEDIA_CACHE_PATH_PREFIX = "/__metaon-book-media/";
 
-const VIDEO_ACTIVITY_FOLDERS = new Set(["wdca02", "wdqu03", "wdbl02", "stbl02", "stsc02", "strc02"]);
-const VIDEO_MEDIA_CATEGORIES = new Set([
-  "movie",
-  "movie-audio",
-  "video-background",
-  "wdca02",
-  "wdqu03",
-  "wdbl02",
-  "stbl02",
-  "stsc02",
-  "strc02"
-]);
+// Compatibility aliases keep older Activity imports working while all media
+// types now share one Cache Storage implementation.
+export const VIDEO_MEDIA_CACHE_NAME = BOOK_MEDIA_CACHE_NAME;
+export const VIDEO_MEDIA_CACHE_PATH_PREFIX = BOOK_MEDIA_CACHE_PATH_PREFIX;
 
-export function isVideoMediaCacheResource(resource: Pick<BookResource, "path" | "mimeType" | "category">): boolean {
-  const mimeType = resource.mimeType.toLowerCase();
+export function isBookMediaCacheResource(resource: Pick<BookResource, "path" | "mimeType" | "category">): boolean {
+  const mimeType = (resource.mimeType || "").toLowerCase();
   const path = resource.path.toLowerCase();
-  const category = resource.category?.toLowerCase() || "";
-  const isMediaFile = mimeType.startsWith("video/") || mimeType.startsWith("audio/") || /\.(mp4|webm|m3u8|mp3|m4a|ogg|wav)(?:$|\?)/i.test(path);
+  const isMediaFile =
+    mimeType.startsWith("image/") ||
+    mimeType.startsWith("video/") ||
+    mimeType.startsWith("audio/") ||
+    /\.(png|jpe?g|webp|gif|svg|mp4|webm|m3u8|mp3|m4a|ogg|wav)(?:$|\?)/i.test(path);
 
-  if (!isMediaFile) return false;
-  if (VIDEO_MEDIA_CATEGORIES.has(category)) return true;
-  return path.split("/").some((segment) => VIDEO_ACTIVITY_FOLDERS.has(segment));
+  return isMediaFile;
 }
 
-export function videoMediaCacheUrl(packageKey: string, path: string): string {
+export function bookMediaCacheUrl(packageKey: string, path: string): string {
   const encodedPackageKey = encodeURIComponent(packageKey);
   const encodedPath = normalizePath(path)
     .split("/")
     .map((segment) => encodeURIComponent(segment))
     .join("/");
-  return new URL(`${VIDEO_MEDIA_CACHE_PATH_PREFIX}${encodedPackageKey}/${encodedPath}`, window.location.origin).toString();
+  return new URL(`${BOOK_MEDIA_CACHE_PATH_PREFIX}${encodedPackageKey}/${encodedPath}`, window.location.origin).toString();
 }
 
-export async function cacheVideoMediaResponse(
+export async function cacheBookMediaResponse(
   packageKey: string,
   resource: Pick<BookResource, "path" | "mimeType" | "category">,
   response: Response
 ): Promise<boolean> {
-  if (!isVideoMediaCacheResource(resource) || typeof caches === "undefined") return false;
+  if (!isBookMediaCacheResource(resource) || typeof caches === "undefined") return false;
 
   try {
-    const cache = await caches.open(VIDEO_MEDIA_CACHE_NAME);
-    await cache.put(videoMediaCacheUrl(packageKey, resource.path), response);
+    const cache = await caches.open(BOOK_MEDIA_CACHE_NAME);
+    await cache.put(bookMediaCacheUrl(packageKey, resource.path), response);
     return true;
   } catch {
     // Cache Storage quota, private browsing, or a browser policy must not make a
@@ -54,22 +47,22 @@ export async function cacheVideoMediaResponse(
   }
 }
 
-export async function hasCachedVideoMedia(packageKey: string, path: string): Promise<boolean> {
+export async function hasCachedBookMedia(packageKey: string, path: string): Promise<boolean> {
   if (typeof caches === "undefined") return false;
 
   try {
-    const cache = await caches.open(VIDEO_MEDIA_CACHE_NAME);
-    return Boolean(await cache.match(videoMediaCacheUrl(packageKey, path)));
+    const cache = await caches.open(BOOK_MEDIA_CACHE_NAME);
+    return Boolean(await cache.match(bookMediaCacheUrl(packageKey, path)));
   } catch {
     return false;
   }
 }
 
-export function isVideoMediaServiceWorkerControlling(): boolean {
+export function isBookMediaServiceWorkerControlling(): boolean {
   return typeof navigator !== "undefined" && Boolean(navigator.serviceWorker?.controller);
 }
 
-export function registerVideoMediaServiceWorker(): void {
+export function registerBookMediaServiceWorker(): void {
   if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
 
   void navigator.serviceWorker.register("/metaon-media-sw.js", { scope: "/" }).catch(() => {
@@ -77,6 +70,13 @@ export function registerVideoMediaServiceWorker(): void {
     // Existing activity resource loading must continue without it.
   });
 }
+
+export const isVideoMediaCacheResource = isBookMediaCacheResource;
+export const videoMediaCacheUrl = bookMediaCacheUrl;
+export const cacheVideoMediaResponse = cacheBookMediaResponse;
+export const hasCachedVideoMedia = hasCachedBookMedia;
+export const isVideoMediaServiceWorkerControlling = isBookMediaServiceWorkerControlling;
+export const registerVideoMediaServiceWorker = registerBookMediaServiceWorker;
 
 function normalizePath(path: string): string {
   return path.replace(/\\/g, "/").replace(/^\/+/, "");

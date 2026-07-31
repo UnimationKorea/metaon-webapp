@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getBookResourceManifest } from "../api/uniplanetApi";
 import { indexedDbStorage } from "./indexedDbStorage";
-import { BOOK_PACKAGE_CACHE_VERSION, downloadAndCacheBookPackage, getCachedPackage } from "./bookPackageImporter";
+import { BOOK_MEDIA_CACHE_VERSION, BOOK_PACKAGE_CACHE_VERSION, downloadAndCacheBookPackage, getCachedPackage } from "./bookPackageImporter";
 import { VIDEO_MEDIA_CACHE_NAME } from "./videoMediaCache";
-import type { BookData, BookResourceManifest } from "../types/metaonTypes";
+import { ActType, type BookData, type BookResourceManifest } from "../types/metaonTypes";
 
 vi.mock("../api/uniplanetApi", () => ({
   getBookResourceManifest: vi.fn()
@@ -166,6 +166,111 @@ describe("downloadAndCacheBookPackage", () => {
     expect(caches.open).toHaveBeenCalledWith(VIDEO_MEDIA_CACHE_NAME);
     expect(put).toHaveBeenCalledTimes(1);
     expect(pkg.mediaCachePaths).toEqual(["Lessons/L1/D1/wdca02/video/loop.mp4"]);
+  });
+
+  it("downloads and caches the first Activity and next Activity media before unrelated Book resources", async () => {
+    const manifest: BookResourceManifest = {
+      key: "book:6710",
+      book,
+      generatedFiles: [],
+      lessonDays: [
+        {
+          id: "1:1",
+          lesson: 1,
+          day: 1,
+          title: "Day 1",
+          activities: [
+            { id: "word-card", actType: ActType.FlashCardSpace, activityCode: "WDCA01", title: "Word Card", actNum: 0, category: "word" },
+            { id: "sentence-blank", actType: ActType.SentenceCheckSpace, activityCode: "STBL01", title: "Sentence Blank", actNum: 1, category: "sentence" }
+          ]
+        }
+      ],
+      resources: [
+        { path: "Lessons/L1/D1/reading/01/img/img_01.png", sourcePath: "/reading.png", url: "https://example.test/reading.png", mimeType: "image/png", category: "reading" },
+        { path: "Lessons/L1/D1/word/img/word_01.png", sourcePath: "/word.png", url: "https://example.test/word.png", mimeType: "image/png", category: "word" },
+        { path: "Lessons/L1/D1/word/snd/snd_word_01.mp3", sourcePath: "/word.mp3", url: "https://example.test/word.mp3", mimeType: "audio/mpeg", category: "word" },
+        { path: "Lessons/L1/D1/sentence/snd/snd_sentence_01.mp3", sourcePath: "/sentence.mp3", url: "https://example.test/sentence.mp3", mimeType: "audio/mpeg", category: "sentence" }
+      ]
+    };
+    const requestedUrls: string[] = [];
+    const put = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("caches", { open: vi.fn().mockResolvedValue({ put }) });
+    vi.mocked(getBookResourceManifest).mockResolvedValue(manifest);
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      requestedUrls.push(url);
+      return new Response("media", { status: 200 });
+    }));
+
+    const pkg = await downloadAndCacheBookPackage(book);
+
+    expect(requestedUrls).toEqual([
+      "https://example.test/word.png",
+      "https://example.test/word.mp3",
+      "https://example.test/sentence.mp3",
+      "https://example.test/reading.png"
+    ]);
+    expect(put).toHaveBeenCalledTimes(4);
+    expect(pkg.mediaCachePaths).toEqual([
+      "Lessons/L1/D1/word/img/word_01.png",
+      "Lessons/L1/D1/word/snd/snd_word_01.mp3",
+      "Lessons/L1/D1/sentence/snd/snd_sentence_01.mp3",
+      "Lessons/L1/D1/reading/01/img/img_01.png"
+    ]);
+    expect(pkg.mediaCacheVersion).toBe(BOOK_MEDIA_CACHE_VERSION);
+  });
+
+  it("hydrates first and next Activity media from an existing IndexedDB Book without S3 download", async () => {
+    const manifest: BookResourceManifest = {
+      key: "book:6710",
+      book,
+      generatedFiles: [],
+      lessonDays: [
+        {
+          id: "1:1",
+          lesson: 1,
+          day: 1,
+          title: "Day 1",
+          activities: [
+            { id: "word-card", actType: ActType.FlashCardSpace, activityCode: "WDCA01", title: "Word Card", actNum: 0, category: "word" },
+            { id: "sentence-blank", actType: ActType.SentenceCheckSpace, activityCode: "STBL01", title: "Sentence Blank", actNum: 1, category: "sentence" }
+          ]
+        }
+      ],
+      resources: [
+        { path: "Lessons/L1/D1/reading/01/img/img_01.png", sourcePath: "/reading.png", url: "https://example.test/reading.png", mimeType: "image/png", category: "reading" },
+        { path: "Lessons/L1/D1/word/img/word_01.png", sourcePath: "/word.png", url: "https://example.test/word.png", mimeType: "image/png", category: "word" },
+        { path: "Lessons/L1/D1/word/snd/snd_word_01.mp3", sourcePath: "/word.mp3", url: "https://example.test/word.mp3", mimeType: "audio/mpeg", category: "word" },
+        { path: "Lessons/L1/D1/sentence/snd/snd_sentence_01.mp3", sourcePath: "/sentence.mp3", url: "https://example.test/sentence.mp3", mimeType: "audio/mpeg", category: "sentence" }
+      ]
+    };
+    const put = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("caches", { open: vi.fn().mockResolvedValue({ put }) });
+    vi.mocked(indexedDbStorage.getPackage).mockResolvedValue({
+      key: "book:6710",
+      cacheVersion: BOOK_PACKAGE_CACHE_VERSION,
+      source: "metaon3-resources",
+      bookId: book.bookId,
+      seriesGroup: book.seriesGroup,
+      seriesIdx: book.seriesIdx,
+      downloadedAt: "2026-07-31T00:00:00.000Z",
+      totalFiles: 4,
+      totalBytes: 10,
+      lessonDays: manifest.lessonDays,
+      manifest,
+      filePaths: manifest.resources.map((resource) => resource.path)
+    });
+    vi.mocked(indexedDbStorage.getFileBlob).mockResolvedValue(new Blob(["media"], { type: "application/octet-stream" }));
+
+    const cached = await getCachedPackage(book);
+
+    expect(cached?.mediaCacheVersion).toBe(BOOK_MEDIA_CACHE_VERSION);
+    expect(cached?.mediaCachePaths).toEqual([
+      "Lessons/L1/D1/word/img/word_01.png",
+      "Lessons/L1/D1/word/snd/snd_word_01.mp3",
+      "Lessons/L1/D1/sentence/snd/snd_sentence_01.mp3"
+    ]);
+    expect(put).toHaveBeenCalledTimes(3);
+    expect(indexedDbStorage.savePackage).toHaveBeenCalledWith(expect.objectContaining({ mediaCacheVersion: BOOK_MEDIA_CACHE_VERSION }), []);
   });
 
   it("downloads MP3 assets referenced by cached npcqhk/script.json", async () => {
