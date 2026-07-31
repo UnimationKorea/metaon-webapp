@@ -240,7 +240,7 @@ export function ActivityPage() {
         onExit: returnToBook
       })}
       {studyError ? <p className="activity-study-error">{studyError}</p> : null}
-      {!isNpcQuickCheck && !isMovie01 ? (
+      {!isNpcQuickCheck ? (
         <button
           aria-label={isComplete ? "Activity completion saved" : "Complete activity"}
           aria-pressed={isComplete}

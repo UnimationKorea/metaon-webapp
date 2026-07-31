@@ -1451,6 +1451,7 @@ function Movie01Activity({ context }: { context: ActivityRendererContext }) {
   const scriptAudioUrl = usePackageUrl(context, selectedMovie?.audioPath);
   const captionPaths = selectedMovie?.captionPaths || [];
   const captionTextByPath = usePackageTextList(context, captionPaths);
+  const modeVideoRef = useRef<HTMLVideoElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [mode, setMode] = useState<MovieLearningMode>();
@@ -1505,7 +1506,23 @@ function Movie01Activity({ context }: { context: ActivityRendererContext }) {
     void media.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
   }, [mode, scriptAudioUrl, usesScriptAudio, videoUrl]);
 
+  function resetMediaToStart(media: HTMLMediaElement | null) {
+    if (!media) return;
+    media.pause();
+    try {
+      media.currentTime = 0;
+    } catch {
+      // Seeking is unavailable until some streamed media exposes metadata.
+    }
+  }
+
   function selectMode(nextMode: MovieLearningMode) {
+    resetMediaToStart(modeVideoRef.current);
+    resetMediaToStart(videoRef.current);
+    resetMediaToStart(audioRef.current);
+    setCurrentMs(0);
+    setDurationMs(0);
+    setIsPlaying(false);
     setMode(nextMode);
     setShowModeMenu(false);
     recordLearnEvent(context, {
@@ -1533,6 +1550,7 @@ function Movie01Activity({ context }: { context: ActivityRendererContext }) {
           <>
             {videoUrl && !usesScriptAudio ? (
               <video
+                key="movie01-player-video"
                 className="movie01-video"
                 controls={false}
                 playsInline
@@ -1615,7 +1633,17 @@ function Movie01Activity({ context }: { context: ActivityRendererContext }) {
         ) : (
           <>
             {videoUrl ? (
-              <video className="movie01-mode-video" src={videoUrl} autoPlay loop muted playsInline preload="auto" />
+              <video
+                key="movie01-mode-background"
+                className="movie01-mode-video"
+                ref={modeVideoRef}
+                src={videoUrl}
+                autoPlay
+                loop
+                muted
+                playsInline
+                preload="auto"
+              />
             ) : (
               <img className="movie01-mode-background" src="/metaon-assets/activity/movie01/figma-source/menu-background.png" alt="" />
             )}

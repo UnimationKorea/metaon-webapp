@@ -4362,10 +4362,6 @@ button.image-page-control:hover:not(:disabled) {
   transform: translate(-50%, -50%);
 }
 
-.activity-layout:has(.movie01-shell) .hub-activity-complete-button {
-  display: none;
-}
-
 .activity-layout:has(.movie01-shell) .video-activity-map {
   display: none;
 }
