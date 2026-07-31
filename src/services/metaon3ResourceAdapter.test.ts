@@ -369,6 +369,13 @@ describe("normalizeBookResourceManifest", () => {
       manifest.generatedFiles.find((file) => file.path.endsWith("movie/info_movie.json"))?.content || "{}"
     );
     expect(movieInfo.movie[0].captionPaths).toContain("Lessons/L1/D1/listening/01/caption/movie_01_vtt.vtt");
-    expect(movieInfo.captions[0]).toMatchObject({ text: "They go back on the boat.", translation: "그들은 배로 돌아갑니다." });
+    expect(movieInfo).toMatchObject({ captionTiming: "generated" });
+    expect(movieInfo.captions[0]).toMatchObject({
+      text: "They go back on the boat.",
+      translation: "그들은 배로 돌아갑니다.",
+      startMs: 0,
+      endMs: 0,
+      generated: true
+    });
   });
 });

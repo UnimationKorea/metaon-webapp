@@ -28,6 +28,7 @@ type SentenceInfo = {
 type MovieInfo = {
   version?: number;
   source?: string;
+  captionTiming?: "generated" | "source";
   movie?: Array<{
     is_url?: boolean;
     video_path?: string;
@@ -40,6 +41,7 @@ type MovieInfo = {
 
 type MovieCaptionCue = ListenCaptionCue & {
   translation?: string;
+  generated?: boolean;
 };
 
 type ListenEbookInfo = {
@@ -1418,8 +1420,8 @@ function Movie01Activity({ context }: { context: ActivityRendererContext }) {
   );
   const scriptCues = useMemo(() => {
     const source = parsedCaptionCues.length > 0 ? parsedCaptionCues : info?.captions?.length ? info.captions : previewCues;
-    return normalizeMovieCaptionCues(source, durationMs);
-  }, [durationMs, info?.captions, parsedCaptionCues, previewCues]);
+    return normalizeMovieCaptionCues(source, durationMs, parsedCaptionCues.length === 0 && info?.captionTiming !== "source");
+  }, [durationMs, info?.captionTiming, info?.captions, parsedCaptionCues, previewCues]);
   const activeCueIndex = useMemo(() => findMovieCueIndex(scriptCues, currentMs), [currentMs, scriptCues]);
   const visibleCues = useMemo(() => movieScriptWindow(scriptCues, activeCueIndex), [activeCueIndex, scriptCues]);
   const isScriptMode = mode === "script" || mode === "movie-script";
@@ -1433,11 +1435,6 @@ function Movie01Activity({ context }: { context: ActivityRendererContext }) {
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !mode) return;
-    if (mode === "script") {
-      video.pause();
-      setIsPlaying(false);
-      return;
-    }
     void video.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
   }, [mode, videoUrl]);
 
@@ -1454,7 +1451,7 @@ function Movie01Activity({ context }: { context: ActivityRendererContext }) {
 
   function togglePlayback() {
     const video = videoRef.current;
-    if (!video || mode === "script") return;
+    if (!video) return;
     if (video.paused) {
       void video.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
     } else {
@@ -1464,7 +1461,7 @@ function Movie01Activity({ context }: { context: ActivityRendererContext }) {
 
   return (
     <ActivityFrame context={context} actionLabel="Movie" className="movie01-frame">
-      <section className={`movie01-shell${mode ? " is-player" : " is-mode-select"}`}>
+      <section className={`movie01-shell${mode ? " is-player" : " is-mode-select"}${mode === "script" ? " is-script-mode" : ""}`}>
         {mode ? (
           <>
             {videoUrl ? (
@@ -1484,6 +1481,7 @@ function Movie01Activity({ context }: { context: ActivityRendererContext }) {
             ) : (
               <img className="movie01-fallback-image" src="/metaon-assets/activity/movie01/figma-source/player-fallback-warm.png" alt="" />
             )}
+            {mode === "script" ? <img className="movie01-script-poster" src="/metaon-assets/activity/movie01/figma-source/player-fallback-warm.png" alt="" /> : null}
             <span aria-hidden="true" className="movie01-player-scrim" />
             <div className="movie01-controls" aria-label="Movie controls">
               <div className="movie01-control-menu">
@@ -1530,7 +1528,7 @@ function Movie01Activity({ context }: { context: ActivityRendererContext }) {
                 )}
               </div>
             ) : null}
-            {mode !== "script" && videoUrl ? (
+            {videoUrl ? (
               <button className="movie01-play-toggle" type="button" onClick={togglePlayback} aria-label={isPlaying ? "Pause movie" : "Play movie"}>
                 {isPlaying ? <Pause size={28} fill="currentColor" aria-hidden="true" /> : <Play size={28} fill="currentColor" aria-hidden="true" />}
               </button>
@@ -6133,14 +6131,14 @@ function usePackageTextList(context: ActivityRendererContext, paths: string[]): 
   return texts;
 }
 
-function normalizeMovieCaptionCues(cues: MovieCaptionCue[], durationMs: number): MovieCaptionCue[] {
+function normalizeMovieCaptionCues(cues: MovieCaptionCue[], durationMs: number, useGeneratedTiming = false): MovieCaptionCue[] {
   const sorted = cues
     .filter((cue) => cue.text.trim())
     .map((cue) => ({ ...cue, text: cue.text.replace(/\s+/g, " ").trim() }))
     .sort((left, right) => left.startMs - right.startMs);
   if (sorted.length === 0) return [];
 
-  const hasRealTiming = sorted.some((cue) => cue.startMs > 0 || cue.endMs < 59000);
+  const hasRealTiming = !useGeneratedTiming && sorted.some((cue) => cue.startMs > 0 || cue.endMs < 59000);
   if (hasRealTiming) return sorted;
 
   const cueDuration = Math.max(2500, Math.floor((durationMs || sorted.length * 5000) / sorted.length));
@@ -6155,7 +6153,8 @@ function findMovieCueIndex(cues: MovieCaptionCue[], currentMs: number): number {
   if (cues.length === 0) return -1;
   const exactIndex = cues.findIndex((cue) => currentMs >= cue.startMs && currentMs < cue.endMs);
   if (exactIndex >= 0) return exactIndex;
-  return Math.max(0, cues.findIndex((cue) => cue.startMs > currentMs) - 1);
+  const nextIndex = cues.findIndex((cue) => cue.startMs > currentMs);
+  return nextIndex < 0 ? cues.length - 1 : Math.max(0, nextIndex - 1);
 }
 
 function movieScriptWindow(cues: MovieCaptionCue[], activeIndex: number): Array<{ cue: MovieCaptionCue; index: number }> {

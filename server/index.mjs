@@ -2373,13 +2373,14 @@ function toMovieInfo(day, virtualBase) {
     const sentence = recordValue(rawSentence);
     const translation = firstMeaning(sentence);
     return splitCaptionSentences(firstCaptionText(sentence.sentence, sentence.eng, sentence.Eng, sentence.script, sentence.text, sentence.caption)).map(
-      (text, textIndex) => ({
+      (text) => ({
         pageIndex: 0,
         audioIndex: sentenceIndex,
-        startMs: (sentenceIndex + textIndex) * 60000,
-        endMs: (sentenceIndex + textIndex + 1) * 60000,
+        startMs: 0,
+        endMs: 0,
         text,
-        translation
+        translation,
+        generated: true
       })
     );
   });
@@ -2387,6 +2388,7 @@ function toMovieInfo(day, virtualBase) {
   return {
     version: 1,
     source: "metaon3-movie",
+    captionTiming: "generated",
     movie: movie.map((item, index) => {
       const videoSource = movieBookInfoVideoSource(item);
       return {

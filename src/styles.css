@@ -4032,6 +4032,7 @@ button.image-page-control:hover:not(:disabled) {
 .movie01-mode-background,
 .movie01-video,
 .movie01-fallback-image,
+.movie01-script-poster,
 .movie01-mode-scrim,
 .movie01-player-scrim {
   position: absolute;
@@ -4042,6 +4043,7 @@ button.image-page-control:hover:not(:disabled) {
 
 .movie01-mode-background,
 .movie01-fallback-image,
+.movie01-script-poster,
 .movie01-video {
   z-index: 0;
   object-fit: cover;
@@ -4051,6 +4053,12 @@ button.image-page-control:hover:not(:disabled) {
   background: #101b37;
 }
 
+.movie01-script-poster {
+  z-index: 1;
+  object-fit: cover;
+  pointer-events: none;
+}
+
 .movie01-mode-scrim {
   z-index: 1;
   pointer-events: none;
@@ -4058,7 +4066,7 @@ button.image-page-control:hover:not(:disabled) {
 }
 
 .movie01-player-scrim {
-  z-index: 1;
+  z-index: 2;
   pointer-events: none;
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.06) 32%, rgba(0, 0, 0, 0.68) 100%);
 }
