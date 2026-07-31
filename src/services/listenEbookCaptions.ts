@@ -1,3 +1,9 @@
+export type CaptionWordTiming = {
+  text: string;
+  startMs: number;
+  endMs: number;
+};
+
 export type ListenCaptionCue = {
   pageIndex: number;
   audioIndex: number;
@@ -5,6 +11,7 @@ export type ListenCaptionCue = {
   endMs: number;
   text: string;
   lang?: string;
+  words?: CaptionWordTiming[];
 };
 
 export type CaptionParseDefaults = {
@@ -78,30 +85,47 @@ export function parseVttCaptionCues(source: string, defaults: CaptionParseDefaul
 export function parseJsonCaptionCues(source: string, defaults: CaptionParseDefaults = {}): ListenCaptionCue[] {
   try {
     const parsed = JSON.parse(source) as unknown;
+    const parsedRecord = parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : undefined;
     const records = Array.isArray(parsed)
       ? parsed
-      : Array.isArray((parsed as { cues?: unknown[] }).cues)
-        ? (parsed as { cues: unknown[] }).cues
-        : Array.isArray((parsed as { captions?: unknown[] }).captions)
-          ? (parsed as { captions: unknown[] }).captions
+      : Array.isArray(parsedRecord?.cues)
+        ? parsedRecord.cues
+        : Array.isArray(parsedRecord?.captions)
+          ? parsedRecord.captions
           : [];
+
+    if (records.length === 0 && parsedRecord) {
+      const words = parseWordTimings(parsedRecord.words ?? parsedRecord.word_timings ?? parsedRecord.wordTiming ?? parsedRecord.word_timing, 0, 0);
+      if (words.length > 0) {
+        return [{
+          pageIndex: defaults.pageIndex ?? 0,
+          audioIndex: defaults.audioIndex ?? 0,
+          startMs: Math.min(...words.map((word) => word.startMs)),
+          endMs: Math.max(...words.map((word) => word.endMs)),
+          text: words.map((word) => word.text).join(" "),
+          words
+        }];
+      }
+    }
 
     return records
       .map((record) => {
         const item = record && typeof record === "object" ? (record as Record<string, unknown>) : {};
-        const text = String(item.text ?? item.caption ?? item.Eng ?? item.eng ?? "").trim();
+        const text = String(item.text ?? item.caption ?? item.Eng ?? item.eng ?? item.word ?? "").trim();
         const startMs = millisValue(item.startMs ?? item.start_ms ?? item.start ?? item.time ?? 0);
         const endValue = item.endMs ?? item.end_ms ?? item.end;
         const duration = millisValue(item.durationMs ?? item.duration_ms ?? item.duration);
         const endMs = endValue == null ? startMs + (duration || 3000) : millisValue(endValue);
         if (!text) return undefined;
+        const words = parseWordTimings(item.words ?? item.word_timings ?? item.wordTiming ?? item.word_timing, startMs, endMs);
         return {
           pageIndex: numberValue(item.pageIndex ?? item.page_index, defaults.pageIndex ?? 0),
           audioIndex: numberValue(item.audioIndex ?? item.audio_index, defaults.audioIndex ?? 0),
           startMs,
           endMs: Math.max(startMs + 1, endMs),
           text,
-          lang: typeof item.lang === "string" ? item.lang : undefined
+          lang: typeof item.lang === "string" ? item.lang : undefined,
+          ...(words.length > 0 ? { words } : {})
         };
       })
       .filter(Boolean) as ListenCaptionCue[];
@@ -153,4 +177,40 @@ function millisValue(value: unknown): number {
 function numberValue(value: unknown, fallback: number): number {
   const parsed = typeof value === "number" ? value : Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function parseWordTimings(value: unknown, cueStartMs: number, cueEndMs: number): CaptionWordTiming[] {
+  const records = Array.isArray(value)
+    ? value
+    : value && typeof value === "object" && Array.isArray((value as { words?: unknown[] }).words)
+      ? (value as { words: unknown[] }).words
+      : [];
+
+  return records
+    .map((record) => {
+      const item = record && typeof record === "object" ? (record as Record<string, unknown>) : {};
+      const text = String(item.text ?? item.word ?? item.token ?? item.value ?? "").trim();
+      const startMs = wordTimingMillis(item, ["startMs", "start_ms", "start", "time"], cueStartMs);
+      const endMs = wordTimingMillis(item, ["endMs", "end_ms", "end"], startMs || cueEndMs);
+      if (!text || endMs <= startMs) return undefined;
+      return { text, startMs, endMs };
+    })
+    .filter(Boolean) as CaptionWordTiming[];
+}
+
+function wordTimingMillis(item: Record<string, unknown>, keys: string[], fallback: number): number {
+  for (const key of keys) {
+    if (item[key] == null) continue;
+    const value = item[key];
+    if (typeof value === "number" && !Number.isInteger(value) && Math.abs(value) < 3600) {
+      return Math.round(value * 1000);
+    }
+    return millisValue(value);
+  }
+  for (const key of keys) {
+    const secondsKey = `${key}_sec`;
+    const seconds = Number(item[secondsKey]);
+    if (Number.isFinite(seconds)) return Math.round(seconds * 1000);
+  }
+  return fallback;
 }

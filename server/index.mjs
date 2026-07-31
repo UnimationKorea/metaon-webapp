@@ -2391,8 +2391,10 @@ function toMovieInfo(day, virtualBase) {
     captionTiming: "generated",
     movie: movie.map((item, index) => {
       const videoSource = movieBookInfoVideoSource(item);
+      const audioSource = movieBookInfoAudioSource(item);
       return {
         videoPath: videoSource ? `${virtualBase}/movie/video/${movieBookInfoFileName(videoSource, index)}` : "",
+        audioPath: audioSource ? `${virtualBase}/movie/audio/${movieBookInfoAudioFileName(audioSource, index)}` : "",
         captionPaths: captionBookInfoVirtualPaths(item, virtualBase, index + 1, "movie")
       };
     }),
@@ -2431,15 +2433,36 @@ function movieBookInfoVideoSource(movie) {
   );
 }
 
+function movieBookInfoAudioSource(movie) {
+  return firstBookInfoResourcePath(
+    movie.mp3,
+    movie.audio,
+    movie.audio_path,
+    movie.audioPath,
+    movie.snd,
+    movie.snd_path,
+    movie.sndPath
+  );
+}
+
 function movieBookInfoFileName(sourcePath, index) {
   const fileName = sourcePath.replace(/\\/g, "/").split("?")[0].split("/").filter(Boolean).pop();
   return fileName || `movie_${twoDigit(index + 1)}.mp4`;
 }
 
+function movieBookInfoAudioFileName(sourcePath, index) {
+  const fileName = sourcePath.replace(/\\/g, "/").split("?")[0].split("/").filter(Boolean).pop();
+  return fileName || `movie_${twoDigit(index + 1)}.mp3`;
+}
+
 function collectMovieBookInfoResources(day, virtualBase, resources) {
   movieBookInfoRecords(day).forEach((movie, index) => {
     const videoSource = movieBookInfoVideoSource(movie);
+    const audioSource = movieBookInfoAudioSource(movie);
     addBookInfoResource(resources, `${virtualBase}/movie/video/${movieBookInfoFileName(videoSource, index)}`, videoSource, "movie");
+    if (audioSource) {
+      addBookInfoResource(resources, `${virtualBase}/movie/audio/${movieBookInfoAudioFileName(audioSource, index)}`, audioSource, "movie-audio");
+    }
     collectCaptionBookInfoResources(movie, virtualBase, index + 1, "movie", resources);
   });
 }
@@ -2485,7 +2508,11 @@ function captionBookInfoSourceEntries(record) {
     "captionPath",
     "subtitle",
     "subtitle_path",
-    "subtitlePath"
+    "subtitlePath",
+    "word_timing",
+    "wordTiming",
+    "word_timing_path",
+    "wordTimingPath"
   ]
     .map((key) => ({ key, value: stringValue(record[key]) }))
     .filter((entry) => entry.value.length > 0);

@@ -371,8 +371,10 @@ function toMovieInfo(day: UnknownRecord, virtualBase: string) {
     captionTiming: "generated",
     movie: movie.map((item, index) => {
       const videoSource = movieVideoSource(item);
+      const audioSource = movieAudioSource(item);
       return {
         videoPath: videoSource ? `${virtualBase}/movie/video/${movieFileName(videoSource, index)}` : "",
+        audioPath: audioSource ? `${virtualBase}/movie/audio/${movieAudioFileName(audioSource, index)}` : "",
         captionPaths: captionVirtualPaths(item, virtualBase, index + 1, "movie")
       };
     }),
@@ -412,9 +414,26 @@ function movieVideoSource(movie: UnknownRecord): string {
   );
 }
 
+function movieAudioSource(movie: UnknownRecord): string {
+  return firstResourcePath(
+    movie.mp3,
+    movie.audio,
+    movie.audio_path,
+    movie.audioPath,
+    movie.snd,
+    movie.snd_path,
+    movie.sndPath
+  );
+}
+
 function movieFileName(sourcePath: string, index: number): string {
   const fileName = sourcePath.replace(/\\/g, "/").split("?")[0].split("/").filter(Boolean).pop();
   return fileName || `movie_${twoDigit(index + 1)}.mp4`;
+}
+
+function movieAudioFileName(sourcePath: string, index: number): string {
+  const fileName = sourcePath.replace(/\\/g, "/").split("?")[0].split("/").filter(Boolean).pop();
+  return fileName || `movie_${twoDigit(index + 1)}.mp3`;
 }
 
 function collectWordResources(day: UnknownRecord, virtualBase: string, resources: Map<string, BookResource>): void {
@@ -453,7 +472,11 @@ function collectListeningResources(day: UnknownRecord, virtualBase: string, reso
 function collectMovieResources(day: UnknownRecord, virtualBase: string, resources: Map<string, BookResource>): void {
   movieRecords(day).forEach((movie, index) => {
     const videoSource = movieVideoSource(movie);
+    const audioSource = movieAudioSource(movie);
     addResource(resources, `${virtualBase}/movie/video/${movieFileName(videoSource, index)}`, videoSource, "movie");
+    if (audioSource) {
+      addResource(resources, `${virtualBase}/movie/audio/${movieAudioFileName(audioSource, index)}`, audioSource, "movie-audio");
+    }
     collectCaptionResources(movie, virtualBase, index + 1, "movie", resources);
   });
 }
@@ -737,7 +760,11 @@ function captionSourceEntries(record: UnknownRecord): Array<{ key: string; value
     "captionPath",
     "subtitle",
     "subtitle_path",
-    "subtitlePath"
+    "subtitlePath",
+    "word_timing",
+    "wordTiming",
+    "word_timing_path",
+    "wordTimingPath"
   ]
     .map((key) => ({ key, value: stringValue(record[key]) }))
     .filter((entry) => entry.value.length > 0);

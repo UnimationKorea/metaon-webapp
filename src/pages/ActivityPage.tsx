@@ -116,11 +116,15 @@ export function ActivityPage() {
   }, [book, recordRecentBook]);
 
   if (isLoading) {
-    return <EmptyState title="Loading activity" detail="Resolving book and package metadata." />;
+    return <ActivityResourceLoadingScreen detail="Resolving book and package metadata." />;
   }
 
   if (!book) {
     return <EmptyState title="Book not found" detail={`${seriesGroup}/${seriesIdx}/${bookId}`} />;
+  }
+
+  if (packageState.isCheckingCache) {
+    return <ActivityResourceLoadingScreen detail="Preparing cached learning resources." />;
   }
 
   if (!packageState.packageMeta || !day || !activity) {
@@ -280,5 +284,16 @@ function pointsFromStudyEnd(value: unknown): unknown {
     record.reward_point ??
     record.new_points ??
     record.point
+  );
+}
+
+function ActivityResourceLoadingScreen({ detail }: { detail: string }) {
+  return (
+    <main className="activity-route-loading" role="status" aria-live="polite">
+      <span className="activity-route-loading-orbit" aria-hidden="true" />
+      <strong>Loading activity</strong>
+      <p>{detail}</p>
+      <i aria-hidden="true"><b /></i>
+    </main>
   );
 }

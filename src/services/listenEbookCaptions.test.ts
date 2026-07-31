@@ -38,4 +38,26 @@ Over the log.`,
 
     expect(cues).toEqual([{ pageIndex: 1, audioIndex: 0, startMs: 500, endMs: 2000, text: "Jump." }]);
   });
+
+  it("preserves word-level timing from JSON caption resources", () => {
+    const cues = parseCaptionCues(
+      JSON.stringify([{
+        startMs: 1000,
+        endMs: 2600,
+        text: "Over the log.",
+        words: [
+          { word: "Over", startMs: 1000, endMs: 1480 },
+          { word: "the", startMs: 1500, endMs: 1780 },
+          { word: "log.", startMs: 1800, endMs: 2400 }
+        ]
+      }]),
+      "caption.json"
+    );
+
+    expect(cues[0]?.words).toEqual([
+      { text: "Over", startMs: 1000, endMs: 1480 },
+      { text: "the", startMs: 1500, endMs: 1780 },
+      { text: "log.", startMs: 1800, endMs: 2400 }
+    ]);
+  });
 });

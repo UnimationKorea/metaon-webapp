@@ -353,7 +353,12 @@ describe("normalizeBookResourceManifest", () => {
           days: [{
             num: 1,
             activities: [{ act_idx: 21008, act_code: "MOVIE01", act_name: "Movie Play" }],
-            movie: { mp4: "/13/173/648/8159/1512/1512/movie/boat-fun.mp4", vtt: "/13/173/648/8159/1512/1512/movie/boat-fun.vtt" },
+            movie: {
+              mp4: "/13/173/648/8159/1512/1512/movie/boat-fun.mp4",
+              mp3: "/13/173/648/8159/1512/1512/movie/boat-fun.mp3",
+              vtt: "/13/173/648/8159/1512/1512/movie/boat-fun.vtt",
+              word_timing_path: "/13/173/648/8159/1512/1512/movie/boat-fun.words.json"
+            },
             sentence: [{ sentence: "They go back on the boat.", meanings: [{ nation: "KR", meaning: "그들은 배로 돌아갑니다." }] }]
           }]
         }]
@@ -365,10 +370,20 @@ describe("normalizeBookResourceManifest", () => {
       path: "Lessons/L1/D1/movie/video/boat-fun.mp4",
       category: "movie"
     }));
+    expect(manifest.resources).toContainEqual(expect.objectContaining({
+      path: "Lessons/L1/D1/movie/audio/boat-fun.mp3",
+      category: "movie-audio"
+    }));
     const movieInfo = JSON.parse(
       manifest.generatedFiles.find((file) => file.path.endsWith("movie/info_movie.json"))?.content || "{}"
     );
-    expect(movieInfo.movie[0].captionPaths).toContain("Lessons/L1/D1/listening/01/caption/movie_01_vtt.vtt");
+    expect(movieInfo.movie[0]).toMatchObject({
+      audioPath: "Lessons/L1/D1/movie/audio/boat-fun.mp3"
+    });
+    expect(movieInfo.movie[0].captionPaths).toEqual(expect.arrayContaining([
+      "Lessons/L1/D1/listening/01/caption/movie_01_vtt.vtt",
+      "Lessons/L1/D1/listening/01/caption/movie_01_word_timing_path.json"
+    ]));
     expect(movieInfo).toMatchObject({ captionTiming: "generated" });
     expect(movieInfo.captions[0]).toMatchObject({
       text: "They go back on the boat.",
