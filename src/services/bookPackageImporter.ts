@@ -2,11 +2,12 @@ import { getBookResourceManifest } from "../api/uniplanetApi";
 import { indexedDbStorage } from "./indexedDbStorage";
 import { guessMimeType } from "./mime";
 import { packageKeyFor } from "./packageKeys";
+import { cacheVideoMediaResponse } from "./videoMediaCache";
 import type { StoredPackageFile } from "../types/ports";
 import type { BookData, BookPackage, BookResource, DownloadProgress } from "../types/metaonTypes";
 
 // MOVIE01 now caches optional script audio and word-level caption timing files.
-export const BOOK_PACKAGE_CACHE_VERSION = 8;
+export const BOOK_PACKAGE_CACHE_VERSION = 9;
 
 export async function downloadAndCacheBookPackage(
   book: BookData,
@@ -27,6 +28,7 @@ export async function downloadAndCacheBookPackage(
   const downloadedFiles: StoredPackageFile[] = [];
   const downloadedFileMap = new Map<string, StoredPackageFile>();
   const cachedBlobMap = new Map<string, Blob>();
+  const mediaCachePaths = new Set<string>();
   const seenResourcePaths = new Set(manifest.resources.map((resource) => normalizePath(resource.path)));
   let totalFiles = manifest.resources.length;
   let loadedFiles = 0;
@@ -45,6 +47,12 @@ export async function downloadAndCacheBookPackage(
     const cached = await indexedDbStorage.getFileBlob(key, path);
     if (cached) {
       cachedBlobMap.set(path, cached);
+      const restoredToMediaCache = await cacheVideoMediaResponse(
+        key,
+        { path, mimeType: resource.mimeType || cached.type, category: resource.category },
+        new Response(cached, { headers: { "Content-Type": resource.mimeType || cached.type || "application/octet-stream" } })
+      );
+      if (restoredToMediaCache) mediaCachePaths.add(path);
       loadedFiles += 1;
       loadedBytes += cached.size;
       onProgress?.({
@@ -71,6 +79,13 @@ export async function downloadAndCacheBookPackage(
       if (isNpcResource(resource)) return skipOptionalResource(path);
       throw new Error(`Failed to download ${resource.sourcePath}: ${response.status} ${response.statusText}`);
     }
+    // The complete response is additionally cached only for the video Activity
+    // allowlist. Cache Storage failure never fails the existing IndexedDB import.
+    const cacheMediaPromise = cacheVideoMediaResponse(
+      key,
+      { path, mimeType: resource.mimeType, category: resource.category },
+      response.clone()
+    );
     const responseBlob = await response.blob();
     // IndexedDB persists the Blob's MIME type. Keep the manifest type when S3
     // returns a generic response type so cached video still decodes as media.
@@ -84,6 +99,7 @@ export async function downloadAndCacheBookPackage(
       mimeType
     });
     downloadedFileMap.set(path, downloadedFiles[downloadedFiles.length - 1]);
+    if (await cacheMediaPromise) mediaCachePaths.add(path);
     loadedFiles += 1;
     loadedBytes += blob.size;
     onProgress?.({
@@ -145,6 +161,7 @@ export async function downloadAndCacheBookPackage(
     totalBytes: loadedBytes,
     lessonDays: manifest.lessonDays,
     npcScriptPaths,
+    mediaCachePaths: Array.from(mediaCachePaths),
     manifest
   };
 

@@ -167,6 +167,9 @@ export type BookPackage = {
   // resources are missing. Undefined on packages cached before this was tracked (treat as "all
   // present" — those imports only succeeded because every resource downloaded).
   npcScriptPaths?: string[];
+  // Virtual paths whose full media responses also exist in Cache Storage. All
+  // other resources keep using the IndexedDB Blob compatibility path.
+  mediaCachePaths?: string[];
   manifest?: unknown;
 };
 

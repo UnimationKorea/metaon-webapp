@@ -202,6 +202,69 @@ describe("Figma renewal activities", () => {
     expect(await screen.findByRole("img", { name: "river" })).toBeInTheDocument();
   });
 
+  it("keeps Word Card behind the activity loader until its word assets are ready", async () => {
+    let resolveFiles: ((files: Array<{ packageKey: string; path: string; blob: Blob; size: number; mimeType: string }>) => void) | undefined;
+    const delayedFiles = new Promise<Array<{ packageKey: string; path: string; blob: Blob; size: number; mimeType: string }>>((resolve) => {
+      resolveFiles = resolve;
+    });
+    vi.mocked(indexedDbStorage.listFiles).mockReturnValueOnce(delayedFiles);
+
+    const { container } = render(
+      <FlashCardActivity context={activityContext(ActType.FlashCardSpace, "WDCA01")} />
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent("Loading activity");
+    expect(container.querySelector(".activity-frame")).toHaveAttribute("aria-busy", "true");
+
+    resolveFiles?.(
+      words.flatMap((word, index) => [
+        `${basePath}/word/img/word_${String(index + 1).padStart(2, "0")}.png`,
+        `${basePath}/word/snd/snd_word_${String(index + 1).padStart(2, "0")}.mp3`
+      ]).map((path) => ({
+        packageKey,
+        path,
+        blob: new Blob([path]),
+        size: path.length,
+        mimeType: path.endsWith(".png") ? "image/png" : "audio/mpeg"
+      }))
+    );
+
+    await waitFor(() => expect(container.querySelector(".activity-frame")).toHaveAttribute("aria-busy", "false"));
+    expect(screen.queryByText("No word")).not.toBeInTheDocument();
+  });
+
+  it("keeps Sentence Blank behind the activity loader until sentence data is ready", async () => {
+    let resolveFiles: ((files: Array<{ packageKey: string; path: string; blob: Blob; size: number; mimeType: string }>) => void) | undefined;
+    const delayedFiles = new Promise<Array<{ packageKey: string; path: string; blob: Blob; size: number; mimeType: string }>>((resolve) => {
+      resolveFiles = resolve;
+    });
+    vi.mocked(indexedDbStorage.listFiles).mockReturnValueOnce(delayedFiles);
+
+    const { container } = render(
+      <SentenceBlankActivity context={activityContext(ActType.SentenceCheckSpace, "STBL01")} />
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent("Loading activity");
+    expect(container.querySelector(".activity-frame")).toHaveAttribute("aria-busy", "true");
+
+    resolveFiles?.([
+      `${basePath}/sentence/snd/snd_sentence_01.mp3`,
+      ...words.flatMap((word, index) => [
+        `${basePath}/word/img/word_${String(index + 1).padStart(2, "0")}.png`,
+        `${basePath}/word/snd/snd_word_${String(index + 1).padStart(2, "0")}.mp3`
+      ])
+    ].map((path) => ({
+      packageKey,
+      path,
+      blob: new Blob([path]),
+      size: path.length,
+      mimeType: path.endsWith(".png") ? "image/png" : path.endsWith(".mp3") ? "audio/mpeg" : "application/json"
+    })));
+
+    await waitFor(() => expect(container.querySelector(".activity-frame")).toHaveAttribute("aria-busy", "false"));
+    expect(screen.queryByText("No sentence data.")).not.toBeInTheDocument();
+  });
+
   it("renders WDCA02 with a cached looping video background while keeping the WDCA card controls", async () => {
     const backgroundVideoPath = `${basePath}/wdca02/video/night-loop.mp4`;
     mockRenewalPackage(sentences, [backgroundVideoPath]);

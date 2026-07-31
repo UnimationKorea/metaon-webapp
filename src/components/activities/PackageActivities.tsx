@@ -8,6 +8,11 @@ import { getActTypeDefinition, getActTypeLabel } from "../../services/actTypeCat
 import { MetaOnActivityCode, normalizeActivityCode } from "../../services/activityCodes";
 import { indexedDbStorage } from "../../services/indexedDbStorage";
 import { parseCaptionCues, type ListenCaptionCue } from "../../services/listenEbookCaptions";
+import {
+  hasCachedVideoMedia,
+  isVideoMediaServiceWorkerControlling,
+  videoMediaCacheUrl
+} from "../../services/videoMediaCache";
 import type { LearnEventInput } from "../../types/learnEvents";
 import { ActType, type Activity, type ActivityRendererContext } from "../../types/metaonTypes";
 
@@ -320,11 +325,18 @@ const READ_RECORD_WAVEFORM = [
 export function ActivityFrame({
   context,
   children,
+  loading = false,
   className = ""
 }: {
   context: ActivityRendererContext;
   children: ReactNode;
   actionLabel: string;
+  /**
+   * Metadata can be available before dependent media has been turned into
+   * browser URLs. Keep the shared loader over the activity until that work is
+   * complete so transient "No word" / missing-image UI is never exposed.
+   */
+  loading?: boolean;
   className?: string;
 }) {
   const metadataPaths = useMemo(
@@ -336,13 +348,13 @@ export function ActivityFrame({
   useEffect(() => {
     let active = true;
     const packageKey = context.packageMeta?.key;
-    if (!packageKey || metadataPaths.length === 0) {
+    if (!packageKey) {
       setIsResourceLoading(false);
       return undefined;
     }
 
     setIsResourceLoading(true);
-    void Promise.all(metadataPaths.map((path) => indexedDbStorage.getFileBlob(packageKey, path)))
+    void warmActivityResources(packageKey, context, metadataPaths)
       .catch(() => undefined)
       .finally(() => {
         if (active) setIsResourceLoading(false);
@@ -353,15 +365,50 @@ export function ActivityFrame({
     };
   }, [context.packageMeta?.key, metadataPaths]);
 
+  const isLoading = isResourceLoading || loading;
+
   return (
     <section
-      aria-busy={isResourceLoading}
-      className={`activity-frame unity-activity-frame${className ? ` ${className}` : ""}${isResourceLoading ? " is-resource-loading" : ""}`}
+      aria-busy={isLoading}
+      className={`activity-frame unity-activity-frame${className ? ` ${className}` : ""}${isLoading ? " is-resource-loading" : ""}`}
     >
       {children}
-      {isResourceLoading ? <ActivityResourceLoading /> : null}
+      {isLoading ? <ActivityResourceLoading /> : null}
     </section>
   );
+}
+
+async function warmActivityResources(
+  packageKey: string,
+  context: ActivityRendererContext,
+  metadataPaths: string[]
+): Promise<void> {
+  const dayPrefix = `${dayBase(context)}/`.toLowerCase();
+  const files = await indexedDbStorage.listFiles(packageKey);
+  const wordImagePaths = files
+    .map((file) => file.path)
+    .filter((path) => {
+      const normalized = path.toLowerCase();
+      return normalized.startsWith(dayPrefix) && normalized.includes("/word/img/") && /\.(?:png|jpe?g|webp|gif)$/i.test(normalized);
+    });
+  const resourcePaths = Array.from(new Set([...metadataPaths, ...wordImagePaths]));
+
+  await Promise.all(
+    resourcePaths.map(async (path) => {
+      const blob = await indexedDbStorage.getFileBlob(packageKey, path);
+      if (blob && /\.(?:png|jpe?g|webp|gif)$/i.test(path)) await decodeImageBlob(blob);
+    })
+  );
+}
+
+async function decodeImageBlob(blob: Blob): Promise<void> {
+  if (typeof URL === "undefined" || typeof URL.createObjectURL !== "function") return;
+  const url = URL.createObjectURL(blob);
+  try {
+    await decodeImage(url);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 function ActivityResourceLoading() {
@@ -1553,6 +1600,7 @@ function Movie01Activity({ context }: { context: ActivityRendererContext }) {
                 key="movie01-player-video"
                 className="movie01-video"
                 controls={false}
+                crossOrigin="anonymous"
                 playsInline
                 preload="auto"
                 ref={videoRef}
@@ -1570,6 +1618,7 @@ function Movie01Activity({ context }: { context: ActivityRendererContext }) {
               <audio
                 ref={audioRef}
                 src={scriptAudioUrl}
+                crossOrigin="anonymous"
                 preload="auto"
                 onLoadedMetadata={(event) => setDurationMs(Math.round(event.currentTarget.duration * 1000) || 0)}
                 onPlay={() => setIsPlaying(true)}
@@ -1638,6 +1687,7 @@ function Movie01Activity({ context }: { context: ActivityRendererContext }) {
                 className="movie01-mode-video"
                 ref={modeVideoRef}
                 src={videoUrl}
+                crossOrigin="anonymous"
                 autoPlay
                 loop
                 muted
@@ -1749,8 +1799,10 @@ export function FlashCardActivity({
   label?: string;
   prototypeData?: PrototypeActivityData;
 }) {
-  const loadedWords = useWords(context);
+  const wordResource = useWordsState(context);
+  const loadedWords = wordResource.words;
   const words = prototypeData?.words ?? loadedWords;
+  const isWordResourceLoading = !prototypeData && wordResource.status === "loading";
   const [index, setIndex] = useState(0);
   const [showBack, setShowBack] = useState(false);
   const [showMoreInfo, setShowMoreInfo] = useState(false);
@@ -1966,7 +2018,7 @@ export function FlashCardActivity({
 
   if (usesWdcaDesign) {
     return (
-      <ActivityFrame context={context} actionLabel={label} className="wdca-flashcard-frame">
+      <ActivityFrame context={context} actionLabel={label} loading={isWordResourceLoading} className="wdca-flashcard-frame">
         <div className={usesVideoBackground ? `wdca-flashcard-shell wdca02-video-flashcard-shell${videoUnavailable ? " is-video-background-unavailable" : ""}` : "wdca-flashcard-shell"}>
           {usesVideoBackground ? (
             <>
@@ -2068,7 +2120,7 @@ export function FlashCardActivity({
   }
 
   return (
-    <ActivityFrame context={context} actionLabel={label}>
+    <ActivityFrame context={context} actionLabel={label} loading={isWordResourceLoading}>
       <div className="flashcard-shell">
         <button
           aria-label={showBack ? `Word card ${word?.eng || ""}` : `Flip word card ${word?.eng || ""}`}
@@ -2167,6 +2219,7 @@ function VideoActivityBackground({
       aria-hidden="true"
       autoPlay
       className={className}
+      crossOrigin="anonymous"
       loop
       muted
       onCanPlay={(event) => startPlayback(event.currentTarget)}
@@ -2552,8 +2605,10 @@ export function WordBlankActivity({
   label?: string;
   prototypeData?: PrototypeActivityData;
 }) {
-  const loadedWords = useWords(context);
+  const wordResource = useWordsState(context);
+  const loadedWords = wordResource.words;
   const words = prototypeData?.words ?? loadedWords;
+  const isWordResourceLoading = !prototypeData && wordResource.status === "loading";
   const [shuffleSeed] = useState(createShuffleSeed);
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<string>();
@@ -2659,7 +2714,7 @@ export function WordBlankActivity({
   }
 
   return (
-    <ActivityFrame context={context} actionLabel={label} className="figma-renewal-frame">
+    <ActivityFrame context={context} actionLabel={label} loading={isWordResourceLoading} className="figma-renewal-frame">
       <div className={`figma-renewal-shell word-blank-renewal-shell${usesVideoBackground ? ` wdbl02-video-word-blank-shell${videoUnavailable ? " is-video-background-unavailable" : ""}` : ""}`}>
         {usesVideoBackground ? (
           <>
@@ -3522,21 +3577,25 @@ export function VocaQuizActivity({
   context: ActivityRendererContext;
   prototypeData?: PrototypeActivityData;
 }) {
-  const loadedWords = useWords(context);
+  const wordResource = useWordsState(context);
+  const loadedWords = wordResource.words;
   const words = prototypeData?.words ?? loadedWords;
+  const isWordResourceLoading = !prototypeData && wordResource.status === "loading";
 
   if (isMetaOnWordQuiz(context.activity)) {
-    return <VocaQuizSpellingActivity context={context} words={words} />;
+    return <VocaQuizSpellingActivity context={context} loading={isWordResourceLoading} words={words} />;
   }
 
-  return <VocaQuizChoiceActivity context={context} words={words} />;
+  return <VocaQuizChoiceActivity context={context} loading={isWordResourceLoading} words={words} />;
 }
 
 function VocaQuizChoiceActivity({
   context,
+  loading = false,
   words
 }: {
   context: ActivityRendererContext;
+  loading?: boolean;
   words: LoadedWord[];
 }) {
   const [shuffleSeed] = useState(createShuffleSeed);
@@ -3642,7 +3701,7 @@ function VocaQuizChoiceActivity({
   }
 
   return (
-    <ActivityFrame context={context} actionLabel="Word Quiz" className="figma-renewal-frame">
+    <ActivityFrame context={context} actionLabel="Word Quiz" loading={loading} className="figma-renewal-frame">
       <div
         className={`figma-renewal-shell voca-quiz-renewal-shell${usesVideoBackground ? ` wdqu03-video-quiz-shell${videoUnavailable ? " is-video-background-unavailable" : ""}` : ""}`}
         data-quiz-mode={`${promptKind}-${optionKind}`}
@@ -3720,9 +3779,11 @@ function VocaQuizChoiceActivity({
 
 function VocaQuizSpellingActivity({
   context,
+  loading = false,
   words
 }: {
   context: ActivityRendererContext;
+  loading?: boolean;
   words: LoadedWord[];
 }) {
   const [shuffleSeed] = useState(createShuffleSeed);
@@ -3813,7 +3874,7 @@ function VocaQuizSpellingActivity({
   }
 
   return (
-    <ActivityFrame context={context} actionLabel="Word Quiz" className="figma-renewal-frame">
+    <ActivityFrame context={context} actionLabel="Word Quiz" loading={loading} className="figma-renewal-frame">
       <div className="figma-renewal-shell voca-quiz-renewal-shell voca-quiz-spelling-shell" data-quiz-mode="spelling-letter">
         <RenewalCounter current={words.length === 0 ? 0 : current + 1} total={words.length} className="voca-quiz-counter" />
         <ActivityQuestionNavigation current={current} total={words.length} onChange={setCurrent} />
@@ -3949,10 +4010,13 @@ export function SentenceBlankActivity({
   label?: string;
   prototypeData?: PrototypeActivityData;
 }) {
-  const loadedSentences = useSentences(context);
-  const loadedWords = useWords(context);
+  const sentenceResource = useSentencesState(context);
+  const wordResource = useWordsState(context);
+  const loadedSentences = sentenceResource.sentences;
+  const loadedWords = wordResource.words;
   const sentences = prototypeData?.sentences ?? loadedSentences;
   const words = prototypeData?.words ?? loadedWords;
+  const isSentenceResourceLoading = !prototypeData && (sentenceResource.status === "loading" || wordResource.status === "loading");
   const [shuffleSeed] = useState(createShuffleSeed);
   const [index, setIndex] = useState(0);
   const sentence = sentences[index];
@@ -4061,7 +4125,7 @@ export function SentenceBlankActivity({
   }
 
   return (
-    <ActivityFrame context={context} actionLabel={label} className="figma-renewal-frame">
+    <ActivityFrame context={context} actionLabel={label} loading={isSentenceResourceLoading} className="figma-renewal-frame">
       <div className={`figma-renewal-shell sentence-blank-renewal-shell${usesVideoBackground ? ` stbl02-video-sentence-blank-shell${videoUnavailable ? " is-video-background-unavailable" : ""}` : ""}`}>
         {usesVideoBackground ? (
           <>
@@ -4139,8 +4203,10 @@ export function SentenceUnscrambleActivity({
   label?: string;
   prototypeData?: PrototypeActivityData;
 }) {
-  const loadedSentences = useSentences(context);
+  const sentenceResource = useSentencesState(context);
+  const loadedSentences = sentenceResource.sentences;
   const sentences = prototypeData?.sentences ?? loadedSentences;
+  const isSentenceResourceLoading = !prototypeData && sentenceResource.status === "loading";
   const [index, setIndex] = useState(0);
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
   const [videoUnavailable, setVideoUnavailable] = useState(false);
@@ -4253,7 +4319,7 @@ export function SentenceUnscrambleActivity({
   }
 
   return (
-    <ActivityFrame context={context} actionLabel={label} className="figma-renewal-frame">
+    <ActivityFrame context={context} actionLabel={label} loading={isSentenceResourceLoading} className="figma-renewal-frame">
       <div className={`figma-renewal-shell unscramble-renewal-shell${usesVideoBackground ? ` stsc02-video-unscramble-shell${videoUnavailable ? " is-video-background-unavailable" : ""}` : ""}`}>
         {usesVideoBackground ? (
           <>
@@ -4334,10 +4400,13 @@ export function ContextClozeRaceActivity({
   label?: string;
   prototypeData?: PrototypeActivityData;
 }) {
-  const loadedWords = useWords(context);
-  const loadedSentences = useSentences(context);
+  const wordResource = useWordsState(context);
+  const sentenceResource = useSentencesState(context);
+  const loadedWords = wordResource.words;
+  const loadedSentences = sentenceResource.sentences;
   const words = prototypeData?.words ?? loadedWords;
   const sentences = prototypeData?.sentences ?? loadedSentences;
+  const isSentenceResourceLoading = !prototypeData && (sentenceResource.status === "loading" || wordResource.status === "loading");
   const [shuffleSeed] = useState(createShuffleSeed);
   const questions = useMemo(() => buildContextClozeQuestions(sentences, words, shuffleSeed), [sentences, shuffleSeed, words]);
   const [index, setIndex] = useState(0);
@@ -4379,7 +4448,7 @@ export function ContextClozeRaceActivity({
   }
 
   return (
-    <ActivityFrame context={context} actionLabel={label}>
+    <ActivityFrame context={context} actionLabel={label} loading={isSentenceResourceLoading}>
       <ActivityQuestionNavigation
         current={index}
         total={questions.length}
@@ -4451,8 +4520,10 @@ export function SentenceRepairActivity({
   label?: string;
   prototypeData?: PrototypeActivityData;
 }) {
-  const loadedSentences = useSentences(context);
+  const sentenceResource = useSentencesState(context);
+  const loadedSentences = sentenceResource.sentences;
   const sentences = prototypeData?.sentences ?? loadedSentences;
+  const isSentenceResourceLoading = !prototypeData && sentenceResource.status === "loading";
   const questions = useMemo(() => sentences.map(buildSentenceRepairQuestion).filter(Boolean) as SentenceRepairQuestion[], [sentences]);
   const [index, setIndex] = useState(0);
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
@@ -4467,7 +4538,7 @@ export function SentenceRepairActivity({
   }, [index, questions.length]);
 
   return (
-    <ActivityFrame context={context} actionLabel={label}>
+    <ActivityFrame context={context} actionLabel={label} loading={isSentenceResourceLoading}>
       <ActivityQuestionNavigation current={index} total={questions.length} onChange={setIndex} disableNext={!isComplete} />
       <div className="prototype-game-shell sentence-repair-shell">
         <header className="prototype-game-header">
@@ -4529,8 +4600,10 @@ export function DictationLadderActivity({
   label?: string;
   prototypeData?: PrototypeActivityData;
 }) {
-  const loadedSentences = useSentences(context);
+  const sentenceResource = useSentencesState(context);
+  const loadedSentences = sentenceResource.sentences;
   const sentences = prototypeData?.sentences ?? loadedSentences;
+  const isSentenceResourceLoading = !prototypeData && sentenceResource.status === "loading";
   const [index, setIndex] = useState(0);
   const [value, setValue] = useState("");
   const [checked, setChecked] = useState(false);
@@ -4549,7 +4622,7 @@ export function DictationLadderActivity({
   }, [index, sentences.length]);
 
   return (
-    <ActivityFrame context={context} actionLabel={label}>
+    <ActivityFrame context={context} actionLabel={label} loading={isSentenceResourceLoading}>
       <ActivityQuestionNavigation current={index} total={sentences.length} onChange={setIndex} disableNext={!isCorrect} />
       <div className="prototype-game-shell dictation-ladder-shell">
         <header className="prototype-game-header">
@@ -4634,8 +4707,10 @@ export function GrammarTransformActivity({
   label?: string;
   prototypeData?: PrototypeActivityData;
 }) {
-  const loadedSentences = useSentences(context);
+  const sentenceResource = useSentencesState(context);
+  const loadedSentences = sentenceResource.sentences;
   const sentences = prototypeData?.sentences ?? loadedSentences;
+  const isSentenceResourceLoading = !prototypeData && sentenceResource.status === "loading";
   const questions = useMemo(() => buildGrammarTransformQuestions(sentences), [sentences]);
   const [index, setIndex] = useState(0);
   const [value, setValue] = useState("");
@@ -4652,7 +4727,7 @@ export function GrammarTransformActivity({
   }, [index, questions.length]);
 
   return (
-    <ActivityFrame context={context} actionLabel={label}>
+    <ActivityFrame context={context} actionLabel={label} loading={isSentenceResourceLoading}>
       <ActivityQuestionNavigation current={index} total={questions.length} onChange={setIndex} disableNext={!isCorrect} />
       <div className="prototype-game-shell grammar-transform-shell">
         <header className="prototype-game-header">
@@ -4727,8 +4802,10 @@ export function ParaphraseMatchActivity({
   label?: string;
   prototypeData?: PrototypeActivityData;
 }) {
-  const loadedSentences = useSentences(context);
+  const sentenceResource = useSentencesState(context);
+  const loadedSentences = sentenceResource.sentences;
   const sentences = prototypeData?.sentences ?? loadedSentences;
+  const isSentenceResourceLoading = !prototypeData && sentenceResource.status === "loading";
   const [shuffleSeed] = useState(createShuffleSeed);
   const questions = useMemo(() => buildParaphraseMatchQuestions(sentences, shuffleSeed), [sentences, shuffleSeed]);
   const [index, setIndex] = useState(0);
@@ -4751,7 +4828,7 @@ export function ParaphraseMatchActivity({
   }
 
   return (
-    <ActivityFrame context={context} actionLabel={label}>
+    <ActivityFrame context={context} actionLabel={label} loading={isSentenceResourceLoading}>
       <ActivityQuestionNavigation current={index} total={questions.length} onChange={setIndex} disableNext={!selected} />
       <div className="prototype-game-shell paraphrase-match-shell">
         <header className="prototype-game-header">
@@ -5202,8 +5279,10 @@ export function SentenceRecordActivity({
   context: ActivityRendererContext;
   prototypeData?: PrototypeActivityData;
 }) {
-  const packageSentences = useSentences(context);
+  const sentenceResource = useSentencesState(context);
+  const packageSentences = sentenceResource.sentences;
   const sentences = prototypeData?.sentences || packageSentences;
+  const isSentenceResourceLoading = !prototypeData && sentenceResource.status === "loading";
   const [index, setIndex] = useState(0);
   const [videoUnavailable, setVideoUnavailable] = useState(false);
   const activityCode = normalizeActivityCode(context.activity?.activityCode);
@@ -5228,7 +5307,7 @@ export function SentenceRecordActivity({
 
   if (!sentence) {
     return (
-      <ActivityFrame context={context} actionLabel="Sentence Record" className="figma-renewal-frame">
+      <ActivityFrame context={context} actionLabel="Sentence Record" loading={isSentenceResourceLoading} className="figma-renewal-frame">
         <div className="figma-renewal-shell sentence-record-renewal-shell">
           <div className="sentence-record-renewal-panel is-empty">
             <ResourceMissing label="sentence data" />
@@ -6127,9 +6206,20 @@ function firstStringArray(...values: unknown[]): string[] {
 }
 
 function useWords(context: ActivityRendererContext): LoadedWord[] {
+  return useWordsState(context).words;
+}
+
+type WordResourceState = {
+  words: LoadedWord[];
+  status: "loading" | "ready" | "empty" | "error";
+};
+
+function useWordsState(context: ActivityRendererContext): WordResourceState {
   const base = dayBase(context);
-  const info = usePackageJson<WordInfo>(context, `${base}/word/info_word.json`);
-  const paths = usePackagePathList(context, `${base}/word/`);
+  const infoState = usePackageJsonState<WordInfo>(context, `${base}/word/info_word.json`);
+  const pathState = usePackagePathListState(context, `${base}/word/`);
+  const info = infoState.data;
+  const paths = pathState.paths;
   const selectedIndexes = context.activity?.useWordList;
   const sourceWords = info?.word || [];
   const indexes = selectedIndexes && selectedIndexes.length > 0 ? selectedIndexes : sourceWords.map((_, index) => index);
@@ -6159,47 +6249,109 @@ function useWords(context: ActivityRendererContext): LoadedWord[] {
     })
     .filter(Boolean) as Array<LoadedWord & { imagePath?: string; audioPath?: string }>;
 
-  const imageMap = usePackageUrls(
+  const imageState = usePackageUrlsState(
     context,
     wordRecords.map((word) => word.imagePath).filter(Boolean) as string[]
   );
-  const audioMap = usePackageUrls(
+  const audioState = usePackageUrlsState(
     context,
     wordRecords.map((word) => word.audioPath).filter(Boolean) as string[]
   );
+  const imageUrlSignature = Object.values(imageState.urls).join("|");
+  const [imagesDecoded, setImagesDecoded] = useState(false);
 
-  return wordRecords.map((word) => ({
-    index: word.index,
-    wordIdx: word.wordIdx,
-    eng: word.eng,
-    mean: word.mean,
-    sentence: word.sentence,
-    wordClass: word.wordClass,
-    imagePath: word.imagePath,
-    imageUrl: word.imagePath ? imageMap[word.imagePath] : undefined,
-    audioPath: word.audioPath,
-    audioUrl: word.audioPath ? audioMap[word.audioPath] : undefined
-  }));
+  useEffect(() => {
+    let active = true;
+    setImagesDecoded(false);
+    if (!imageState.checked) return undefined;
+
+    const imageUrls = Object.values(imageState.urls);
+    if (imageUrls.length === 0 || typeof Image === "undefined") {
+      setImagesDecoded(true);
+      return undefined;
+    }
+
+    void Promise.all(imageUrls.map((url) => decodeImage(url))).finally(() => {
+      if (active) setImagesDecoded(true);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [imageState.checked, imageUrlSignature]);
+
+  const checked = infoState.checked && pathState.checked && imageState.checked && audioState.checked && imagesDecoded;
+  const hasLoadError = infoState.error || pathState.error || imageState.error || audioState.error;
+  const status: WordResourceState["status"] = !checked
+    ? "loading"
+    : wordRecords.length === 0
+      ? hasLoadError ? "error" : "empty"
+      : "ready";
+
+  return {
+    status,
+    words: wordRecords.map((word) => ({
+      index: word.index,
+      wordIdx: word.wordIdx,
+      eng: word.eng,
+      mean: word.mean,
+      sentence: word.sentence,
+      wordClass: word.wordClass,
+      imagePath: word.imagePath,
+      imageUrl: word.imagePath ? imageState.urls[word.imagePath] : undefined,
+      audioPath: word.audioPath,
+      audioUrl: word.audioPath ? audioState.urls[word.audioPath] : undefined
+    }))
+  };
+}
+
+function decodeImage(url: string): Promise<void> {
+  if (typeof Image === "undefined") return Promise.resolve();
+  const image = new Image();
+  image.src = url;
+  if (typeof image.decode !== "function") return Promise.resolve();
+  return image.decode().catch(() => undefined);
 }
 
 function useSentences(context: ActivityRendererContext): LoadedSentence[] {
+  return useSentencesState(context).sentences;
+}
+
+type SentenceResourceState = {
+  sentences: LoadedSentence[];
+  status: "loading" | "ready" | "empty" | "error";
+};
+
+function useSentencesState(context: ActivityRendererContext): SentenceResourceState {
   const base = dayBase(context);
-  const info = usePackageJson<SentenceInfo>(context, `${base}/sentence/info_sentence.json`);
-  const paths = usePackagePathList(context, `${base}/sentence/snd/`);
+  const infoState = usePackageJsonState<SentenceInfo>(context, `${base}/sentence/info_sentence.json`);
+  const pathState = usePackagePathListState(context, `${base}/sentence/snd/`);
+  const info = infoState.data;
+  const paths = pathState.paths;
   const sentences = info?.sentence || [];
   const audioPaths = sentences.map((_, index) => findExistingPath(paths, [`${base}/sentence/snd/snd_sentence_${twoDigit(index + 1)}.mp3`]));
-  const audioMap = usePackageUrls(context, audioPaths.filter(Boolean) as string[]);
+  const audioState = usePackageUrlsState(context, audioPaths.filter(Boolean) as string[]);
+  const checked = infoState.checked && pathState.checked && audioState.checked;
+  const hasLoadError = infoState.error || pathState.error || audioState.error;
+  const status: SentenceResourceState["status"] = !checked
+    ? "loading"
+    : sentences.length === 0
+      ? hasLoadError ? "error" : "empty"
+      : "ready";
 
-  return sentences.map((sentence, index) => ({
-    index,
-    sentenceIdx: numberOrUndefined(sentence.Sentence_Idx ?? sentence.sentence_idx ?? sentence.sentenceIdx),
-    eng: sentence.Eng || "",
-    mean: sentence.Mean || "",
-    slice: sentence.Slice || "",
-    blankIndex: sentence.Blank_Index ?? -1,
-    audioPath: audioPaths[index] || undefined,
-    audioUrl: audioPaths[index] ? audioMap[audioPaths[index] as string] : undefined
-  }));
+  return {
+    status,
+    sentences: sentences.map((sentence, index) => ({
+      index,
+      sentenceIdx: numberOrUndefined(sentence.Sentence_Idx ?? sentence.sentence_idx ?? sentence.sentenceIdx),
+      eng: sentence.Eng || "",
+      mean: sentence.Mean || "",
+      slice: sentence.Slice || "",
+      blankIndex: sentence.Blank_Index ?? -1,
+      audioPath: audioPaths[index] || undefined,
+      audioUrl: audioPaths[index] ? audioState.urls[audioPaths[index] as string] : undefined
+    }))
+  };
 }
 
 function usePackageTextList(context: ActivityRendererContext, paths: string[]): Record<string, string> {
@@ -6285,16 +6437,21 @@ function usePackageJson<T>(context: ActivityRendererContext, path?: string): T |
   return usePackageJsonState<T>(context, path).data;
 }
 
-function usePackageJsonState<T>(context: ActivityRendererContext, path?: string): { data?: T; checked: boolean } {
+function usePackageJsonState<T>(context: ActivityRendererContext, path?: string): { data?: T; checked: boolean; error: boolean } {
   const key = context.packageMeta?.key;
   const [data, setData] = useState<T>();
   const [checked, setChecked] = useState(false);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     let active = true;
     setData(undefined);
     setChecked(false);
-    if (!key || !path) return undefined;
+    setError(false);
+    if (!key || !path) {
+      setChecked(true);
+      return undefined;
+    }
 
     indexedDbStorage
       .getFileBlob(key, path)
@@ -6310,6 +6467,7 @@ function usePackageJsonState<T>(context: ActivityRendererContext, path?: string)
         if (active) {
           setData(undefined);
           setChecked(true);
+          setError(true);
         }
       });
 
@@ -6318,26 +6476,44 @@ function usePackageJsonState<T>(context: ActivityRendererContext, path?: string)
     };
   }, [key, path]);
 
-  return { data, checked };
+  return { data, checked, error };
 }
 
 function usePackagePathList(context: ActivityRendererContext, prefix: string): string[] {
+  return usePackagePathListState(context, prefix).paths;
+}
+
+function usePackagePathListState(context: ActivityRendererContext, prefix: string): { paths: string[]; checked: boolean; error: boolean } {
   const key = context.packageMeta?.key;
   const [paths, setPaths] = useState<string[]>([]);
+  const [checked, setChecked] = useState(false);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     let active = true;
     setPaths([]);
-    if (!key) return undefined;
+    setChecked(false);
+    setError(false);
+    if (!key) {
+      setChecked(true);
+      return undefined;
+    }
 
     indexedDbStorage
       .listFiles(key)
       .then((files) => files.map((file) => file.path).filter((path) => path.toLowerCase().startsWith(prefix.toLowerCase())))
       .then((nextPaths) => {
-        if (active) setPaths(nextPaths);
+        if (active) {
+          setPaths(nextPaths);
+          setChecked(true);
+        }
       })
       .catch(() => {
-        if (active) setPaths([]);
+        if (active) {
+          setPaths([]);
+          setChecked(true);
+          setError(true);
+        }
       });
 
     return () => {
@@ -6345,7 +6521,7 @@ function usePackagePathList(context: ActivityRendererContext, prefix: string): s
     };
   }, [key, prefix]);
 
-  return paths;
+  return { paths, checked, error };
 }
 
 function usePackageUrl(context: ActivityRendererContext, path?: string): string | undefined {
@@ -6354,18 +6530,43 @@ function usePackageUrl(context: ActivityRendererContext, path?: string): string 
 }
 
 function usePackageUrls(context: ActivityRendererContext, paths: string[]): Record<string, string> {
+  return usePackageUrlsState(context, paths).urls;
+}
+
+function usePackageUrlsState(
+  context: ActivityRendererContext,
+  paths: string[]
+): { urls: Record<string, string>; checked: boolean; error: boolean } {
   const key = context.packageMeta?.key;
+  const mediaCachePaths = context.packageMeta?.mediaCachePaths || [];
   const uniquePaths = useMemo(() => Array.from(new Set(paths.filter(Boolean))), [paths.join("|")]);
   const [urls, setUrls] = useState<Record<string, string>>({});
+  const [checked, setChecked] = useState(false);
+  const [error, setError] = useState(false);
+  const videoMediaServiceWorkerControlled = useVideoMediaServiceWorkerControlled();
 
   useEffect(() => {
     let active = true;
     const createdUrls: string[] = [];
     setUrls({});
-    if (!key || uniquePaths.length === 0) return undefined;
+    setChecked(false);
+    setError(false);
+    if (!key || uniquePaths.length === 0) {
+      setChecked(true);
+      return undefined;
+    }
 
     Promise.all(
       uniquePaths.map(async (path) => {
+        if (
+          key &&
+          mediaCachePaths.includes(path) &&
+          videoMediaServiceWorkerControlled &&
+          await hasCachedVideoMedia(key, path)
+        ) {
+          return [path, videoMediaCacheUrl(key, path)] as const;
+        }
+
         const blob = await indexedDbStorage.getFileBlob(key, path);
         if (!blob) return undefined;
         const url = URL.createObjectURL(blob);
@@ -6377,21 +6578,40 @@ function usePackageUrls(context: ActivityRendererContext, paths: string[]): Reco
         const nextUrls = Object.fromEntries(entries.filter(Boolean) as Array<readonly [string, string]>);
         if (active) {
           setUrls(nextUrls);
+          setChecked(true);
         } else {
           Object.values(nextUrls).forEach((url) => URL.revokeObjectURL(url));
         }
       })
       .catch(() => {
-        if (active) setUrls({});
+        if (active) {
+          setUrls({});
+          setChecked(true);
+          setError(true);
+        }
       });
 
     return () => {
       active = false;
       createdUrls.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [key, uniquePaths]);
+  }, [key, mediaCachePaths.join("|"), uniquePaths, videoMediaServiceWorkerControlled]);
 
-  return urls;
+  return { urls, checked, error };
+}
+
+function useVideoMediaServiceWorkerControlled(): boolean {
+  const [isControlled, setIsControlled] = useState(isVideoMediaServiceWorkerControlling);
+
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return undefined;
+    const update = () => setIsControlled(isVideoMediaServiceWorkerControlling());
+    navigator.serviceWorker.addEventListener("controllerchange", update);
+    update();
+    return () => navigator.serviceWorker.removeEventListener("controllerchange", update);
+  }, []);
+
+  return isControlled;
 }
 
 function normalizeListenCueTiming(cues: ListenCaptionCue[], durationMs: number): ListenCaptionCue[] {

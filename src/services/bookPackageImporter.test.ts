@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getBookResourceManifest } from "../api/uniplanetApi";
 import { indexedDbStorage } from "./indexedDbStorage";
 import { BOOK_PACKAGE_CACHE_VERSION, downloadAndCacheBookPackage, getCachedPackage } from "./bookPackageImporter";
+import { VIDEO_MEDIA_CACHE_NAME } from "./videoMediaCache";
 import type { BookData, BookResourceManifest } from "../types/metaonTypes";
 
 vi.mock("../api/uniplanetApi", () => ({
@@ -37,6 +38,7 @@ const book: BookData = {
 describe("downloadAndCacheBookPackage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllGlobals();
     vi.mocked(indexedDbStorage.getFileBlob).mockResolvedValue(undefined);
   });
 
@@ -134,6 +136,34 @@ describe("downloadAndCacheBookPackage", () => {
       .find((file) => file.path === "Lessons/L1/D1/video/movie.mp4");
     expect(savedFile?.mimeType).toBe("video/mp4");
     expect(savedFile?.blob.type).toBe("video/mp4");
+  });
+
+  it("also stores opt-in video Activity media as a complete Cache Storage response", async () => {
+    const manifest: BookResourceManifest = {
+      key: "book:6710",
+      book,
+      lessonDays: [],
+      generatedFiles: [],
+      resources: [
+        {
+          path: "Lessons/L1/D1/wdca02/video/loop.mp4",
+          sourcePath: "/13/173/648/8159/1512/1512/wdca02/loop.mp4",
+          url: "https://metaon.s3.ap-northeast-2.amazonaws.com/MetaOn3/BookData/13/173/648/8159/1512/1512/wdca02/loop.mp4",
+          mimeType: "video/mp4",
+          category: "wdca02"
+        }
+      ]
+    };
+    const put = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("caches", { open: vi.fn().mockResolvedValue({ put }) });
+    vi.mocked(getBookResourceManifest).mockResolvedValue(manifest);
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(new Uint8Array([1, 2, 3]), { status: 200 })));
+
+    const pkg = await downloadAndCacheBookPackage(book);
+
+    expect(caches.open).toHaveBeenCalledWith(VIDEO_MEDIA_CACHE_NAME);
+    expect(put).toHaveBeenCalledTimes(1);
+    expect(pkg.mediaCachePaths).toEqual(["Lessons/L1/D1/wdca02/video/loop.mp4"]);
   });
 
   it("downloads MP3 assets referenced by cached npcqhk/script.json", async () => {
