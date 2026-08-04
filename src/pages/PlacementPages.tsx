@@ -78,36 +78,29 @@ export function PlacementIntroPage() {
   }
 
   return (
-    <section className="hub-placement-page hub-raz-page">
-      <Link className="hub-back-link" to="/">
-        <ArrowLeft size={17} />
-        홈으로
+    <section className="hub-placement-page hub-raz-page figma-placement-page figma-placement-intro-page">
+      <Link aria-label="홈으로" className="figma-placement-back" to="/">
+        <ArrowLeft size={20} strokeWidth={2.4} />
       </Link>
 
-      <div className="hub-raz-start-panel">
-        <div className="hub-raz-hero">
-          <span className="hub-raz-hero-icon">
-            <BookOpen size={34} strokeWidth={2.3} />
-          </span>
+      <div className="figma-placement-start-card">
+        <aside className="figma-placement-intro-copy">
+          <img alt="Raz 읽기 레벨테스트" className="figma-placement-thumbnail" src="/metaon-assets/placement/raz-placement-thumbnail.png" />
           <div>
-            <p className="hub-kicker">Raz Adaptive Placement</p>
+            <p className="figma-placement-eyebrow">RAZ ADAPTIVE PLACEMENT</p>
             <h1>Raz 읽기 레벨테스트</h1>
-            <p>
-              글을 읽고 문제를 풀면 현재 읽기 레벨과 추천 Book을 제시합니다. 쉬우면 더 높은 단계로, 어려우면 더 쉬운
-              단계로 이동합니다.
+            <p className="figma-placement-description">
+              글을 읽고 문제를 풀면 현재 읽기 레벨과 추천 Book을 제시합니다.<br />
+              쉬우면 더 높은 단계로, 어려우면 더 쉬운 단계로 이동합니다.
             </p>
           </div>
-        </div>
+          <div className="figma-placement-tags" aria-label="Placement test areas">
+            <span>독해</span><span>어휘</span><span>적응형 레벨</span><span>추천 Book</span>
+          </div>
+        </aside>
 
-        <div className="hub-raz-chips" aria-label="Placement test areas">
-          <span>독해</span>
-          <span>어휘</span>
-          <span>적응형 레벨</span>
-          <span>추천 Book</span>
-        </div>
-
-        <div className="hub-raz-form">
-          <label>
+        <div className="figma-placement-form">
+          <label className="figma-placement-field">
             <span>이름</span>
             <input
               maxLength={20}
@@ -118,12 +111,12 @@ export function PlacementIntroPage() {
             />
           </label>
 
-          <div className="hub-raz-grade-field">
+          <div className="figma-placement-field">
             <span>학년</span>
-            <div className="hub-raz-grade-grid">
+            <div className="figma-placement-grade-grid">
               {gradeOptions.map((option) => (
                 <button
-                  className={`hub-raz-grade-chip${grade === option.value ? " is-selected" : ""}`}
+                  className={grade === option.value ? "is-selected" : ""}
                   key={option.value}
                   onClick={() => setGrade(option.value)}
                   type="button"
@@ -133,29 +126,21 @@ export function PlacementIntroPage() {
               ))}
             </div>
           </div>
-        </div>
 
-        {error ? <p className="hub-warning-copy">{error}</p> : null}
-        {!isAuthenticated ? <p className="hub-warning-copy">로그인 후 Placement Test 결과를 저장할 수 있습니다.</p> : null}
-
-        <div className="hub-button-row">
-          <button className="hub-primary-action" disabled={!name.trim() || !grade || loading} onClick={() => void beginTest()} type="button">
-            <PlayCircle size={18} strokeWidth={2.3} />
-            {loading ? "준비 중..." : placement.status === "in-progress" ? "새 테스트 시작" : "시작하기"}
+          <button className={`figma-placement-audio-check${soundChecked ? " is-selected" : ""}`} type="button" onClick={() => setSoundChecked(true)}>
+            <Headphones size={20} strokeWidth={2.2} />
+            <span>{soundChecked ? "소리 확인이 완료되었습니다." : "테스트 시작 전 소리를 확인해 주세요."}</span>
+            <b>{soundChecked ? "완료" : "소리 확인"}</b>
           </button>
-          <button className={`hub-secondary-action${soundChecked ? " is-selected" : ""}`} type="button" onClick={() => setSoundChecked(true)}>
-            <Volume2 size={18} strokeWidth={2.3} />
-            {soundChecked ? "소리 확인 완료" : "소리 확인"}
+
+          {error ? <p className="hub-warning-copy">{error}</p> : null}
+          {!isAuthenticated ? <p className="hub-warning-copy">로그인 후 Placement Test 결과를 저장할 수 있습니다.</p> : null}
+
+          <button className="figma-placement-start-button" disabled={!name.trim() || !grade || loading} onClick={() => void beginTest()} type="button">
+            <PlayCircle size={21} strokeWidth={2.4} />
+            {loading ? "테스트 준비 중..." : placement.status === "in-progress" ? "새 테스트 시작" : "테스트 시작하기"}
           </button>
         </div>
-      </div>
-
-      <div className="hub-placement-note">
-        <Headphones size={22} strokeWidth={2.25} />
-        <span>
-          <strong>적응형 테스트</strong>
-          <small>3~5개 지문의 등록된 독해·어휘 문항 전체와 풀이 시간을 기록합니다.</small>
-        </span>
       </div>
     </section>
   );
@@ -227,46 +212,43 @@ export function PlacementTestPage() {
   }
 
   return (
-    <section className="hub-placement-page hub-raz-page">
-      <div className="hub-placement-test-header">
-        <Link className="hub-back-link" to="/placement/intro">
-          <ArrowLeft size={17} />
-          안내로
+    <section className="hub-placement-page hub-raz-page figma-placement-page figma-placement-test-page">
+      <header className="figma-placement-test-header">
+        <Link aria-label="배치고사 안내로" className="figma-placement-back" to="/placement/intro">
+          <ArrowLeft size={20} strokeWidth={2.4} />
         </Link>
-        <span className="hub-placement-count">지문 {unit.step}</span>
-      </div>
+        <div>
+          <p>RAZ ADAPTIVE PLACEMENT</p>
+          <strong>{gradeLabelForUnit(unit)} 읽기 테스트</strong>
+        </div>
+        <span className="figma-placement-step">지문 {unit.step}</span>
+      </header>
 
       {unit.confirm ? <div className="hub-raz-banner">마지막 확인 문제입니다.</div> : null}
 
-      <div className="hub-raz-passage-card">
-        <div>
-          <p className="hub-kicker">Read and answer</p>
-          <h1>{gradeLabelForUnit(unit)} 지문</h1>
-        </div>
-        <div className="hub-raz-passage-text" aria-label="Placement Test reading passage">
-          {normalizePassageText(unit.passage)}
-        </div>
-        {isSpeechSupported() ? (
-          <button className="hub-secondary-action" onClick={() => speak(unit.passage)} type="button">
-            <Volume2 size={18} strokeWidth={2.3} />
-            읽어주기
-          </button>
-        ) : null}
-      </div>
+      <div className="figma-placement-test-grid">
+        <aside className="figma-placement-passage-card">
+          <div className="figma-placement-passage-heading">
+            <span>READ</span>
+            <h1>지문을 읽어 보세요</h1>
+          </div>
+          <div className="hub-raz-passage-text" aria-label="Placement Test reading passage">
+            {normalizePassageText(unit.passage)}
+          </div>
+          {isSpeechSupported() ? (
+            <button className="figma-placement-listen-button" onClick={() => speak(unit.passage)} type="button">
+              <Volume2 size={20} strokeWidth={2.3} />
+              지문 듣기
+            </button>
+          ) : null}
+          <dl className="figma-placement-question-summary" aria-label="Placement Test question composition">
+            <div><dt>Reading</dt><dd>{countUnitItems(unit, "reading")}</dd></div>
+            <div><dt>Vocabulary</dt><dd>{countUnitItems(unit, "vocab")}</dd></div>
+            <div><dt>Total</dt><dd>{unit.items.length}</dd></div>
+          </dl>
+        </aside>
 
-      <div className="hub-raz-question-summary" aria-label="Placement Test question composition">
-        <span>
-          Reading <b>{countUnitItems(unit, "reading")}</b>
-        </span>
-        <span>
-          Vocabulary <b>{countUnitItems(unit, "vocab")}</b>
-        </span>
-        <span>
-          Total <b>{unit.items.length}</b>
-        </span>
-      </div>
-
-      <div className="hub-raz-question-list">
+        <div className="hub-raz-question-list figma-placement-question-list">
         {unit.items.map((item, itemIndex) => (
           <article className={`hub-raz-question-card is-${item.skill}`} key={item.id}>
             <div className="hub-raz-question-meta">
@@ -291,15 +273,16 @@ export function PlacementTestPage() {
             </div>
           </article>
         ))}
+        </div>
       </div>
 
       {error ? <p className="hub-warning-copy">{error}</p> : null}
 
-      <div className="hub-placement-actions">
-        <button className="hub-secondary-action" type="button" onClick={() => navigate("/")}>
+      <div className="hub-placement-actions figma-placement-actions">
+        <button className="figma-placement-later-button" type="button" onClick={() => navigate("/")}>
           나중에 이어하기
         </button>
-        <button className="hub-primary-action" disabled={!allAnswered || submitting} onClick={() => void next()} type="button">
+        <button className="figma-placement-next-button" disabled={!allAnswered || submitting} onClick={() => void next()} type="button">
           {submitting ? "채점 중..." : unit.confirm ? "결과 보기" : "다음"}
           <ArrowRight size={18} strokeWidth={2.3} />
         </button>
