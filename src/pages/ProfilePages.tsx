@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowLeft, BookOpen, Building2, CheckCircle2, Edit3, KeyRound, LockKeyhole, Plus, Save, Trash2, UserCheck, UserRound, UserX } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Bell, BookOpen, Building2, CheckCircle2, Edit3, KeyRound, LockKeyhole, Plus, Save, Search, Trash2, UserCheck, UserRound, UserX } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCatalog } from "../hooks/useCatalog";
@@ -187,7 +187,19 @@ export function ProfileManagePage() {
   if (isLoading || !isAccountAuthenticated) return null;
 
   return (
-    <section className="hub-form-screen hub-profile-manager">
+    <section className="figma-profile-manage-screen">
+      <header className="figma-profile-manage-topbar">
+        <div className="figma-profile-manage-topbar-left">
+          <Link aria-label="프로필로 돌아가기" className="figma-profile-manage-icon-button" to="/profile"><ArrowLeft size={18} /></Link>
+          <strong>METAON</strong>
+        </div>
+        <div className="figma-profile-manage-topbar-right" aria-hidden="true">
+          <span className="figma-profile-manage-icon-button"><Search size={18} /></span>
+          <span className="figma-profile-manage-icon-button"><Bell size={18} /></span>
+          <span className="figma-profile-manage-topbar-avatar" />
+        </div>
+      </header>
+      <main className="hub-form-screen hub-profile-manager">
       <Link className="hub-back-link" to="/profile">
         <ArrowLeft size={17} />
         프로필로
@@ -302,6 +314,7 @@ export function ProfileManagePage() {
         </>
       )}
       {message || authError ? <p className="hub-profile-select-message">{message || authError}</p> : null}
+      </main>
     </section>
   );
 }

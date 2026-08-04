@@ -16,6 +16,8 @@ export function MetaOnHubShell() {
   const isActivityRoute = location.pathname.startsWith("/activity/") || location.pathname.startsWith("/activity-preview/");
   const isExternalFrameRoute = location.pathname === "/ai-session" || location.pathname === "/metaverse-world";
   const isHomeRoute = location.pathname === "/";
+  const isLoginRoute = location.pathname === "/login";
+  const isProfileManageRoute = location.pathname === "/profiles/manage";
   const displayName = authUser?.username || account?.username || hubUser.name;
   const displayAvatar = getInitials(displayName || hubUser.avatar);
 
@@ -104,7 +106,7 @@ export function MetaOnHubShell() {
   }
 
   return (
-    <div className={`metaon-hub-shell${isHomeRoute ? " is-home-route" : ""}`}>
+    <div className={`metaon-hub-shell${isHomeRoute ? " is-home-route" : ""}${isLoginRoute ? " is-login-route" : ""}${isProfileManageRoute ? " is-profile-manage-route" : ""}`}>
       <div className="hub-main-column">
         <header
           className={`hub-top-bar${isHomeRoute ? " hub-home-top-bar" : ""}${

@@ -1,3 +1,6 @@
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@latest/dist/web/variable/pretendardvariable-dynamic-subset.css");
+@import url("https://fonts.googleapis.com/css2?family=Fredoka:wght@700&display=swap");
+
 :root {
   --hub-bg: #f4fbff;
   --hub-bg-strong: #e8f7ff;
@@ -844,6 +847,605 @@
 .hub-login-layout {
   grid-template-columns: minmax(0, 1.1fr) minmax(380px, 0.75fr);
   gap: 28px;
+}
+
+.metaon-hub-shell.is-login-route .hub-top-bar {
+  display: none;
+}
+
+.metaon-hub-shell.is-profile-manage-route .hub-top-bar {
+  display: none;
+}
+
+.metaon-hub-shell.is-login-route .hub-app-content {
+  padding: 0;
+}
+
+.metaon-hub-shell.is-profile-manage-route .hub-app-content {
+  padding: 0;
+}
+
+.figma-profile-manage-screen {
+  min-height: 100svh;
+  background: #f8fafc;
+  color: #1f1f1f;
+  font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", sans-serif;
+}
+
+.figma-profile-manage-topbar {
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+.figma-profile-manage-topbar-left,
+.figma-profile-manage-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.figma-profile-manage-topbar-left strong {
+  color: #3aabf8;
+  font-family: Fredoka, "Pretendard Variable", sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: normal;
+}
+
+.figma-profile-manage-icon-button {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #334155;
+}
+
+.figma-profile-manage-topbar-avatar {
+  width: 40px;
+  height: 40px;
+  display: block;
+  border: 1px solid #bae0fd;
+  border-radius: 50%;
+  background: #e5f3fe url("/metaon-assets/auth/profile-avatar.png") center / 30px 30px no-repeat;
+}
+
+.hub-profile-manager {
+  width: min(1280px, 100%);
+  min-height: calc(100svh - 72px);
+  display: grid;
+  align-content: start;
+  gap: 32px;
+  padding: 40px 64px;
+  margin: 0 auto;
+}
+
+.hub-profile-manager > .hub-back-link {
+  display: none;
+}
+
+.hub-profile-manager .hub-section-heading {
+  display: grid;
+  gap: 8px;
+}
+
+.hub-profile-manager .hub-section-heading h1 {
+  margin: 0;
+  color: #1f1f1f;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: normal;
+}
+
+.hub-profile-manager .hub-section-heading p {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: normal;
+}
+
+.hub-profile-manager .hub-profile-create-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: end;
+  padding: 24px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.hub-profile-manager .hub-profile-create-form .hub-field {
+  gap: 4px;
+  color: #1f1f1f;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.hub-profile-manager .hub-profile-create-form .hub-field input,
+.hub-profile-manager .hub-profile-manage-main .hub-field input {
+  height: 40px;
+  border-color: #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1f1f1f;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.hub-profile-manager .hub-profile-create-form .hub-field input::placeholder {
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+.hub-profile-manager .hub-profile-create-form .hub-field input:focus,
+.hub-profile-manager .hub-profile-manage-main .hub-field input:focus {
+  border-color: #0092f5;
+  box-shadow: 0 0 0 3px rgba(0, 146, 245, 0.12);
+}
+
+.hub-profile-manager .hub-profile-create-form .hub-primary-action {
+  height: 43px;
+  min-height: 43px;
+  padding: 0 20px;
+  border-radius: 8px;
+  background: #0092f5;
+  box-shadow: none;
+  font-size: 16px;
+}
+
+.hub-profile-manager .hub-profile-manage-list {
+  display: grid;
+  gap: 12px;
+}
+
+.hub-profile-manager .hub-profile-manage-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  gap: 24px;
+  align-items: center;
+  min-height: 112px;
+  padding: 24px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.hub-profile-manager .hub-profile-manage-row.is-inactive {
+  opacity: 0.65;
+}
+
+.hub-profile-manager .hub-profile-choice-avatar {
+  width: 64px;
+  height: 64px;
+  display: block;
+  border-radius: 50%;
+  background: #e5f3fe url("/metaon-assets/auth/profile-avatar.png") center / 48px 48px no-repeat;
+  color: transparent;
+  font-size: 0;
+  box-shadow: none;
+}
+
+.hub-profile-manager .hub-profile-manage-main {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 8px;
+  position: relative;
+}
+
+.hub-profile-manager .hub-profile-manage-main::before {
+  content: "학습 프로필";
+  order: -1;
+  color: #8e8e8e;
+  font-size: 13px;
+}
+
+.hub-profile-manager .hub-profile-manage-main > small {
+  position: absolute;
+  margin-top: 0;
+  align-self: start;
+  justify-self: end;
+  color: #4b4b4b;
+  font-size: 12px;
+}
+
+.hub-profile-manager .hub-profile-manage-main .hub-field {
+  width: 100%;
+  margin-top: 0;
+}
+
+.hub-profile-manager .hub-button-row.compact {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.hub-profile-manager .hub-button-row.compact button {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  box-shadow: none;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.hub-profile-manager .hub-button-row.compact .hub-danger-action {
+  color: #e93a35;
+}
+
+.hub-profile-manager .hub-profile-select-message {
+  margin: -16px 0 0;
+  color: #e93a35;
+  font-size: 14px;
+}
+
+.hub-profile-manager .hub-empty-state {
+  min-height: 180px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+@media (max-width: 760px) {
+  .figma-profile-manage-topbar { padding: 0 18px; }
+  .figma-profile-manage-topbar-right { gap: 8px; }
+  .figma-profile-manage-topbar-right > .figma-profile-manage-icon-button { display: none; }
+  .hub-profile-manager { gap: 20px; padding: 26px 16px; }
+  .hub-profile-manager .hub-profile-create-form { grid-template-columns: 1fr; }
+  .hub-profile-manager .hub-profile-create-form .hub-primary-action { justify-content: center; }
+  .hub-profile-manager .hub-profile-manage-row { grid-template-columns: 48px minmax(0, 1fr); gap: 14px; min-height: 0; padding: 16px; }
+  .hub-profile-manager .hub-profile-choice-avatar { width: 48px; height: 48px; background-size: 38px 38px; }
+  .hub-profile-manager .hub-button-row.compact { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .hub-profile-manager .hub-button-row.compact button { justify-content: center; padding: 0 8px; font-size: 13px; }
+}
+
+.figma-login-screen {
+  min-height: 100svh;
+  background: #ffffff;
+  color: #1f1f1f;
+  font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", sans-serif;
+  font-variation-settings: "wght" 400;
+}
+
+.figma-login-topbar {
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+.figma-login-topbar-left,
+.figma-login-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.figma-login-topbar-left strong {
+  color: #3aabf8;
+  font-family: Fredoka, "Pretendard Variable", sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  font-variation-settings: "wdth" 100;
+  line-height: normal;
+}
+
+.figma-login-round-button {
+  width: 40px;
+  height: 40px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #394a58;
+}
+
+.figma-login-notification-dot::before {
+  content: "";
+  width: 17px;
+  height: 17px;
+  display: block;
+  border-radius: 50%;
+  background: #e93a35;
+}
+
+.figma-login-topbar-login {
+  min-width: 72px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #dbdbdb;
+  border-radius: 32px;
+  color: #333333;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 27px;
+}
+
+.figma-login-content {
+  min-height: calc(100svh - 72px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 560px;
+}
+
+.figma-login-marketing {
+  min-height: 728px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  padding: 64px;
+  overflow: hidden;
+  background: #0092f5;
+  color: #ffffff;
+}
+
+.figma-login-brand-copy {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+}
+
+.figma-login-brand-copy span {
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.figma-login-brand-copy strong {
+  font-family: Fredoka, "Pretendard Variable", sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  font-variation-settings: "wdth" 100;
+  line-height: normal;
+}
+
+.figma-login-intro {
+  display: grid;
+  gap: 24px;
+}
+
+.figma-login-intro h1,
+.figma-login-card h1 {
+  margin: 0;
+}
+
+.figma-login-intro h1 {
+  font-size: 32px;
+  line-height: 1.4;
+  font-weight: 700;
+}
+
+.figma-login-intro p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.6;
+  opacity: 0.9;
+}
+
+.figma-login-path {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.figma-login-path span {
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #0073c4;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.figma-login-path i {
+  font-style: normal;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.figma-login-mascot {
+  width: min(194px, 42%);
+  height: auto;
+  margin-top: auto;
+  object-fit: contain;
+}
+
+.figma-login-form-side {
+  display: grid;
+  align-items: center;
+  padding: 40px 48px;
+  background: #ffffff;
+}
+
+.figma-login-card {
+  display: grid;
+  gap: 56px;
+  padding: 40px 32px;
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 8px 12px rgba(19, 25, 39, 0.04);
+}
+
+.figma-login-card-heading {
+  display: grid;
+  gap: 6px;
+}
+
+.figma-login-card-heading h1 {
+  font-size: 32px;
+  font-weight: 800;
+  line-height: normal;
+}
+
+.figma-login-card-heading p {
+  margin: 0;
+  color: #8e8e8e;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: normal;
+}
+
+.figma-login-fields {
+  display: grid;
+  gap: 24px;
+}
+
+.figma-login-fields > label:not(.figma-login-save-option) {
+  display: grid;
+  gap: 8px;
+  color: #1f1f1f;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: normal;
+}
+
+.figma-login-fields input:not([type="checkbox"]) {
+  width: 100%;
+  height: 48px;
+  border: 1.5px solid #7ec8fb;
+  border-radius: 16px;
+  outline: 0;
+  padding: 0 16px;
+  background: #e5f3fe;
+  color: #00243e;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: normal;
+}
+
+.figma-login-fields input:not([type="checkbox"]):focus {
+  border-color: #0092f5;
+  box-shadow: 0 0 0 3px rgba(0, 146, 245, 0.16);
+}
+
+.figma-login-password-field {
+  position: relative;
+}
+
+.figma-login-password-field input {
+  padding-right: 52px !important;
+}
+
+.figma-login-password-field button {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  transform: translateY(-50%);
+  background: transparent;
+  color: #48667a;
+}
+
+.figma-login-save-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #1f1f1f;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: normal;
+}
+
+.figma-login-save-option input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: #0073c4;
+}
+
+.figma-login-error {
+  margin: -12px 0 -4px;
+  padding-left: 4px;
+  color: #e93a35;
+  font-size: 14px;
+}
+
+.figma-login-submit {
+  width: 100%;
+  min-height: 51px;
+  border-radius: 32px;
+  background: #3aabf8;
+  color: #ffffff;
+  box-shadow: 0 8px 8px rgba(58, 171, 248, 0.24);
+  font-size: 16px;
+  font-weight: 800;
+  line-height: normal;
+}
+
+.figma-login-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.figma-login-active-session {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid #bde5fd;
+  border-radius: 16px;
+  background: #f2faff;
+  color: #1f1f1f;
+}
+
+.figma-login-active-session > div {
+  display: flex;
+  gap: 8px;
+}
+
+.figma-login-active-session a,
+.figma-login-active-session button {
+  min-height: 34px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 12px;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #0073c4;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+@media (max-width: 900px) {
+  .figma-login-topbar { padding: 0 18px; }
+  .figma-login-content { grid-template-columns: 1fr; }
+  .figma-login-marketing { min-height: 300px; padding: 34px; }
+  .figma-login-mascot { display: none; }
+  .figma-login-form-side { padding: 22px 18px; }
+}
+
+@media (max-width: 560px) {
+  .figma-login-topbar-right { gap: 8px; }
+  .figma-login-topbar-right .figma-login-round-button { display: none; }
+  .figma-login-marketing { min-height: 260px; gap: 22px; padding: 26px 22px; }
+  .figma-login-intro h1 { font-size: 24px; }
+  .figma-login-intro h1 br,
+  .figma-login-intro p br { display: none; }
+  .figma-login-intro p { font-size: 14px; }
+  .figma-login-path { gap: 5px; }
+  .figma-login-path span { padding: 6px 10px; font-size: 12px; }
+  .figma-login-card { gap: 32px; padding: 28px 18px; }
+  .figma-login-card-heading h1 { font-size: 28px; }
 }
 
 .hub-auth-visual,
