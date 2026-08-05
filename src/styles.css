@@ -8102,6 +8102,322 @@ button.image-page-control:hover:not(:disabled) {
   font-size: 22px;
 }
 
+/* WDWR02: Unity Activity 48 behavior on the renewed Figma writing stage. */
+.wdwr02-unity-write-word-frame {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  background: #17202b;
+}
+
+.wdwr02-unity-write-word-shell {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background-image: url("/metaon-assets/activity/wdwr02/figma-source/raw-image-3.png");
+  background-position: center 52%;
+  background-size: cover;
+}
+
+.wdwr02-unity-write-word-shell::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  content: "";
+  background: rgba(0, 0, 0, 0.42);
+  pointer-events: none;
+}
+
+.wdwr02-unity-write-word-shell > * {
+  position: relative;
+  z-index: 2;
+}
+
+.wdwr02-word-card {
+  position: absolute;
+  z-index: 2;
+  top: 11.5%;
+  left: 50%;
+  width: min(29vw, 330px);
+  min-width: 250px;
+  aspect-ratio: 1 / 1;
+  transform: translateX(-50%);
+  overflow: hidden;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+}
+
+.wdwr02-word-card .wdwr02-word-image,
+.wdwr02-word-card .resource-missing {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  object-fit: cover;
+  border: 0;
+  border-radius: inherit;
+}
+
+.wdwr02-word-card .wdwr02-sound-button {
+  position: absolute;
+  z-index: 3;
+  top: 20px;
+  left: 20px;
+  width: 64px;
+  height: 64px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+}
+
+.wdwr02-word-card .wdwr02-sound-button .activity-sound-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.wdwr02-keyboard-toggle {
+  position: absolute;
+  z-index: 4;
+  top: 85px;
+  right: 3%;
+  width: 100px;
+  height: 58px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.wdwr02-keyboard-toggle img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.wdwr02-keyboard-toggle:disabled {
+  opacity: 0.45;
+}
+
+.wdwr02-notebook {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 30%;
+  min-height: 190px;
+  overflow: hidden;
+  background-color: rgba(250, 250, 250, 0.2);
+  background-image:
+    linear-gradient(90deg, transparent 0 13.5%, rgba(244, 112, 139, 0.65) 13.5% calc(13.5% + 2px), transparent calc(13.5% + 2px)),
+    repeating-linear-gradient(to bottom, transparent 0 47px, rgba(121, 206, 241, 0.8) 47px 49px);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.16);
+  backdrop-filter: blur(1px);
+}
+
+.wdwr02-notebook-binding {
+  position: absolute;
+  z-index: 5;
+  top: 12px;
+  bottom: 12px;
+  left: 0;
+  width: 44px;
+  background: radial-gradient(circle at 28px 10px, #dcd6e1 0 9px, transparent 10px) 0 0 / 44px 45px repeat-y;
+  pointer-events: none;
+}
+
+.wdwr02-drawing-canvas {
+  position: absolute;
+  z-index: 2;
+  inset: 0 190px 0 48px;
+  width: calc(100% - 238px);
+  height: 100%;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.wdwr02-recognized-word {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  left: 50%;
+  max-width: 58%;
+  transform: translate(-50%, -50%);
+  overflow: hidden;
+  color: #fff;
+  font-family: "Comic Sans MS", "Segoe Print", cursive;
+  font-size: 68px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.wdwr02-notebook.is-fail .wdwr02-recognized-word {
+  color: #ff6d78;
+}
+
+.wdwr02-notebook.is-correct .wdwr02-recognized-word {
+  color: #fff;
+  text-shadow: 0 0 16px rgba(149, 239, 97, 0.82), 0 3px 8px rgba(0, 0, 0, 0.35);
+}
+
+.wdwr02-virtual-keyboard {
+  position: absolute;
+  z-index: 7;
+  right: 190px;
+  bottom: 8px;
+  left: 70px;
+  display: grid;
+  gap: 5px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 12px;
+  background: rgba(28, 35, 63, 0.88);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(8px);
+}
+
+.wdwr02-keyboard-row,
+.wdwr02-keyboard-actions {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.wdwr02-keyboard-row button,
+.wdwr02-keyboard-actions button {
+  min-width: 42px;
+  min-height: 30px;
+  padding: 2px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: 6px;
+  color: #18213d;
+  background: #fff;
+  box-shadow: 0 2px 0 rgba(103, 122, 163, 0.75);
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.wdwr02-keyboard-actions button {
+  min-width: 86px;
+  color: #fff;
+  background: #6d6491;
+}
+
+.wdwr02-check-button {
+  position: absolute;
+  z-index: 8;
+  right: 3.1%;
+  bottom: 16px;
+  display: inline-flex;
+  width: 160px;
+  height: 64px;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  border-radius: 32px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+  backdrop-filter: blur(7px);
+}
+
+.wdwr02-check-button svg {
+  width: 28px;
+  height: 28px;
+  stroke-width: 4;
+}
+
+.wdwr02-check-button:not(:disabled):active,
+.wdwr02-check-button.is-correct {
+  transform: translateY(2px) scale(0.98);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.wdwr02-check-button:disabled {
+  opacity: 0.42;
+}
+
+.wdwr02-unity-write-word-shell .activity-question-edge-nav {
+  position: absolute;
+  top: 43%;
+  z-index: 6;
+  transform: translateY(-50%);
+}
+
+.wdwr02-unity-write-word-shell .activity-question-edge-nav.previous {
+  left: 3.1%;
+  right: auto;
+}
+
+.wdwr02-unity-write-word-shell .activity-question-edge-nav.next {
+  left: auto;
+  right: 3.1%;
+}
+
+@media (max-width: 900px) {
+  .wdwr02-word-card {
+    top: 12%;
+    width: min(37vw, 300px);
+    min-width: 210px;
+  }
+
+  .wdwr02-keyboard-toggle {
+    top: 78px;
+    width: 82px;
+    height: 50px;
+  }
+
+  .wdwr02-notebook {
+    height: 31%;
+    min-height: 178px;
+  }
+
+  .wdwr02-recognized-word {
+    max-width: 54%;
+    font-size: 56px;
+  }
+
+  .wdwr02-drawing-canvas {
+    right: 155px;
+    width: calc(100% - 203px);
+  }
+
+  .wdwr02-virtual-keyboard {
+    right: 152px;
+  }
+
+  .wdwr02-keyboard-row button,
+  .wdwr02-keyboard-actions button {
+    min-width: 34px;
+    min-height: 27px;
+    padding: 1px 6px;
+    font-size: 15px;
+  }
+
+  .wdwr02-check-button {
+    width: 136px;
+    height: 56px;
+    font-size: 23px;
+  }
+}
+
 .package-record {
   align-items: flex-start;
 }

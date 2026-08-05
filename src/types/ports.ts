@@ -34,5 +34,11 @@ export type RecorderPort = {
 
 export type RecognitionPort = {
   recognizeSpeech: (audio: Blob, expectedText?: string) => Promise<unknown>;
-  recognizeHandwriting: (image: Blob) => Promise<unknown>;
+  recognizeHandwriting: (image: Blob) => Promise<{
+    resultCode: number;
+    resultMessage?: string;
+    candidates: string[];
+    provider?: string;
+    featureType?: string;
+  }>;
 };

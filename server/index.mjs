@@ -6,6 +6,7 @@ import { pipeline } from "node:stream/promises";
 import { createHmac, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
 import { isConfirmedAuthenticationFailure, resolveUpstreamCredentials } from "./authSession.mjs";
 import { discoverEbookResources } from "./ebookResourceDiscovery.mjs";
+import { recognizeGoogleVisionHandwriting } from "./googleVisionHandwriting.mjs";
 import { createNpcQuickCheckLaunch } from "./npcQuickCheckLaunch.mjs";
 import { loadNpcQuickCheckScenario } from "./npcQuickCheckScenarioSource.mjs";
 import {
@@ -69,6 +70,9 @@ const METAON_PUBLIC_ORIGIN = process.env.METAON_PUBLIC_ORIGIN || "";
 const NPC_QUICK_CHECK_SCENARIO_API_URL = process.env.METAON_NPC_SCENARIO_API_URL || "";
 const NPC_QUICK_CHECK_SCENARIO_API_KEY = process.env.METAON_NPC_SCENARIO_API_KEY || "";
 const NPC_QUICK_CHECK_SCENARIO_TIMEOUT_MS = Number(process.env.METAON_NPC_SCENARIO_TIMEOUT_MS || 5000);
+const GOOGLE_VISION_API_KEY = process.env.METAON_GOOGLE_VISION_API_KEY || process.env.GOOGLE_VISION_API_KEY || "";
+const GOOGLE_VISION_API_URL = process.env.METAON_GOOGLE_VISION_API_URL || "https://vision.googleapis.com/v1/images:annotate";
+const GOOGLE_VISION_TIMEOUT_MS = Number(process.env.METAON_GOOGLE_VISION_TIMEOUT_MS || 12000);
 
 const catalogCache = new Map();
 const CATALOG_TTL_MS = 60_000;
@@ -100,7 +104,8 @@ app.get("/api/health", (_req, res) => {
       name: AUTH_COOKIE_NAME,
       secure: AUTH_COOKIE_SECURE,
       httpOnly: true
-    }
+    },
+    handwritingRecognitionConfigured: Boolean(GOOGLE_VISION_API_KEY)
   });
 });
 
@@ -967,12 +972,24 @@ app.post("/api/recognition/speech", (_req, res) => {
   });
 });
 
-app.post("/api/recognition/handwriting", (_req, res) => {
-  res.status(501).json({
-    resultCode: 501,
-    resultMessage: "Handwriting recognition proxy is not configured yet.",
-    replacement: "Route canvas PNG payloads through this BFF once server credentials are provisioned."
-  });
+app.post("/api/recognition/handwriting", requireSelectedProfile, async (req, res) => {
+  try {
+    const candidates = await recognizeGoogleVisionHandwriting({
+      imageBase64: req.body?.imageBase64,
+      apiKey: GOOGLE_VISION_API_KEY,
+      endpoint: GOOGLE_VISION_API_URL,
+      timeoutMs: GOOGLE_VISION_TIMEOUT_MS
+    });
+    res.json({
+      resultCode: 1,
+      resultMessage: "success",
+      provider: "google-vision",
+      featureType: "TEXT_DETECTION",
+      candidates
+    });
+  } catch (error) {
+    sendError(res, error, "Failed to recognize handwriting");
+  }
 });
 
 const distPath = path.resolve(__dirname, "../dist");
@@ -1833,6 +1850,7 @@ const METAON_ACTIVITY_CODE = {
   videoWordQuiz: "WDQU03",
   wordBlank: "WDBL01",
   videoWordBlank: "WDBL02",
+  writeWord: "WDWR02",
   matchingGame: "WDPL01",
   memoryCard: "WDPL02",
   sentenceBlank: "STBL01",
@@ -1854,6 +1872,7 @@ const actTypeByActivityCode = new Map([
   [METAON_ACTIVITY_CODE.videoWordQuiz, 1004],
   [METAON_ACTIVITY_CODE.wordBlank, 1005],
   [METAON_ACTIVITY_CODE.videoWordBlank, 1005],
+  [METAON_ACTIVITY_CODE.writeWord, 48],
   [METAON_ACTIVITY_CODE.matchingGame, 8],
   [METAON_ACTIVITY_CODE.memoryCard, 15],
   [METAON_ACTIVITY_CODE.sentenceBlank, 1006],
@@ -1880,6 +1899,7 @@ const activityCodeByActType = new Map([
   [1004, METAON_ACTIVITY_CODE.wordQuiz],
   [5, METAON_ACTIVITY_CODE.wordBlank],
   [1005, METAON_ACTIVITY_CODE.wordBlank],
+  [48, METAON_ACTIVITY_CODE.writeWord],
   [8, METAON_ACTIVITY_CODE.matchingGame],
   [15, METAON_ACTIVITY_CODE.memoryCard],
   [6, METAON_ACTIVITY_CODE.sentenceBlank],
@@ -1900,6 +1920,7 @@ const titleByActivityCode = new Map([
   [METAON_ACTIVITY_CODE.videoWordQuiz, "Word Quiz"],
   [METAON_ACTIVITY_CODE.wordBlank, "Word Blank"],
   [METAON_ACTIVITY_CODE.videoWordBlank, "Word Blank"],
+  [METAON_ACTIVITY_CODE.writeWord, "Write Word"],
   [METAON_ACTIVITY_CODE.matchingGame, "Matching Game"],
   [METAON_ACTIVITY_CODE.memoryCard, "Memory Card"],
   [METAON_ACTIVITY_CODE.sentenceBlank, "Sentence Blank"],

@@ -63,6 +63,7 @@ export function ActivityPage() {
     normalizedActivityCode === MetaOnActivityCode.LegacyNpcQuickCheck ||
     normalizedActivityCode === MetaOnActivityCode.NpcQuickCheck2;
   const isMovie01 = normalizedActivityCode === MetaOnActivityCode.Movie;
+  const isWriteWordHandwriting = normalizedActivityCode === MetaOnActivityCode.WriteWord;
   const isVideoActivity =
     normalizedActivityCode === MetaOnActivityCode.VideoWordCard ||
     normalizedActivityCode === MetaOnActivityCode.VideoWordQuiz ||
@@ -229,7 +230,7 @@ export function ActivityPage() {
         onPrev={() => goToActivity(currentActivityIndex - 1)}
         onNext={() => goToActivity(currentActivityIndex + 1)}
         onToggleFullscreen={toggleFullscreen}
-        variant={isVideoActivity ? "video" : "standard"}
+        variant={isVideoActivity || isWriteWordHandwriting ? "video" : "standard"}
       />
       {renderer.render({
         packageMeta: packageState.packageMeta,
@@ -241,7 +242,7 @@ export function ActivityPage() {
         onExit: returnToBook
       })}
       {studyError ? <p className="activity-study-error">{studyError}</p> : null}
-      {!isNpcQuickCheck ? (
+      {!isNpcQuickCheck && !isWriteWordHandwriting ? (
         <button
           aria-label={isComplete ? "Activity completion saved" : "Complete activity"}
           aria-pressed={isComplete}

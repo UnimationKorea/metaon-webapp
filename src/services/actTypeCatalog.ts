@@ -56,7 +56,7 @@ export const unityActTypeDefinitions: ActTypeDefinition[] = [
   def(ActType.FlipImage, "FlipImage", "Flip Image", "quiz", "planned", "Requires flip image metadata renderer."),
   def(ActType.BookPage, "BookPage", "Preview", "book", "implemented", "Use cached bookpage images and metadata."),
   def(ActType.PeelingWord, "PeelingWord", "Peeling Word", "word", "implemented", "Use cached word image/audio with progressive letter reveal."),
-  def(ActType.WriteWord, "WriteWord", "Write Word", "word", "implemented", "Use cached word image/audio and text input."),
+  def(ActType.WriteWord, "WriteWord", "Write Word", "word", "implemented", "Use cached word image/audio, canvas handwriting, and Unity-compatible Google Vision scoring."),
   def(ActType.PowerPoint, "PowerPoint", "PowerPoint", "book", "planned", "Requires slide-like package renderer."),
   def(ActType.WordBox, "WordBox", "Word Box", "word", "implemented", "Use cached word cards."),
   def(ActType.StoryBook, "StoryBook", "Story Book", "story", "compatible-renderer", "Use cached story pages and script audio."),

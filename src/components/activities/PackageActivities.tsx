@@ -9,6 +9,7 @@ import { getActTypeDefinition, getActTypeLabel } from "../../services/actTypeCat
 import { MetaOnActivityCode, normalizeActivityCode } from "../../services/activityCodes";
 import { indexedDbStorage } from "../../services/indexedDbStorage";
 import { parseCaptionCues, type ListenCaptionCue } from "../../services/listenEbookCaptions";
+import { evaluateUnityHandwriting, normalizeHandwritingCandidates } from "../../services/unityHandwriting";
 import {
   bookMediaCacheUrl,
   hasCachedBookMedia,
@@ -4933,10 +4934,20 @@ export function SequencingActivity({ context }: { context: ActivityRendererConte
   );
 }
 
-export function WriteWordActivity({ context }: { context: ActivityRendererContext }) {
+export function WriteWordActivity({
+  context,
+  prototypeData
+}: {
+  context: ActivityRendererContext;
+  prototypeData?: PrototypeActivityData;
+}) {
+  if (normalizeActivityCode(context.activity?.activityCode) === MetaOnActivityCode.WriteWord) {
+    return <UnityWriteWordActivity context={context} prototypeData={prototypeData} />;
+  }
+
   const wordResource = useWordsState(context);
-  const words = wordResource.words;
-  const isWordResourceLoading = wordResource.status === "loading";
+  const words = prototypeData?.words || wordResource.words;
+  const isWordResourceLoading = !prototypeData && wordResource.status === "loading";
   const [index, setIndex] = useState(0);
   const [value, setValue] = useState("");
   const word = words[index];
@@ -4957,6 +4968,344 @@ export function WriteWordActivity({ context }: { context: ActivityRendererContex
       </div>
     </ActivityFrame>
   );
+}
+
+type HandwritingPoint = { x: number; y: number };
+type HandwritingStroke = HandwritingPoint[];
+type WriteWordFeedback = "idle" | "checking" | "correct" | "fail";
+
+const WDWR02_ASSET_BASE = "/metaon-assets/activity/wdwr02/figma-source";
+const WDWR02_KEY_ROWS = ["ABCDEFG", "HIJKLMN", "OPQRSTU", "VWXYZ"] as const;
+
+function UnityWriteWordActivity({
+  context,
+  prototypeData
+}: {
+  context: ActivityRendererContext;
+  prototypeData?: PrototypeActivityData;
+}) {
+  const wordResource = useWordsState(context);
+  const words = prototypeData?.words || wordResource.words;
+  const isWordResourceLoading = !prototypeData && wordResource.status === "loading";
+  const [index, setIndex] = useState(0);
+  const [inputMode, setInputMode] = useState<"draw" | "keyboard">("draw");
+  const [typedText, setTypedText] = useState("");
+  const [displayText, setDisplayText] = useState("");
+  const [hasInk, setHasInk] = useState(false);
+  const [feedback, setFeedback] = useState<WriteWordFeedback>("idle");
+  const [solvedWordIndexes, setSolvedWordIndexes] = useState<Set<number>>(() => new Set());
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const strokesRef = useRef<HandwritingStroke[]>([]);
+  const activePointerIdRef = useRef<number | null>(null);
+  const questionStartedAtRef = useRef(Date.now());
+  const completionRequestedRef = useRef(false);
+  const questionViewKeyRef = useRef("");
+  const word = words[index];
+  const isChecking = feedback === "checking";
+  const canCheck = Boolean(word && !isChecking && (hasInk || typedText.trim()));
+
+  function redrawCanvas() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(1, Math.round(rect.width * ratio));
+    canvas.height = Math.max(1, Math.round(rect.height * ratio));
+    const drawingContext = canvas.getContext("2d");
+    if (!drawingContext) return;
+    drawingContext.setTransform(ratio, 0, 0, ratio, 0, 0);
+    drawHandwritingStrokes(drawingContext, strokesRef.current, rect.width, rect.height, "#ffffff", 8);
+  }
+
+  function clearInk() {
+    strokesRef.current = [];
+    activePointerIdRef.current = null;
+    setHasInk(false);
+    redrawCanvas();
+  }
+
+  function resetAnswer() {
+    setTypedText("");
+    setDisplayText("");
+    setFeedback("idle");
+    setInputMode("draw");
+    clearInk();
+    questionStartedAtRef.current = Date.now();
+  }
+
+  useEffect(() => {
+    if (index >= words.length) setIndex(0);
+  }, [index, words.length]);
+
+  useEffect(() => {
+    resetAnswer();
+  }, [index, word?.eng]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+    const observer = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(redrawCanvas);
+    observer?.observe(canvas);
+    redrawCanvas();
+    return () => observer?.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!word) return;
+    const viewKey = `${wordItemIdx(word) ?? word.index}:${index}:${word.eng}`;
+    if (questionViewKeyRef.current === viewKey) return;
+    questionViewKeyRef.current = viewKey;
+    recordLearnEvent(context, {
+      action: "question_view",
+      item_type: "word",
+      item_idx: wordItemIdx(word),
+      extra: { word: word.eng, question_index: index, activity_code: MetaOnActivityCode.WriteWord }
+    });
+  }, [context, index, word]);
+
+  function startStroke(event: ReactPointerEvent<HTMLCanvasElement>) {
+    if (isChecking || inputMode !== "draw") return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    activePointerIdRef.current = event.pointerId;
+    setTypedText("");
+    setDisplayText("");
+    setFeedback("idle");
+    const point = normalizedCanvasPoint(event);
+    strokesRef.current = [...strokesRef.current, [point]];
+    setHasInk(true);
+    redrawCanvas();
+  }
+
+  function continueStroke(event: ReactPointerEvent<HTMLCanvasElement>) {
+    if (activePointerIdRef.current !== event.pointerId || inputMode !== "draw") return;
+    event.preventDefault();
+    const strokes = strokesRef.current;
+    const activeStroke = strokes[strokes.length - 1];
+    if (!activeStroke) return;
+    activeStroke.push(normalizedCanvasPoint(event));
+    redrawCanvas();
+  }
+
+  function finishStroke(event: ReactPointerEvent<HTMLCanvasElement>) {
+    if (activePointerIdRef.current !== event.pointerId) return;
+    activePointerIdRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  }
+
+  function showKeyboard() {
+    clearInk();
+    setDisplayText("");
+    setTypedText("");
+    setFeedback("idle");
+    setInputMode("keyboard");
+  }
+
+  function updateTypedText(next: string) {
+    setTypedText(next);
+    setDisplayText(next);
+    setFeedback("idle");
+  }
+
+  async function checkAnswer() {
+    if (!word || !canCheck) return;
+    setFeedback("checking");
+    let candidates: string[] = [];
+    let recognitionError = false;
+
+    try {
+      if (typedText.trim()) {
+        candidates = [typedText];
+      } else {
+        const image = await handwritingStrokesToPng(strokesRef.current);
+        const response = await bffRecognitionPort.recognizeHandwriting(image);
+        candidates = normalizeHandwritingCandidates(response);
+      }
+    } catch {
+      recognitionError = true;
+    }
+
+    clearInk();
+    setTypedText("");
+    setInputMode("draw");
+    const evaluation = evaluateUnityHandwriting(word.eng, candidates);
+    const elapsed = Date.now() - questionStartedAtRef.current;
+    setDisplayText(evaluation.correct ? word.eng : evaluation.bestCandidate);
+    setFeedback(evaluation.correct ? "correct" : "fail");
+    recordLearnEvent(context, {
+      action: "answer_result",
+      item_type: "word",
+      item_idx: wordItemIdx(word),
+      correct: evaluation.correct ? 1 : 0,
+      score: evaluation.bestScore,
+      time_ms: elapsed,
+      extra: {
+        word: word.eng,
+        question_index: index,
+        input_mode: typedText.trim() ? "keyboard" : "handwriting",
+        recognized_text: evaluation.bestCandidate,
+        candidate_count: candidates.length,
+        recognition_error: recognitionError,
+        unity_threshold: 70
+      }
+    });
+
+    if (!evaluation.correct) return;
+    const completedIndexes = new Set(solvedWordIndexes);
+    completedIndexes.add(word.index);
+    setSolvedWordIndexes(completedIndexes);
+    if (completedIndexes.size >= words.length && !completionRequestedRef.current) {
+      completionRequestedRef.current = true;
+      window.setTimeout(() => void context.onComplete?.(), 500);
+    }
+  }
+
+  function playWordAudio() {
+    if (!word?.audioUrl) return;
+    recordLearnEvent(context, {
+      action: "audio_play",
+      item_type: "word",
+      item_idx: wordItemIdx(word),
+      audio_replays: 1,
+      extra: { word: word.eng, question_index: index, audio_path: word.audioPath }
+    });
+  }
+
+  return (
+    <ActivityFrame
+      context={context}
+      actionLabel="Write Word"
+      loading={isWordResourceLoading}
+      className="wdwr02-unity-write-word-frame"
+    >
+      <div className="wdwr02-unity-write-word-shell">
+        <ActivityQuestionNavigation current={index} total={words.length} onChange={setIndex} variant="video" />
+        {word ? (
+          <>
+            <button
+              aria-label="Open alphabet keyboard"
+              className="wdwr02-keyboard-toggle"
+              disabled={isChecking}
+              onClick={showKeyboard}
+              type="button"
+            >
+              <img src={`${WDWR02_ASSET_BASE}/keyboard.svg`} alt="" aria-hidden="true" draggable={false} />
+            </button>
+
+            <div className="wdwr02-word-card">
+              {word.imageUrl ? <img className="wdwr02-word-image" src={word.imageUrl} alt={word.eng} /> : <ResourceMissing label="word image" />}
+              <RenewalSoundButton
+                src={word.audioUrl}
+                label={`Play ${word.eng}`}
+                className="wdwr02-sound-button"
+                icon="sound"
+                onPlay={playWordAudio}
+              />
+            </div>
+
+            <div className={`wdwr02-notebook${feedback !== "idle" ? ` is-${feedback}` : ""}`}>
+              <span className="wdwr02-notebook-binding" aria-hidden="true" />
+              <canvas
+                aria-label="Write the word here"
+                className="wdwr02-drawing-canvas"
+                ref={canvasRef}
+                onPointerDown={startStroke}
+                onPointerMove={continueStroke}
+                onPointerUp={finishStroke}
+                onPointerCancel={finishStroke}
+              />
+              {displayText ? <strong className="wdwr02-recognized-word">{displayText}</strong> : null}
+              {inputMode === "keyboard" ? (
+                <div className="wdwr02-virtual-keyboard" aria-label="Alphabet keyboard">
+                  {WDWR02_KEY_ROWS.map((row) => (
+                    <div className="wdwr02-keyboard-row" key={row}>
+                      {row.split("").map((letter) => (
+                        <button key={letter} type="button" onClick={() => updateTypedText(`${typedText}${letter}`)}>{letter}</button>
+                      ))}
+                    </div>
+                  ))}
+                  <div className="wdwr02-keyboard-actions">
+                    <button type="button" onClick={() => updateTypedText(typedText.slice(0, -1))}>Remove</button>
+                    <button type="button" onClick={() => updateTypedText("")}>Clear</button>
+                    <button type="button" onClick={() => setInputMode("draw")}>Write</button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <button
+              aria-label="Check handwriting"
+              className={`wdwr02-check-button${feedback === "correct" ? " is-correct" : ""}`}
+              disabled={!canCheck}
+              onClick={() => void checkAnswer()}
+              type="button"
+            >
+              <Check aria-hidden="true" />
+              <span>{isChecking ? "Checking" : "Check"}</span>
+            </button>
+            <span className="sr-only" aria-live="polite">
+              {feedback === "correct" ? "Correct" : feedback === "fail" ? "Try again" : ""}
+            </span>
+          </>
+        ) : isWordResourceLoading ? null : (
+          <ResourceMissing label="word data" />
+        )}
+      </div>
+    </ActivityFrame>
+  );
+}
+
+function normalizedCanvasPoint(event: ReactPointerEvent<HTMLCanvasElement>): HandwritingPoint {
+  const rect = event.currentTarget.getBoundingClientRect();
+  return {
+    x: rect.width ? (event.clientX - rect.left) / rect.width : 0,
+    y: rect.height ? (event.clientY - rect.top) / rect.height : 0
+  };
+}
+
+function drawHandwritingStrokes(
+  context: CanvasRenderingContext2D,
+  strokes: HandwritingStroke[],
+  width: number,
+  height: number,
+  strokeStyle: string,
+  lineWidth: number,
+  clear = true
+) {
+  if (clear) context.clearRect(0, 0, width, height);
+  context.lineCap = "round";
+  context.lineJoin = "round";
+  context.strokeStyle = strokeStyle;
+  context.lineWidth = lineWidth;
+  for (const stroke of strokes) {
+    if (!stroke.length) continue;
+    context.beginPath();
+    context.moveTo(stroke[0].x * width, stroke[0].y * height);
+    if (stroke.length === 1) {
+      context.lineTo(stroke[0].x * width + 0.1, stroke[0].y * height + 0.1);
+    } else {
+      for (let index = 1; index < stroke.length; index += 1) {
+        context.lineTo(stroke[index].x * width, stroke[index].y * height);
+      }
+    }
+    context.stroke();
+  }
+}
+
+function handwritingStrokesToPng(strokes: HandwritingStroke[]): Promise<Blob> {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1200;
+  canvas.height = 300;
+  const context = canvas.getContext("2d");
+  if (!context) return Promise.reject(new Error("Canvas is unavailable."));
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  drawHandwritingStrokes(context, strokes, canvas.width, canvas.height, "#111111", 20, false);
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Failed to encode handwriting.")), "image/png");
+  });
 }
 
 export function SpellingActivity({ context, label = "Spelling" }: { context: ActivityRendererContext; label?: string }) {

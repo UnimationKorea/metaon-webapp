@@ -264,7 +264,7 @@ export const activityRenderers: ActivityRenderer[] = [
   {
     actType: ActType.WriteWord,
     name: "Write Word",
-    requires: ["indexeddb"],
+    requires: ["audio", "recognition", "indexeddb"],
     loadAssets: async () => undefined,
     render: (context) => <WriteWordActivity context={context} />
   },

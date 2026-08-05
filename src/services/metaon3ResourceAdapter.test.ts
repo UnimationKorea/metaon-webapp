@@ -2,6 +2,43 @@ import { describe, expect, it } from "vitest";
 import { normalizeBookResourceManifest } from "./metaon3ResourceAdapter";
 
 describe("normalizeBookResourceManifest", () => {
+  it("routes WDWR02 to Unity Activity 48 while reusing cached word resources", () => {
+    const manifest = normalizeBookResourceManifest({
+      resultCode: 1,
+      book: {
+        book_idx: 9001,
+        book_code: "WRITE01",
+        title: "Write Words",
+        brand_idx: 11,
+        sg_idx: 160,
+        series_idx: 591,
+        lessons: [{
+          lesson_idx: 1,
+          num: 1,
+          days: [{
+            day_idx: 1,
+            num: 1,
+            activities: [{ act_idx: 4801, num: 1, act_code: "WDWR02", act_name: "Write Word", category: "word" }],
+            word: [{
+              word_idx: 8128,
+              word: "fox",
+              img: "/11/160/591/9001/word/image/word_01.png",
+              snd: "/11/160/591/9001/word/sound/snd_word_01.mp3"
+            }]
+          }]
+        }]
+      }
+    });
+
+    expect(manifest.lessonDays[0].activities[0]).toMatchObject({
+      activityCode: "WDWR02",
+      actType: 48,
+      title: "Write Word"
+    });
+    expect(manifest.resources.map((resource) => resource.path)).toContain("Lessons/L1/D1/word/img/word_01.png");
+    expect(manifest.resources.map((resource) => resource.path)).toContain("Lessons/L1/D1/word/snd/snd_word_01.mp3");
+  });
+
   it("maps getBookInfo resources into virtual package files", () => {
     const manifest = normalizeBookResourceManifest({
       resultCode: 1,

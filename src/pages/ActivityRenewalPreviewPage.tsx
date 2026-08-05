@@ -13,6 +13,7 @@ import {
   VocaQuizActivity,
   WordBlankActivity,
   WordSearchActivity,
+  WriteWordActivity,
   type PrototypeActivityData
 } from "../components/activities/PackageActivities";
 import { ActType, type ActivityRendererContext } from "../types/metaonTypes";
@@ -141,7 +142,8 @@ export function ActivityRenewalPreviewPage() {
   const { kind } = useParams();
   const [previewComplete, setPreviewComplete] = useState(false);
   const isMovie01 = kind === "movie01";
-  const isVideoActivity = isMovie01 || kind === "video-flashcard" || kind === "video-voca-quiz" || kind === "video-word-blank" || kind === "video-sentence-blank" || kind === "video-unscramble" || kind === "video-sentence-record";
+  const isWriteWord = kind === "write-word";
+  const isVideoActivity = isMovie01 || isWriteWord || kind === "video-flashcard" || kind === "video-voca-quiz" || kind === "video-word-blank" || kind === "video-sentence-blank" || kind === "video-unscramble" || kind === "video-sentence-record";
 
   if (!import.meta.env.DEV) return <Navigate replace to="/" />;
 
@@ -170,6 +172,9 @@ export function ActivityRenewalPreviewPage() {
       break;
     case "word-search":
       activity = <WordSearchActivity context={previewContext(ActType.WordSearch, "WDQU02")} prototypeData={{ words: previewWords }} />;
+      break;
+    case "write-word":
+      activity = <WriteWordActivity context={previewContext(ActType.WriteWord, "WDWR02")} prototypeData={{ words: previewWords }} />;
       break;
     case "matching":
       activity = <MatchingGameActivity context={previewContext(ActType.MatchingGame, "WDPL01")} prototypeData={{ words: previewWords }} />;
@@ -218,7 +223,7 @@ export function ActivityRenewalPreviewPage() {
         variant={isVideoActivity ? "video" : "standard"}
       />
       {activity}
-      {!isMovie01 ? <button
+      {!isMovie01 && !isWriteWord ? <button
         aria-label="Complete activity"
         aria-pressed={previewComplete}
         className={`hub-activity-complete-button${isVideoActivity ? " video-activity-check" : ""}${previewComplete ? " is-complete" : ""}`}

@@ -14,6 +14,7 @@ describe("MetaOn activity code mapping", () => {
     [MetaOnActivityCode.WordQuiz, ActType.VocaQuizSpace, "Word Quiz"],
     [MetaOnActivityCode.WordSearch, ActType.WordSearch, "Word Search"],
     [MetaOnActivityCode.WordBlank, ActType.VocaCheckSpace, "Word Blank"],
+    [MetaOnActivityCode.WriteWord, ActType.WriteWord, "Write Word"],
     [MetaOnActivityCode.MatchingGame, ActType.MatchingGame, "Matching Game"],
     [MetaOnActivityCode.MemoryCard, ActType.MemoryGame, "Memory Card"],
     [MetaOnActivityCode.SentenceBlank, ActType.SentenceCheckSpace, "Sentence Blank"],
@@ -51,6 +52,13 @@ describe("MetaOn activity code mapping", () => {
     expect(canonicalActivityCodeForActType(ActType.VocaCheckSpace, MetaOnActivityCode.VideoWordBlank))
       .toBe(MetaOnActivityCode.VideoWordBlank);
     expect(activityTitleForCode(MetaOnActivityCode.VideoWordBlank, "Fallback")).toBe("Word Blank");
+  });
+
+  it("maps WDWR02 to Unity Activity 48 Write Word", () => {
+    expect(resolveActTypeFromActivityCode(MetaOnActivityCode.WriteWord)).toBe(ActType.WriteWord);
+    expect(canonicalActivityCodeForActType(ActType.WriteWord, MetaOnActivityCode.WriteWord))
+      .toBe(MetaOnActivityCode.WriteWord);
+    expect(activityTitleForCode(MetaOnActivityCode.WriteWord, "Fallback")).toBe("Write Word");
   });
 
   it("maps STBL02 to the existing Sentence Blank renderer while preserving the video-blank code from Book data", () => {
