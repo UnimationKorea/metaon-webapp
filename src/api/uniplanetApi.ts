@@ -1,7 +1,7 @@
 import { normalizeCatalog } from "./catalogNormalizer";
 import { normalizeBookResourceManifest } from "../services/metaon3ResourceAdapter";
 import type { LearnEvent } from "../types/learnEvents";
-import type { BookCatalog, BookResourceManifest } from "../types/metaonTypes";
+import type { BookCatalog, BookResourceManifest, BookResourceVersion } from "../types/metaonTypes";
 
 const CLIENT_ID_KEY = "metaon-web-client-id";
 const SESSION_ID_KEY = "metaon-session-id";
@@ -272,6 +272,21 @@ export async function getBookResourceManifest(bookIdx: number): Promise<BookReso
     return payload;
   }
   return normalizeBookResourceManifest(payload);
+}
+
+export async function getBookResourceVersion(bookIdx: number): Promise<BookResourceVersion> {
+  const response = await fetch(`/api/books/${bookIdx}/resource-version`, {
+    cache: "no-store",
+    credentials: "same-origin",
+    headers: sessionHeaders()
+  });
+  const payload = await readJsonResponse(response);
+  assertMetaOnSuccess(payload);
+
+  return {
+    bookIdx: Number(payload?.bookIdx) || bookIdx,
+    contentVersion: typeof payload?.contentVersion === "string" ? payload.contentVersion.trim() : ""
+  };
 }
 
 export async function startStudy(payload: unknown): Promise<unknown> {

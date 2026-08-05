@@ -153,6 +153,9 @@ export type BookData = {
 export type BookPackage = {
   key: string;
   cacheVersion?: number;
+  // Server-side resource version at the time this Book was downloaded. This is
+  // compared on the next Book visit before local files are reused.
+  contentVersion?: string;
   source?: "unity-zip" | "metaon3-resources";
   bookIdx?: number;
   bookId: string;
@@ -279,4 +282,9 @@ export type BookResourceManifest = {
   resources: BookResource[];
   generatedFiles: GeneratedPackageFile[];
   raw?: unknown;
+};
+
+export type BookResourceVersion = {
+  bookIdx: number;
+  contentVersion: string;
 };

@@ -58,6 +58,24 @@ export async function hasCachedBookMedia(packageKey: string, path: string): Prom
   }
 }
 
+export async function deleteCachedBookMedia(packageKey: string): Promise<void> {
+  if (typeof caches === "undefined") return;
+
+  try {
+    const cache = await caches.open(BOOK_MEDIA_CACHE_NAME);
+    const packagePrefix = bookMediaCacheUrl(packageKey, "");
+    const requests = await cache.keys();
+    await Promise.all(
+      requests
+        .filter((request) => request.url.startsWith(packagePrefix))
+        .map((request) => cache.delete(request))
+    );
+  } catch {
+    // Cache Storage is an optimization. IndexedDB remains the authoritative
+    // package cache and must still be invalidated when this cleanup fails.
+  }
+}
+
 export function isBookMediaServiceWorkerControlling(): boolean {
   return typeof navigator !== "undefined" && Boolean(navigator.serviceWorker?.controller);
 }

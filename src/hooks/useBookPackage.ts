@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { downloadAndCacheBookPackage, getCachedPackage } from "../services/bookPackageImporter";
+import { getBookResourceVersion } from "../api/uniplanetApi";
+import {
+  downloadAndCacheBookPackage,
+  getCachedPackage,
+  invalidateCachedBookPackage,
+  isBookPackageCurrentVersion
+} from "../services/bookPackageImporter";
 import type { BookData, BookPackage, DownloadProgress } from "../types/metaonTypes";
 
 export function useBookPackage(book?: BookData) {
@@ -16,7 +22,7 @@ export function useBookPackage(book?: BookData) {
     }
     setIsCheckingCache(true);
     try {
-      setPackageMeta(await getCachedPackage(book));
+      setPackageMeta(await resolveCachedBookPackage(book));
     } finally {
       setIsCheckingCache(false);
     }
@@ -39,7 +45,7 @@ export function useBookPackage(book?: BookData) {
       setProgress({ phase: "idle", ratio: 0 });
       setIsCheckingCache(true);
       try {
-        const cached = await getCachedPackage(book);
+        const cached = await resolveCachedBookPackage(book);
         if (active) setPackageMeta(cached);
       } catch (caught) {
         if (active) {
@@ -88,4 +94,22 @@ export function useBookPackage(book?: BookData) {
     download,
     refresh
   };
+}
+
+async function resolveCachedBookPackage(book: BookData): Promise<BookPackage | undefined> {
+  const cached = await getCachedPackage(book);
+  if (!cached) return undefined;
+
+  let remoteVersion = "";
+  try {
+    remoteVersion = (await getBookResourceVersion(book.bookIdx)).contentVersion;
+  } catch {
+    // A temporary network/API failure must not make a previously downloaded
+    // Book unavailable. The next successful Book visit checks again.
+    return cached;
+  }
+
+  if (isBookPackageCurrentVersion(cached, remoteVersion)) return cached;
+  await invalidateCachedBookPackage(cached);
+  return undefined;
 }

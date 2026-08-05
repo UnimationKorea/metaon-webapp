@@ -1,8 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getBookResourceManifest } from "../api/uniplanetApi";
 import { indexedDbStorage } from "./indexedDbStorage";
-import { BOOK_MEDIA_CACHE_VERSION, BOOK_PACKAGE_CACHE_VERSION, downloadAndCacheBookPackage, getCachedPackage } from "./bookPackageImporter";
-import { VIDEO_MEDIA_CACHE_NAME } from "./videoMediaCache";
+import {
+  BOOK_MEDIA_CACHE_VERSION,
+  BOOK_PACKAGE_CACHE_VERSION,
+  downloadAndCacheBookPackage,
+  getCachedPackage,
+  isBookPackageCurrentVersion
+} from "./bookPackageImporter";
+import { bookMediaCacheUrl, VIDEO_MEDIA_CACHE_NAME } from "./videoMediaCache";
 import { ActType, type BookData, type BookResourceManifest } from "../types/metaonTypes";
 
 vi.mock("../api/uniplanetApi", () => ({
@@ -111,6 +117,59 @@ describe("downloadAndCacheBookPackage", () => {
     });
 
     await expect(getCachedPackage(book)).resolves.toBeUndefined();
+  });
+
+  it("reuses a package only when its downloaded resource version matches", () => {
+    expect(isBookPackageCurrentVersion({ contentVersion: "2026.08.05" }, "2026.08.05")).toBe(true);
+    expect(isBookPackageCurrentVersion({ contentVersion: "2026.08.04" }, "2026.08.05")).toBe(false);
+    expect(isBookPackageCurrentVersion({ manifest: { book: { ...book, appVersion: "3" } } }, "3")).toBe(true);
+    expect(isBookPackageCurrentVersion({ contentVersion: "3" }, "")).toBe(true);
+  });
+
+  it("clears stale IndexedDB and media cache entries before downloading a newer Book version", async () => {
+    const updatedBook = { ...book, appVersion: "2" };
+    const manifest: BookResourceManifest = {
+      key: "book:6710",
+      book: updatedBook,
+      lessonDays: [],
+      generatedFiles: [],
+      resources: [
+        {
+          path: "Lessons/L1/D1/word/img/word_01.png",
+          sourcePath: "/word.png",
+          url: "https://example.test/word.png",
+          mimeType: "image/png",
+          category: "word"
+        }
+      ]
+    };
+    const mediaCache = {
+      keys: vi.fn().mockResolvedValue([new Request(bookMediaCacheUrl("book:6710", "Lessons/L1/D1/word/img/word_01.png"))]),
+      delete: vi.fn().mockResolvedValue(true),
+      put: vi.fn().mockResolvedValue(undefined)
+    };
+    vi.stubGlobal("caches", { open: vi.fn().mockResolvedValue(mediaCache) });
+    vi.mocked(indexedDbStorage.getPackage).mockResolvedValue({
+      key: "book:6710",
+      cacheVersion: BOOK_PACKAGE_CACHE_VERSION,
+      contentVersion: "1",
+      source: "metaon3-resources",
+      bookId: book.bookId,
+      seriesGroup: book.seriesGroup,
+      seriesIdx: book.seriesIdx,
+      downloadedAt: "2026-08-01T00:00:00.000Z",
+      totalFiles: 1,
+      totalBytes: 1,
+      lessonDays: []
+    });
+    vi.mocked(getBookResourceManifest).mockResolvedValue(manifest);
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("new", { status: 200, headers: { "Content-Type": "image/png" } })));
+
+    const next = await downloadAndCacheBookPackage(updatedBook);
+
+    expect(indexedDbStorage.deletePackage).toHaveBeenCalledWith("book:6710");
+    expect(mediaCache.delete).toHaveBeenCalledTimes(1);
+    expect(next.contentVersion).toBe("2");
   });
 
   it("stores a video Blob with the manifest MIME type when S3 uses a generic response type", async () => {

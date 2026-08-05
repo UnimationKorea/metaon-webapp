@@ -550,6 +550,29 @@ app.get("/api/books/:bookIdx/resource-manifest", async (req, res) => {
   }
 });
 
+app.get("/api/books/:bookIdx/resource-version", async (req, res) => {
+  try {
+    const bookIdx = numberValue(req.params.bookIdx);
+    if (!bookIdx) {
+      res.status(400).json({ resultCode: 310, resultMessage: "bookIdx is required." });
+      return;
+    }
+
+    const upstream = await postUpstream("/content/getBookInfo", { book_idx: bookIdx }, req);
+    assertMetaOnSuccess(upstream.data, "/content/getBookInfo");
+    const rawBook = recordValue(upstream.data?.book ?? upstream.data);
+    const book = normalizeBook(rawBook, numberValue(rawBook.sg_idx), numberValue(rawBook.series_idx), "");
+    res.set("Cache-Control", "no-store").json({
+      resultCode: numberValue(upstream.data?.resultCode),
+      resultMessage: stringValue(upstream.data?.resultMessage),
+      bookIdx: book.bookIdx || bookIdx,
+      contentVersion: book.appVersion
+    });
+  } catch (error) {
+    sendError(res, error, "Failed to fetch MetaOn3 book resource version");
+  }
+});
+
 app.get("/api/packages", async (req, res) => {
   res.status(410).json({
     resultCode: 410,
@@ -2747,7 +2770,20 @@ function normalizeGroup(group) {
 function normalizeBook(rawBook, groupId, seriesIdx, appVersion) {
   const book = recordValue(rawBook);
   const bookId = readBookId(rawBook);
-  const bookVersion = stringValue(book.bookVer ?? book.bver ?? book.bVer ?? book.aVer ?? book.appversion ?? book.appVersion ?? book.version) || appVersion;
+  const bookVersion = stringValue(
+    book.resourceVer ??
+      book.resource_ver ??
+      book.resourceVersion ??
+      book.bookResourceVersion ??
+      book.book_resource_version ??
+      book.bookVer ??
+      book.bver ??
+      book.bVer ??
+      book.aVer ??
+      book.appversion ??
+      book.appVersion ??
+      book.version
+  ) || appVersion;
   const normalizedGroupId = readGroupId(rawBook) || groupId;
   const normalizedSeriesIdx = readSeriesIdx(rawBook) || seriesIdx;
   const explicitThumbnailUrl = assetUrl(stringValue(book.thumbnailUrl ?? book.coverUrl ?? book.coverURL ?? book.imgUrl ?? book.imageUrl ?? book.thumb_url ?? book.thumbUrl));

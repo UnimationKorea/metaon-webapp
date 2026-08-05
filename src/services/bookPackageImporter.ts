@@ -3,7 +3,7 @@ import { indexedDbStorage } from "./indexedDbStorage";
 import { guessMimeType } from "./mime";
 import { packageKeyFor } from "./packageKeys";
 import { planBookResourceDownload } from "./bookResourcePriority";
-import { cacheBookMediaResponse, isBookMediaCacheResource } from "./videoMediaCache";
+import { cacheBookMediaResponse, deleteCachedBookMedia, isBookMediaCacheResource } from "./videoMediaCache";
 import type { StoredPackageFile } from "../types/ports";
 import type { BookData, BookPackage, BookResource, BookResourceManifest, DownloadProgress } from "../types/metaonTypes";
 
@@ -11,12 +11,37 @@ import type { BookData, BookPackage, BookResource, BookResourceManifest, Downloa
 export const BOOK_PACKAGE_CACHE_VERSION = 9;
 export const BOOK_MEDIA_CACHE_VERSION = 1;
 
+export function bookPackageContentVersion(packageMeta: Pick<BookPackage, "contentVersion" | "manifest">): string {
+  const explicitVersion = normalizeContentVersion(packageMeta.contentVersion);
+  if (explicitVersion) return explicitVersion;
+
+  const manifestBook = (packageMeta.manifest as Partial<BookResourceManifest> | undefined)?.book;
+  return normalizeContentVersion(manifestBook?.appVersion);
+}
+
+export function isBookPackageCurrentVersion(packageMeta: Pick<BookPackage, "contentVersion" | "manifest">, contentVersion?: string): boolean {
+  const expectedVersion = normalizeContentVersion(contentVersion);
+  if (!expectedVersion) return true;
+
+  const cachedVersion = bookPackageContentVersion(packageMeta);
+  return Boolean(cachedVersion) && cachedVersion === expectedVersion;
+}
+
+export async function invalidateCachedBookPackage(packageMeta: Pick<BookPackage, "key">): Promise<void> {
+  await Promise.all([indexedDbStorage.deletePackage(packageMeta.key), deleteCachedBookMedia(packageMeta.key)]);
+}
+
 export async function downloadAndCacheBookPackage(
   book: BookData,
   onProgress?: (progress: DownloadProgress) => void
 ): Promise<BookPackage> {
   const manifest = await getBookResourceManifest(book.bookIdx);
   const key = manifest.key || packageKeyFor(book);
+  const contentVersion = normalizeContentVersion(manifest.book.appVersion || book.appVersion);
+  const existingPackage = await indexedDbStorage.getPackage(key);
+  if (existingPackage && !isBookPackageCurrentVersion(existingPackage, contentVersion)) {
+    await invalidateCachedBookPackage(existingPackage);
+  }
   const generatedFiles = manifest.generatedFiles.map<StoredPackageFile>((file) => {
     const blob = new Blob([file.content], { type: file.mimeType });
     return {
@@ -155,6 +180,7 @@ export async function downloadAndCacheBookPackage(
   const packageMeta: BookPackage = {
     key,
     cacheVersion: BOOK_PACKAGE_CACHE_VERSION,
+    contentVersion,
     source: "metaon3-resources",
     bookIdx: manifest.book.bookIdx || book.bookIdx,
     bookId: manifest.book.bookId || book.bookId,
@@ -235,6 +261,10 @@ function isBookResourceManifest(value: unknown): value is BookResourceManifest {
 
 function normalizePath(path: string): string {
   return path.replace(/\\/g, "/").replace(/^\/+/, "");
+}
+
+function normalizeContentVersion(value: unknown): string {
+  return typeof value === "string" || typeof value === "number" ? String(value).trim() : "";
 }
 
 function isNpcResource(resource: BookResource): boolean {
