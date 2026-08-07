@@ -65,7 +65,7 @@ describe("QuickCheckActivity", () => {
     expect(attempts.map((event) => event.correct)).toEqual([0, 1]);
     expect(attempts.map((event) => event.attempts)).toEqual([1, 2]);
     expect(attempts.map((event) => (event.extra?.answer as { selected_index?: number }).selected_index)).toEqual([0, 1]);
-    expect(attempts[0].extra?.incorrect_attempt).toBe(true);
+    expect(attempts[0].correct).toBe(0);
   });
 
   it("keeps result and review correctness aligned with the common scorer", async () => {

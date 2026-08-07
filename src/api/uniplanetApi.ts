@@ -309,8 +309,14 @@ export async function getQuickCheckQuiz(payload: unknown): Promise<unknown> {
   return postStudy("/api/study/quick-check", payload);
 }
 
-export async function sendLearnEvents(payload: { log_idx: number; events: LearnEvent[] }): Promise<unknown> {
-  return postStudy("/api/learn/events", payload);
+export type LearnEventBatchReceipt = {
+  resultCode: 1;
+  accepted_event_count: number;
+  batch_id: string;
+};
+
+export async function sendLearnEvents(payload: { log_idx: number; events: LearnEvent[]; batch_id: string }): Promise<LearnEventBatchReceipt> {
+  return postStudy("/api/learn/events", payload) as Promise<LearnEventBatchReceipt>;
 }
 
 export async function uploadLearnRecording(payload: unknown): Promise<unknown> {

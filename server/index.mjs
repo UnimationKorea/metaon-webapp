@@ -832,7 +832,36 @@ app.post("/api/raz/test/answer", (req, res) => {
 });
 
 app.post("/api/learn/events", async (req, res) => {
-  proxyStudyEndpoint(req, res, "/learn/events");
+  try {
+    const events = Array.isArray(req.body?.events) ? req.body.events : [];
+    const batchId = stringValue(req.body?.batch_id).trim();
+    if (!numberValue(req.body?.log_idx) || events.length === 0 || !batchId) {
+      res.status(400).json({ resultCode: 400, resultMessage: "log_idx, batch_id and events are required." });
+      return;
+    }
+    const { batch_id: _batchId, ...upstreamPayload } = req.body || {};
+    const upstream = await postUpstream("/learn/events", upstreamPayload, req);
+    assertMetaOnSuccess(upstream.data, "/learn/events");
+    if (upstream.sessionId) res.setHeader("X-MetaOn-Session-Id", upstream.sessionId);
+    const accepted = numberValue(upstream.data?.accepted_event_count ?? upstream.data?.acceptedEventCount ?? events.length);
+    if (accepted !== events.length) {
+      res.status(502).json({
+        resultCode: 502,
+        resultMessage: "LearnEvent upstream acknowledgement count mismatch.",
+        accepted_event_count: accepted,
+        batch_id: batchId
+      });
+      return;
+    }
+    res.status(200).json({
+      ...upstream.data,
+      resultCode: 1,
+      accepted_event_count: accepted,
+      batch_id: batchId
+    });
+  } catch (error) {
+    sendError(res, error, "Failed to save LearnEvent batch");
+  }
 });
 
 app.post("/api/learn/recording", async (req, res) => {

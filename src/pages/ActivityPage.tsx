@@ -24,6 +24,7 @@ export function ActivityPage() {
   const activityRootRef = useRef<HTMLDivElement>(null);
   const learnEventRecorderRef = useRef(createLearnEventRecorder());
   const completionLockRef = useRef(false);
+  const exitLockRef = useRef(false);
   const [isFullscreen, setIsFullscreen] = useState(isDocumentFullscreen);
   const [studyLogIdx, setStudyLogIdx] = useState<number>();
   const [studyError, setStudyError] = useState<string>();
@@ -62,6 +63,7 @@ export function ActivityPage() {
     normalizedActivityCode === MetaOnActivityCode.NpcQuickCheck ||
     normalizedActivityCode === MetaOnActivityCode.LegacyNpcQuickCheck ||
     normalizedActivityCode === MetaOnActivityCode.NpcQuickCheck2;
+  const isQuickCheck = normalizedActivityCode === MetaOnActivityCode.QuickCheck || isNpcQuickCheck;
   const isMovie01 = normalizedActivityCode === MetaOnActivityCode.Movie;
   const isWriteWordHandwriting = normalizedActivityCode === MetaOnActivityCode.WriteWord;
   const isVideoActivity =
@@ -92,7 +94,10 @@ export function ActivityPage() {
     setStudyError(undefined);
     setCelebration(null);
     completionLockRef.current = false;
+    exitLockRef.current = false;
     learnEventRecorderRef.current.reset();
+    learnEventRecorderRef.current.begin({ activityCode: normalizedActivityCode });
+    void learnEventRecorderRef.current.flushPending().catch(() => undefined);
     if (!activity?.actIdx) return undefined;
 
     startStudy({ act_idx: activity.actIdx })
@@ -102,6 +107,7 @@ export function ActivityPage() {
         const nextLogIdx = Number(payload.log_idx || 0);
         if (Number.isFinite(nextLogIdx) && nextLogIdx > 0) {
           setStudyLogIdx(nextLogIdx);
+          void learnEventRecorderRef.current.bindStudyLog(nextLogIdx);
         }
       })
       .catch((caught) => {
@@ -111,7 +117,19 @@ export function ActivityPage() {
     return () => {
       cancelled = true;
     };
-  }, [activity?.actIdx]);
+  }, [activity?.actIdx, normalizedActivityCode]);
+
+  useEffect(() => {
+    const persistLearnEvents = () => {
+      void learnEventRecorderRef.current.persist();
+    };
+    window.addEventListener("pagehide", persistLearnEvents);
+    document.addEventListener("visibilitychange", persistLearnEvents);
+    return () => {
+      window.removeEventListener("pagehide", persistLearnEvents);
+      document.removeEventListener("visibilitychange", persistLearnEvents);
+    };
+  }, []);
 
   useEffect(() => {
     if (book) recordRecentBook(packageKeyFor(book));
@@ -157,6 +175,27 @@ export function ActivityPage() {
       if (isDocumentFullscreen()) {
         await exitFullscreen();
       }
+      if (!exitLockRef.current && !completionLockRef.current && studyLogIdx) {
+        exitLockRef.current = true;
+        if (!isQuickCheck) {
+          learnEventRecorderRef.current.record({
+            action: "activity_exit",
+            item_type: "activity",
+            item_idx: activity?.actIdx ?? null,
+            extra: { reason: "back_to_book" }
+          });
+          try {
+            await learnEventRecorderRef.current.flush(studyLogIdx);
+          } catch (caught) {
+            setStudyError(caught instanceof Error ? `LearnEvent 저장 실패: ${caught.message}` : `LearnEvent 저장 실패: ${String(caught)}`);
+          }
+        }
+        try {
+          await endStudy({ log_idx: studyLogIdx });
+        } catch (caught) {
+          setStudyError(caught instanceof Error ? caught.message : String(caught));
+        }
+      }
     } finally {
       navigate(routeForBook(book), { replace: true });
     }
@@ -170,23 +209,27 @@ export function ActivityPage() {
     const firstStudy = !isComplete;
     let awardedPoints = firstStudy ? positivePoints(result?.newPoints) : undefined;
 
-    if (firstStudy && !completionLockRef.current) {
+    if (!completionLockRef.current) {
       completionLockRef.current = true;
-      if (isNpcQuickCheck) {
-        learnEventRecorderRef.current.record({
-          action: "activity_complete",
-          item_type: "activity",
-          item_idx: activity.actIdx ?? null,
-          score: result?.score,
-          extra: {
-            source: "npc_quick_check",
-            correct_count: result?.correctCount,
-            new_points: result?.newPoints,
-            total: result?.total
-          }
-        });
-      }
       if (studyLogIdx) {
+        if (!isQuickCheck) {
+          learnEventRecorderRef.current.record({
+            action: "activity_complete",
+            item_type: "activity",
+            item_idx: activity.actIdx ?? null,
+            score: result?.score,
+            time_ms: undefined,
+            extra: {
+              correct_count: result?.correctCount,
+              total: result?.total
+            }
+          });
+          try {
+            await learnEventRecorderRef.current.flush(studyLogIdx);
+          } catch (caught) {
+            setStudyError(caught instanceof Error ? `LearnEvent 저장 실패: ${caught.message}` : `LearnEvent 저장 실패: ${String(caught)}`);
+          }
+        }
         try {
           const endResult = await endStudy({ log_idx: studyLogIdx });
           const endPoints = positivePoints(pointsFromStudyEnd(endResult));
@@ -194,18 +237,15 @@ export function ActivityPage() {
         } catch (caught) {
           setStudyError(caught instanceof Error ? caught.message : String(caught));
         }
-        try {
-          await learnEventRecorderRef.current.flush(studyLogIdx);
-        } catch (caught) {
-          setStudyError(caught instanceof Error ? `LearnEvent 저장 실패: ${caught.message}` : `LearnEvent 저장 실패: ${String(caught)}`);
-        }
       }
-      completeActivity(packageKeyFor(book), activity.id);
-      createNotification({
-        title: "Activity 완료",
-        body: `${book.bookName} / ${activity.title} 진행 상태가 저장되었습니다.`,
-        tone: "success"
-      });
+      if (firstStudy) {
+        completeActivity(packageKeyFor(book), activity.id);
+        createNotification({
+          title: "Activity 완료",
+          body: `${book.bookName} / ${activity.title} 진행 상태가 저장되었습니다.`,
+          tone: "success"
+        });
+      }
     }
 
     setCelebration({ firstStudy, points: awardedPoints });

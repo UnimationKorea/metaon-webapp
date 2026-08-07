@@ -2641,6 +2641,10 @@ export function WordBlankActivity({
   const questionViewKeyRef = useRef("");
 
   useEffect(() => {
+    context.learnEventRecorder?.setQuestionTotal(words.length || null);
+  }, [context.learnEventRecorder, words.length]);
+
+  useEffect(() => {
     if (feedbackTimerRef.current !== undefined) window.clearTimeout(feedbackTimerRef.current);
     setSelected(undefined);
     if (current >= words.length) setCurrent(0);
@@ -2666,6 +2670,9 @@ export function WordBlankActivity({
       action: "question_view",
       item_type: "word",
       item_idx: wordItemIdx(target),
+      q_no: current + 1,
+      q_total: words.length || null,
+      question_form: "choice-letter",
       chunk_index: question.blankIndex >= 0 ? question.blankIndex : undefined,
       extra: {
         blank_indexes: question.blankIndex >= 0 ? [question.blankIndex] : [],
@@ -2683,6 +2690,9 @@ export function WordBlankActivity({
       action: "letter_select",
       item_type: "word",
       item_idx: wordItemIdx(target),
+      q_no: current + 1,
+      q_total: words.length || null,
+      question_form: "choice-letter",
       chunk_index: question.blankIndex >= 0 ? question.blankIndex : undefined,
       extra: {
         selected_letter: option,
@@ -2693,14 +2703,21 @@ export function WordBlankActivity({
       action: "submit",
       item_type: "word",
       item_idx: wordItemIdx(target),
+      q_no: current + 1,
+      q_total: words.length || null,
+      question_form: "choice-letter",
       chunk_index: question.blankIndex >= 0 ? question.blankIndex : undefined,
       correct: boolCorrect(correct),
       attempts: 1,
       extra: {
+        question: question.letters.map((letter, index) => index === question.blankIndex ? "____" : letter).join(""),
+        question_type: "text",
+        question_img: target.imagePath,
         answer: question.answer,
         selected: option,
+        options: question.options,
         blank_indexes: question.blankIndex >= 0 ? [question.blankIndex] : [],
-        option_order: question.options
+        blank_index: question.blankIndex
       }
     });
 
@@ -2742,6 +2759,8 @@ export function WordBlankActivity({
                   action: "audio_play",
                   item_type: "word",
                   item_idx: wordItemIdx(target),
+                  q_no: current + 1,
+                  q_total: words.length || null,
                   audio_replays: 1,
                   extra: { word: target?.eng, question_index: current + 1 }
                 })
@@ -2884,15 +2903,26 @@ export function MatchingGameActivity({
     const imageWord = gameWords.find((word) => word.index === nextImage);
     const selectedWordRecord = gameWords.find((word) => word.index === nextWord);
     const correct = nextImage === nextWord;
+    const qNo = Math.max(0, gameWords.findIndex((word) => word.index === nextImage)) + 1;
     recordLearnEvent(context, {
-      action: "pair_submit",
-      item_type: "pair",
+      action: "pair_attempt",
+      item_type: "word",
       item_idx: wordItemIdx(imageWord),
+      q_no: qNo || undefined,
+      q_total: null,
+      attempt_max: null,
+      question_form: "pair-match",
       correct: boolCorrect(correct),
-      attempts: 1,
       extra: {
-        selected_word_idx: wordItemIdx(selectedWordRecord),
-        target_word_idx: wordItemIdx(imageWord)
+        question: imageWord?.eng || "",
+        question_type: "text",
+        answer: imageWord?.mean || imageWord?.eng || "",
+        answer_idx: wordItemIdx(imageWord),
+        selected: selectedWordRecord?.mean || selectedWordRecord?.eng || "",
+        selected_idx: wordItemIdx(selectedWordRecord),
+        pair_kind: "en-ko",
+        time_limit_ms: 60_000,
+        board_size: gameWords.length * 2
       }
     });
 
@@ -2905,7 +2935,9 @@ export function MatchingGameActivity({
         action: "pair_match",
         item_type: "word",
         item_idx: wordItemIdx(imageWord),
-        correct: 1,
+        q_no: qNo || undefined,
+        q_total: null,
+        question_form: "pair-match",
         extra: {
           attempts_for_pair: 1
         }
@@ -3036,6 +3068,7 @@ export function MemoryGameActivity({
   const hintTimerRef = useRef<number | undefined>(undefined);
   const boardViewKeyRef = useRef("");
   const roundKey = `${roundIndex}:${restartNonce}:${allWordsSignature}`;
+  const roundQuestionOffset = MEMORY_GAME_ROUNDS.slice(0, roundIndex).reduce((sum, item) => sum + item.pairCount, 0);
 
   useEffect(() => {
     setOpenIds([]);
@@ -3093,7 +3126,6 @@ export function MemoryGameActivity({
         action: "round_timeout",
         item_type: "activity",
         item_idx: context.activity?.actIdx ?? null,
-        correct: 0,
         extra: {
           round: roundIndex + 1,
           matched_pairs: matched.size,
@@ -3111,11 +3143,10 @@ export function MemoryGameActivity({
     const isLastRound = roundIndex >= MEMORY_GAME_ROUNDS.length - 1;
     setStatus(isLastRound ? "complete" : "round-complete");
     recordLearnEvent(context, {
-      action: isLastRound ? "activity_complete" : "round_complete",
-      item_type: "activity",
-      item_idx: context.activity?.actIdx ?? null,
-      correct: 1,
-      score: roundIndex + 1,
+        action: isLastRound ? "activity_complete" : "round_complete",
+        item_type: "activity",
+        item_idx: context.activity?.actIdx ?? null,
+        score: roundIndex + 1,
       extra: {
         round: roundIndex + 1,
         remaining_seconds: secondsLeft,
@@ -3150,18 +3181,30 @@ export function MemoryGameActivity({
 
     const [first, second] = nextOpenIds.map((id) => cards.find((item) => item.id === id));
     const correct = Boolean(first && second && first.wordIndex === second.wordIndex && first.kind !== second.kind);
+    const firstWordPosition = first ? gameWords.findIndex((word) => word.index === first.wordIndex) : -1;
+    const qNo = firstWordPosition >= 0 ? roundQuestionOffset + firstWordPosition + 1 : undefined;
     recordLearnEvent(context, {
       action: "pair_attempt",
       item_type: "pair",
-      item_idx: first && second && first.wordIndex === second.wordIndex ? wordItemIdx(first.word) : null,
+      item_idx: first ? wordItemIdx(first.word) : null,
+      q_no: qNo,
+      q_total: null,
+      attempt_max: null,
+      question_form: "memory-card",
       correct: boolCorrect(correct),
       extra: {
-        first_card_id: first?.id,
-        second_card_id: second?.id,
-        first_word_idx: first ? wordItemIdx(first.word) : null,
-        second_word_idx: second ? wordItemIdx(second.word) : null,
-        first_kind: first?.kind,
-        second_kind: second?.kind
+        question: first?.word.imagePath || first?.word.imageUrl || first?.word.eng || "",
+        question_type: first?.word.imagePath || first?.word.imageUrl ? "image" : "text",
+        answer: first?.word.eng || "",
+        answer_idx: first ? wordItemIdx(first.word) : null,
+        selected: second?.word.eng || "",
+        selected_idx: second ? wordItemIdx(second.word) : null,
+        pair_kind: "img-word",
+        round_no: roundIndex + 1,
+        time_limit_ms: round.timeLimit * 1000,
+        board_size: cards.length,
+        slot_a: first ? cards.findIndex((card) => card.id === first.id) : null,
+        slot_b: second ? cards.findIndex((card) => card.id === second.id) : null
       }
     });
 
@@ -3172,7 +3215,9 @@ export function MemoryGameActivity({
         action: "pair_match",
         item_type: "pair",
         item_idx: wordItemIdx(first.word),
-        correct: 1,
+        q_no: qNo,
+        q_total: null,
+        question_form: "memory-card",
         extra: {
           word: first.word.eng,
           first_card_id: first.id,
@@ -3188,7 +3233,7 @@ export function MemoryGameActivity({
     if (status !== "playing" || cards.length === 0 || hintActive) return;
     setHintActive(true);
     recordLearnEvent(context, {
-      action: "hint_use",
+        action: "hint_open",
       item_type: "activity",
       item_idx: context.activity?.actIdx ?? null,
       hints_used: 1,
@@ -3383,6 +3428,10 @@ export function WordSearchActivity({
   const questionViewKeyRef = useRef("");
 
   useEffect(() => {
+    context.learnEventRecorder?.setQuestionTotal(words.length || null);
+  }, [context.learnEventRecorder, words.length]);
+
+  useEffect(() => {
     if (feedbackTimerRef.current !== undefined) window.clearTimeout(feedbackTimerRef.current);
     setSelected(undefined);
     if (current >= words.length) setCurrent(0);
@@ -3404,6 +3453,7 @@ export function WordSearchActivity({
       action: "question_view",
       item_type: "word",
       item_idx: wordItemIdx(target),
+      question_form: "choice-word",
       extra: {
         question_index: current + 1,
         quiz_mode: "image-text",
@@ -3420,6 +3470,7 @@ export function WordSearchActivity({
       action: "option_select",
       item_type: "word",
       item_idx: wordItemIdx(target),
+      question_form: "choice-word",
       extra: {
         selected_word_idx: wordItemIdx(answer),
         selected_text: answer.eng,
@@ -3430,13 +3481,18 @@ export function WordSearchActivity({
       action: "submit",
       item_type: "word",
       item_idx: wordItemIdx(target),
+      question_form: "choice-word",
       correct: boolCorrect(correct),
       attempts: 1,
       extra: {
-        answer_word_idx: wordItemIdx(target),
-        selected_word_idx: wordItemIdx(answer),
-        selected_text: answer.eng,
-        option_order: wordOptionOrder(answers)
+        question: target.imagePath || target.imageUrl || target.eng,
+        question_type: target.imagePath || target.imageUrl ? "image" : "text",
+        answer: target.eng,
+        answer_idx: wordItemIdx(target),
+        selected: answer.eng,
+        selected_idx: wordItemIdx(answer),
+        options: answers.map((item) => item.eng),
+        option_idxs: answers.map((item) => wordItemIdx(item))
       }
     });
 
@@ -3642,6 +3698,10 @@ function VocaQuizChoiceActivity({
   const questionViewKeyRef = useRef("");
 
   useEffect(() => {
+    context.learnEventRecorder?.setQuestionTotal(words.length || null);
+  }, [context.learnEventRecorder, words.length]);
+
+  useEffect(() => {
     if (feedbackTimerRef.current !== undefined) window.clearTimeout(feedbackTimerRef.current);
     setSelected(undefined);
   }, [current]);
@@ -3666,6 +3726,9 @@ function VocaQuizChoiceActivity({
       action: "question_view",
       item_type: "word",
       item_idx: wordItemIdx(target),
+      q_no: current + 1,
+      q_total: words.length || null,
+      question_form: "choice-word",
       extra: {
         question_index: current + 1,
         quiz_mode: `${promptKind}-${optionKind}`,
@@ -3682,6 +3745,9 @@ function VocaQuizChoiceActivity({
       action: "option_select",
       item_type: "word",
       item_idx: wordItemIdx(target),
+      q_no: current + 1,
+      q_total: words.length || null,
+      question_form: "choice-word",
       extra: {
         selected_word_idx: wordItemIdx(answer),
         selected_text: answer.eng
@@ -3691,13 +3757,20 @@ function VocaQuizChoiceActivity({
       action: "submit",
       item_type: "word",
       item_idx: wordItemIdx(target),
+      q_no: current + 1,
+      q_total: words.length || null,
+      question_form: "choice-word",
       correct: boolCorrect(correct),
       attempts: 1,
       extra: {
-        answer_word_idx: wordItemIdx(target),
-        selected_word_idx: wordItemIdx(answer),
-        selected_text: answer.eng,
-        option_order: wordOptionOrder(answers)
+        question: promptKind === "image" ? target.imagePath || target.imageUrl || target.eng : promptKind === "sound" ? target.audioPath || target.audioUrl || target.eng : target.eng,
+        question_type: promptKind === "image" ? "image" : promptKind === "sound" ? "audio" : "text",
+        answer: target.eng,
+        answer_idx: wordItemIdx(target),
+        selected: answer.eng,
+        selected_idx: wordItemIdx(answer),
+        options: answers.map((item) => item.eng),
+        option_idxs: answers.map((item) => wordItemIdx(item))
       }
     });
 
@@ -3812,6 +3885,10 @@ function VocaQuizSpellingActivity({
   const questionViewKeyRef = useRef("");
 
   useEffect(() => {
+    context.learnEventRecorder?.setQuestionTotal(words.length || null);
+  }, [context.learnEventRecorder, words.length]);
+
+  useEffect(() => {
     if (feedbackTimerRef.current !== undefined) window.clearTimeout(feedbackTimerRef.current);
     setSelected(undefined);
     if (current >= words.length) setCurrent(0);
@@ -3833,6 +3910,9 @@ function VocaQuizSpellingActivity({
       action: "question_view",
       item_type: "word",
       item_idx: wordItemIdx(target),
+      q_no: current + 1,
+      q_total: words.length || null,
+      question_form: "choice-letter",
       chunk_index: question.blankIndex >= 0 ? question.blankIndex : undefined,
       extra: {
         quiz_mode: "spelling-letter",
@@ -3851,6 +3931,9 @@ function VocaQuizSpellingActivity({
       action: "letter_select",
       item_type: "word",
       item_idx: wordItemIdx(target),
+      q_no: current + 1,
+      q_total: words.length || null,
+      question_form: "choice-letter",
       chunk_index: question.blankIndex >= 0 ? question.blankIndex : undefined,
       extra: {
         quiz_mode: "spelling-letter",
@@ -3862,15 +3945,21 @@ function VocaQuizSpellingActivity({
       action: "submit",
       item_type: "word",
       item_idx: wordItemIdx(target),
+      q_no: current + 1,
+      q_total: words.length || null,
+      question_form: "choice-letter",
       chunk_index: question.blankIndex >= 0 ? question.blankIndex : undefined,
       correct: boolCorrect(correct),
       attempts: 1,
       extra: {
-        quiz_mode: "spelling-letter",
+        question: question.letters.map((letter, index) => index === question.blankIndex ? "____" : letter).join(""),
+        question_type: "text",
+        question_img: target.imagePath,
         answer: question.answer,
         selected: option,
+        options: question.options,
         blank_indexes: question.blankIndex >= 0 ? [question.blankIndex] : [],
-        option_order: question.options
+        blank_index: question.blankIndex
       }
     });
 
@@ -4062,6 +4151,10 @@ export function SentenceBlankActivity({
   const questionViewKeyRef = useRef("");
 
   useEffect(() => {
+    context.learnEventRecorder?.setQuestionTotal(sentences.length || null);
+  }, [context.learnEventRecorder, sentences.length]);
+
+  useEffect(() => {
     if (feedbackTimerRef.current !== undefined) window.clearTimeout(feedbackTimerRef.current);
     setSelected(undefined);
     if (index >= sentences.length) setIndex(0);
@@ -4087,6 +4180,8 @@ export function SentenceBlankActivity({
       action: "question_view",
       item_type: "sentence",
       item_idx: sentenceItemIdx(sentence),
+      q_no: index + 1,
+      q_total: sentences.length || null,
       chunk_index: blankTokenIndex >= 0 ? blankTokenIndex : undefined,
       extra: {
         blank_index: blankTokenIndex,
@@ -4119,11 +4214,16 @@ export function SentenceBlankActivity({
       correct: boolCorrect(correct),
       attempts: 1,
       extra: {
-        answer_text: answer,
-        selected_word_idx: wordItemIdx(selectedWord),
-        selected_text: option,
+        question: `${sentencePrefix} ____${sentenceSuffix ? ` ${sentenceSuffix}` : ""}`.replace(/\s+([?.!,])/g, "$1"),
+        question_type: "text",
+        answer,
+        answer_idx: wordItemIdx(words.find((word) => normalizeToken(word.eng) === normalizeToken(answer))),
+        selected: option,
+        selected_idx: wordItemIdx(selectedWord),
+        options,
+        option_idxs: options.map((item) => wordItemIdx(words.find((word) => normalizeToken(word.eng) === normalizeToken(item)))),
         blank_index: blankTokenIndex,
-        option_order: sentenceWordOptionOrder(options, words)
+        blank_token: answer
       }
     });
 
@@ -4160,9 +4260,11 @@ export function SentenceBlankActivity({
             onPlay={() =>
               recordLearnEvent(context, {
                 action: "audio_play",
-                item_type: "sentence",
-                item_idx: sentenceItemIdx(sentence),
-                audio_replays: 1,
+                  item_type: "sentence",
+                  item_idx: sentenceItemIdx(sentence),
+                  q_no: index + 1,
+                  q_total: sentences.length || null,
+                  audio_replays: 1,
                 extra: { question_index: index + 1 }
               })
             }
@@ -4252,6 +4354,10 @@ export function SentenceUnscrambleActivity({
   const questionViewKeyRef = useRef("");
 
   useEffect(() => {
+    context.learnEventRecorder?.setQuestionTotal(sentences.length || null);
+  }, [context.learnEventRecorder, sentences.length]);
+
+  useEffect(() => {
     if (feedbackTimerRef.current !== undefined) window.clearTimeout(feedbackTimerRef.current);
     setSelectedIndexes([]);
     if (index >= sentences.length) setIndex(0);
@@ -4277,6 +4383,8 @@ export function SentenceUnscrambleActivity({
       action: "question_view",
       item_type: "sentence",
       item_idx: sentenceItemIdx(sentence),
+      q_no: index + 1,
+      q_total: sentences.length || null,
       extra: {
         token_count: answerTokens.length,
         total_token_count: completeAnswerTokens.length,
@@ -4298,6 +4406,9 @@ export function SentenceUnscrambleActivity({
       action: "token_select",
       item_type: "sentence",
       item_idx: sentenceItemIdx(sentence),
+      q_no: index + 1,
+      q_total: sentences.length || null,
+      question_form: "order-tokens",
       chunk_index: nextSelectedTokens.length - 1,
       extra: {
         token,
@@ -4314,10 +4425,14 @@ export function SentenceUnscrambleActivity({
         correct: boolCorrect(correct),
         attempts: 1,
         extra: {
+          question: answerTokens.map(() => "____").join(" "),
+          question_type: "text",
+          answer: answerTokens.join(" "),
+          selected: nextSelectedTokens.join(" "),
+          options: answerBank,
           selected_tokens: nextSelectedTokens,
           answer_tokens: answerTokens,
-          full_answer_tokens: completeAnswerTokens,
-          token_order: answerBank
+          full_answer_tokens: completeAnswerTokens
         }
       });
       if (feedbackTimerRef.current !== undefined) window.clearTimeout(feedbackTimerRef.current);
@@ -5004,6 +5119,10 @@ function UnityWriteWordActivity({
   const isChecking = feedback === "checking";
   const canCheck = Boolean(word && !isChecking && (hasInk || typedText.trim()));
 
+  useEffect(() => {
+    context.learnEventRecorder?.setQuestionTotal(words.length || null);
+  }, [context.learnEventRecorder, words.length]);
+
   function redrawCanvas() {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -5060,6 +5179,8 @@ function UnityWriteWordActivity({
       action: "question_view",
       item_type: "word",
       item_idx: wordItemIdx(word),
+      q_no: index + 1,
+      q_total: words.length || null,
       extra: { word: word.eng, question_index: index, activity_code: MetaOnActivityCode.WriteWord }
     });
   }, [context, index, word]);
@@ -5141,8 +5262,11 @@ function UnityWriteWordActivity({
       score: evaluation.bestScore,
       time_ms: elapsed,
       extra: {
-        word: word.eng,
-        question_index: index,
+        question: word.imagePath || word.imageUrl || word.eng,
+        question_type: word.imagePath || word.imageUrl ? "image" : "text",
+        answer: word.eng,
+        selected: evaluation.bestCandidate,
+        stroke_count: strokesRef.current.length,
         input_mode: typedText.trim() ? "keyboard" : "handwriting",
         recognized_text: evaluation.bestCandidate,
         candidate_count: candidates.length,
@@ -5673,6 +5797,10 @@ export function SentenceRecordActivity({
   const strc02VideoUrl = usePackageUrl(context, strc02VideoPath);
   const safeIndex = Math.min(index, Math.max(sentences.length - 1, 0));
   const sentence = sentences[safeIndex];
+
+  useEffect(() => {
+    context.learnEventRecorder?.setQuestionTotal(sentences.length || null);
+  }, [context.learnEventRecorder, sentences.length]);
 
   useEffect(() => {
     if (index >= sentences.length && sentences.length > 0) setIndex(0);
