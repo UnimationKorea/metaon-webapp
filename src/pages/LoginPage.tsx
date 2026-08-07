@@ -3,45 +3,11 @@ import { ArrowLeft, Eye, EyeOff, Search } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
-const savedLoginStorageKey = "metaon.savedLogin.v1";
-
-type SavedLogin = {
-  password: string;
-  userId: string;
-};
-
-function readSavedLogin(): SavedLogin | null {
-  if (typeof window === "undefined") return null;
-
-  try {
-    const raw = window.localStorage.getItem(savedLoginStorageKey);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<SavedLogin>;
-    return {
-      password: typeof parsed.password === "string" ? parsed.password : "",
-      userId: typeof parsed.userId === "string" ? parsed.userId : ""
-    };
-  } catch {
-    window.localStorage.removeItem(savedLoginStorageKey);
-    return null;
-  }
-}
-
-function saveLogin(userId: string, password: string) {
-  window.localStorage.setItem(savedLoginStorageKey, JSON.stringify({ userId, password }));
-}
-
-function clearSavedLogin() {
-  window.localStorage.removeItem(savedLoginStorageKey);
-}
-
 export function LoginPage() {
   const navigate = useNavigate();
   const { account, error: authError, isAccountAuthenticated, isAuthenticated, isLoading, login, logout, user } = useAuth();
-  const [savedLogin] = useState(() => readSavedLogin());
-  const [userId, setUserId] = useState(() => savedLogin?.userId || "");
-  const [password, setPassword] = useState(() => savedLogin?.password || "");
-  const [shouldSaveLogin, setShouldSaveLogin] = useState(() => Boolean(savedLogin?.userId || savedLogin?.password));
+  const [userId, setUserId] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -52,11 +18,6 @@ export function LoginPage() {
     setIsSubmitting(true);
     try {
       await login(userId, password);
-      if (shouldSaveLogin) {
-        saveLogin(userId.trim(), password);
-      } else {
-        clearSavedLogin();
-      }
       navigate("/profiles", { replace: true });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
@@ -134,13 +95,6 @@ export function LoginPage() {
                 </span>
               </label>
               {error || authError ? <p className="figma-login-error">{error || authError}</p> : null}
-              <label className="figma-login-save-option">
-                <input checked={shouldSaveLogin} disabled={isSubmitting} onChange={(event) => {
-                  setShouldSaveLogin(event.target.checked);
-                  if (!event.target.checked) clearSavedLogin();
-                }} type="checkbox" />
-                <span>Account ID / Password 저장</span>
-              </label>
             </div>
 
             <button className="figma-login-submit" disabled={isSubmitting || !userId.trim() || !password || isLoading} type="submit">

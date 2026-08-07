@@ -45,6 +45,8 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+const LEGACY_SAVED_LOGIN_KEY = "metaon.savedLogin.v1";
+const LEGACY_USER_IDX_KEY = "metaon-user-idx";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [account, setAccount] = useState<MetaOnAccount | null>(null);
@@ -70,6 +72,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+
+    // Versions before the credential-storage change kept the raw password in
+    // localStorage. Remove it as soon as the application starts.
+    window.localStorage.removeItem(LEGACY_SAVED_LOGIN_KEY);
+    window.localStorage.removeItem(LEGACY_USER_IDX_KEY);
 
     const handleProfileSessionState = (event: Event) => {
       const resultCode = Number((event as CustomEvent<{ resultCode?: unknown }>).detail?.resultCode || 0);
