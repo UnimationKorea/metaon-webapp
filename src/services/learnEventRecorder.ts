@@ -1,4 +1,5 @@
-import { sendLearnEvents } from "../api/uniplanetApi";
+import { LearnEventBatchConflictError, sendLearnEvents } from "../api/uniplanetApi";
+import { learnEventAppVersion } from "./learnEventAppVersion";
 import {
   createLearnEventRunId,
   deleteLearnEventRun,
@@ -21,8 +22,11 @@ const LEGACY_OUTBOX_STORAGE_KEY = "metaon.learn-events.outbox.v2";
 type LegacyPendingLearnEventBatch = {
   log_idx: number;
   batch_id?: string;
+  app_version?: string;
   events: LearnEvent[];
   created_at: string;
+  delivery_state?: "pending" | "conflict";
+  last_error?: string;
 };
 
 function isLegacyPendingBatch(value: unknown): value is LegacyPendingLearnEventBatch {
@@ -40,6 +44,7 @@ export function createLearnEventRecorder(): LearnEventRecorder {
   let scope: LearnEventScope = {};
   let runId = createLearnEventRunId();
   let batchId = createLearnEventRunId();
+  let appVersion = learnEventAppVersion();
   let boundLogIdx: number | undefined;
   let createdAt = new Date().toISOString();
   let persistence = Promise.resolve();
@@ -49,6 +54,7 @@ export function createLearnEventRecorder(): LearnEventRecorder {
     const snapshot: LearnEventOutboxRun = {
       run_id: runId,
       batch_id: batchId,
+      app_version: appVersion,
       ...(boundLogIdx ? { log_idx: boundLogIdx } : {}),
       events: [...events],
       created_at: createdAt,
@@ -67,7 +73,7 @@ export function createLearnEventRecorder(): LearnEventRecorder {
       // IndexedDB can be blocked by an embedded WebView. Retain the legacy
       // fallback once a server study log is available.
       if (boundLogIdx && events.length > 0) {
-        appendLegacyPendingBatch({ log_idx: boundLogIdx, batch_id: batchId, events: [...events], created_at: createdAt });
+        appendLegacyPendingBatch({ log_idx: boundLogIdx, batch_id: batchId, app_version: appVersion, events: [...events], created_at: createdAt });
       }
     }
   }
@@ -85,6 +91,7 @@ export function createLearnEventRecorder(): LearnEventRecorder {
       scope = { ...nextScope };
       runId = createLearnEventRunId();
       batchId = createLearnEventRunId();
+      appVersion = learnEventAppVersion();
       boundLogIdx = undefined;
       createdAt = new Date().toISOString();
       delivered = false;
@@ -134,6 +141,9 @@ export function createLearnEventRecorder(): LearnEventRecorder {
         ts: timestamp,
         seq: nextSeq
       });
+      // The next answer for this question is measured from this submission,
+      // not from the original question_view event.
+      if (isAnswerAttempt(transportReady)) questionStartedAtByItem.set(questionKey, Date.parse(timestamp));
       nextSeq += 1;
       delivered = false;
       // Network delivery remains batched at activity exit/completion. This is
@@ -285,10 +295,20 @@ async function flushPersistedRuns(targetLogIdx?: number): Promise<unknown | unde
   }
   for (const run of runs) {
     try {
-      const result = await sendAndVerify(run.log_idx!, run.events, run.batch_id);
+      const result = await sendAndVerify(run.log_idx!, run.events, run.batch_id, run.app_version || learnEventAppVersion());
       await deleteLearnEventRun(run.run_id);
       if (run.log_idx === targetLogIdx) targetResult = result;
     } catch (error) {
+      if (error instanceof LearnEventBatchConflictError) {
+        await saveLearnEventRun({
+          ...run,
+          delivery_state: "conflict",
+          last_error: error.message,
+          updated_at: new Date().toISOString()
+        });
+        if (run.log_idx === targetLogIdx) throw error;
+        continue;
+      }
       throw error;
     }
   }
@@ -296,11 +316,19 @@ async function flushPersistedRuns(targetLogIdx?: number): Promise<unknown | unde
   return targetResult ?? legacyResult;
 }
 
-async function sendAndVerify(logIdx: number, eventList: LearnEvent[], batchId: string): Promise<unknown> {
-  const result = await sendLearnEvents({ log_idx: logIdx, events: eventList, batch_id: batchId });
+async function sendAndVerify(logIdx: number, eventList: LearnEvent[], batchId: string, appVersion: string): Promise<unknown> {
+  const result = await sendLearnEvents({ log_idx: logIdx, app_version: appVersion, events: eventList, batch_id: batchId });
   const receipt = result && typeof result === "object" ? result as Record<string, unknown> : {};
-  const accepted = Number(receipt.accepted_event_count ?? receipt.acceptedEventCount);
-  if (Number(receipt.resultCode) !== 1 || !Number.isInteger(accepted) || accepted !== eventList.length || receipt.batch_id !== batchId) {
+  const accepted = Number(receipt.accepted ?? receipt.accepted_event_count ?? receipt.acceptedEventCount ?? 0);
+  const duplicated = Number(receipt.duplicated ?? 0);
+  if (
+    Number(receipt.resultCode) !== 1 ||
+    !Number.isInteger(accepted) ||
+    !Number.isInteger(duplicated) ||
+    accepted < 0 ||
+    duplicated < 0 ||
+    accepted + duplicated !== eventList.length
+  ) {
     throw new Error("LearnEvent batch acknowledgement was incomplete.");
   }
   return result;
@@ -334,18 +362,27 @@ function appendLegacyPendingBatch(batch: LegacyPendingLearnEventBatch): void {
 
 async function flushLegacyPendingBatches(targetLogIdx?: number): Promise<unknown | undefined> {
   const pending = readLegacyPendingBatches();
+  const blocked = pending.filter((batch) => batch.delivery_state === "conflict");
+  const deliverable = pending.filter((batch) => batch.delivery_state !== "conflict");
   let targetResult: unknown;
-  for (let index = 0; index < pending.length; index += 1) {
-    const batch = pending[index];
+  for (let index = 0; index < deliverable.length; index += 1) {
+    const batch = deliverable[index];
     const batchId = batch.batch_id || `legacy-${batch.log_idx}-${batch.created_at}`;
     try {
-      const result = await sendAndVerify(batch.log_idx, batch.events, batchId);
+      const result = await sendAndVerify(batch.log_idx, batch.events, batchId, batch.app_version || learnEventAppVersion());
       if (batch.log_idx === targetLogIdx) targetResult = result;
     } catch (error) {
-      writeLegacyPendingBatches(pending.slice(index));
+      if (error instanceof LearnEventBatchConflictError) {
+        const conflicted = { ...batch, delivery_state: "conflict" as const, last_error: error.message };
+        blocked.push(conflicted);
+        writeLegacyPendingBatches([...blocked, ...deliverable.slice(index + 1)]);
+        if (batch.log_idx === targetLogIdx) throw error;
+        continue;
+      }
+      writeLegacyPendingBatches([...blocked, ...deliverable.slice(index)]);
       throw error;
     }
   }
-  writeLegacyPendingBatches([]);
+  writeLegacyPendingBatches(blocked);
   return targetResult;
 }

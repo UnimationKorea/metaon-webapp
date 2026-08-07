@@ -64,6 +64,13 @@ export class MetaOnApiError extends Error {
   }
 }
 
+export class LearnEventBatchConflictError extends MetaOnApiError {
+  constructor(message: string, resultCode = 0) {
+    super(message, resultCode);
+    this.name = "LearnEventBatchConflictError";
+  }
+}
+
 export async function getBookCatalog(options: { refresh?: boolean } = {}): Promise<BookCatalog> {
   const response = await fetch(options.refresh ? "/api/books?refresh=1" : "/api/books", {
     credentials: "same-origin",
@@ -310,13 +317,40 @@ export async function getQuickCheckQuiz(payload: unknown): Promise<unknown> {
 }
 
 export type LearnEventBatchReceipt = {
-  resultCode: 1;
-  accepted_event_count: number;
-  batch_id: string;
+  resultCode: number;
+  accepted?: number;
+  duplicated?: number;
+  accepted_event_count?: number;
+  batch_id?: string;
+  app_version?: string;
 };
 
-export async function sendLearnEvents(payload: { log_idx: number; events: LearnEvent[]; batch_id: string }): Promise<LearnEventBatchReceipt> {
-  return postStudy("/api/learn/events", payload) as Promise<LearnEventBatchReceipt>;
+export async function sendLearnEvents(payload: {
+  log_idx: number;
+  app_version: string;
+  events: LearnEvent[];
+  batch_id?: string;
+}): Promise<LearnEventBatchReceipt> {
+  const response = await fetch("/api/learn/events", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {
+      ...sessionHeaders(),
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+  const data = await readJsonResponse(response, { allowHttpError: true });
+  if (data.learnEventConflict === true) {
+    const message = stringValue(data.resultMessage ?? data.detail ?? data.message) || "LearnEvent batch conflicts with an existing study log.";
+    throw new LearnEventBatchConflictError(message, numberValue(data.resultCode));
+  }
+  if (!response.ok) {
+    const message = stringValue(data.resultMessage ?? data.detail ?? data.message) || response.statusText;
+    throw new MetaOnApiError(message, numberValue(data.resultCode));
+  }
+  assertMetaOnSuccess(data);
+  return data as LearnEventBatchReceipt;
 }
 
 export async function uploadLearnRecording(payload: unknown): Promise<unknown> {

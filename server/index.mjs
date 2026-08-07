@@ -46,6 +46,12 @@ const BOOKDATA_BASE =
   `${CDN_ORIGIN.replace(/\/+$/, "")}/MetaOn3/BookData`;
 const APP_IDX = process.env.METAON_APP_IDX || process.env.UNIPLANET_APP_IDX || "2";
 const APP_VERSION = process.env.METAON_APP_VERSION || process.env.UNIPLANET_APP_VERSION || "2.2.25";
+const LEARN_EVENT_CONFLICT_RESULT_CODES = new Set(
+  String(process.env.METAON_LEARN_EVENT_CONFLICT_RESULT_CODES || "")
+    .split(",")
+    .map((code) => code.trim())
+    .filter(Boolean)
+);
 const PLATFORM = process.env.METAON_PLATFORM || process.env.UNIPLANET_PLATFORM || "Android";
 const DEFAULT_SESSION_ID = process.env.METAON_SESSION_ID || "";
 const DEFAULT_COOKIE = process.env.METAON_COOKIE || (DEFAULT_SESSION_ID ? `JSESSIONID=${DEFAULT_SESSION_ID}` : "");
@@ -835,29 +841,42 @@ app.post("/api/learn/events", async (req, res) => {
   try {
     const events = Array.isArray(req.body?.events) ? req.body.events : [];
     const batchId = stringValue(req.body?.batch_id).trim();
-    if (!numberValue(req.body?.log_idx) || events.length === 0 || !batchId) {
-      res.status(400).json({ resultCode: 400, resultMessage: "log_idx, batch_id and events are required." });
+    const appVersion = stringValue(req.body?.app_version).trim();
+    if (!numberValue(req.body?.log_idx) || events.length === 0 || !appVersion) {
+      res.status(400).json({ resultCode: 400, resultMessage: "log_idx, app_version and events are required." });
       return;
     }
     const { batch_id: _batchId, ...upstreamPayload } = req.body || {};
     const upstream = await postUpstream("/learn/events", upstreamPayload, req);
-    assertMetaOnSuccess(upstream.data, "/learn/events");
     if (upstream.sessionId) res.setHeader("X-MetaOn-Session-Id", upstream.sessionId);
-    const accepted = numberValue(upstream.data?.accepted_event_count ?? upstream.data?.acceptedEventCount ?? events.length);
-    if (accepted !== events.length) {
+    if (numberValue(upstream.data?.resultCode) !== 1) {
+      const conflict = isLearnEventIdempotencyConflict(upstream.data, upstream.status);
+      res.status(conflict ? 409 : (upstream.status >= 400 ? upstream.status : 502)).json({
+        ...upstream.data,
+        ...(batchId ? { batch_id: batchId } : {}),
+        learnEventConflict: conflict
+      });
+      return;
+    }
+    const accepted = numberValue(upstream.data?.accepted ?? upstream.data?.accepted_event_count ?? upstream.data?.acceptedEventCount);
+    const duplicated = numberValue(upstream.data?.duplicated ?? upstream.data?.duplicated_event_count ?? upstream.data?.duplicatedEventCount);
+    if (accepted < 0 || duplicated < 0 || accepted + duplicated !== events.length) {
       res.status(502).json({
         resultCode: 502,
         resultMessage: "LearnEvent upstream acknowledgement count mismatch.",
-        accepted_event_count: accepted,
-        batch_id: batchId
+        accepted,
+        duplicated,
+        ...(batchId ? { batch_id: batchId } : {})
       });
       return;
     }
     res.status(200).json({
       ...upstream.data,
       resultCode: 1,
+      accepted,
+      duplicated,
       accepted_event_count: accepted,
-      batch_id: batchId
+      ...(batchId ? { batch_id: batchId } : {})
     });
   } catch (error) {
     sendError(res, error, "Failed to save LearnEvent batch");
@@ -1520,6 +1539,19 @@ function assertMetaOnSuccess(data, endpoint) {
   error.status = [PROFILE_RESULT.PROFILE_REQUIRED, PROFILE_RESULT.PROFILE_REVOKED].includes(resultCode) ? 409 : 502;
   error.resultCode = resultCode;
   throw error;
+}
+
+function isLearnEventIdempotencyConflict(data, upstreamStatus) {
+  const code = stringValue(data?.resultCode ?? data?.result_code ?? data?.code).toUpperCase();
+  const message = stringValue(data?.resultMessage ?? data?.detail ?? data?.message).toLowerCase();
+  return (
+    upstreamStatus === 409 ||
+    code === "409" ||
+    LEARN_EVENT_CONFLICT_RESULT_CODES.has(code) ||
+    code.includes("IDEMPOT") ||
+    code.includes("CONFLICT") ||
+    /idempot|same\s+(?:study\s+)?log|different\s+content|batch\s+conflict/.test(message)
+  );
 }
 
 function createAccountAuthSession(loginData, upstream) {

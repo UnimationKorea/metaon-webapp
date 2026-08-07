@@ -1,9 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { sendLearnEventsMock } = vi.hoisted(() => ({ sendLearnEventsMock: vi.fn() }));
+const { sendLearnEventsMock, LearnEventBatchConflictErrorMock } = vi.hoisted(() => {
+  class LearnEventBatchConflictErrorMock extends Error {}
+  return { sendLearnEventsMock: vi.fn(), LearnEventBatchConflictErrorMock };
+});
 
 vi.mock("../api/uniplanetApi", () => ({
-  sendLearnEvents: sendLearnEventsMock
+  sendLearnEvents: sendLearnEventsMock,
+  LearnEventBatchConflictError: LearnEventBatchConflictErrorMock
 }));
 
 import { createLearnEventRecorder } from "./learnEventRecorder";
@@ -98,6 +102,35 @@ describe("createLearnEventRecorder", () => {
     expect(firstSubmit.extra?.selected_text).toBeUndefined();
   });
 
+  it("measures every retry from the prior answer submission", () => {
+    const recorder = createLearnEventRecorder();
+    recorder.record({
+      action: "question_view",
+      item_type: "word",
+      item_idx: 4,
+      q_no: 1,
+      ts: "2026-08-07T00:00:00.000Z"
+    });
+    recorder.record({
+      action: "submit",
+      item_type: "word",
+      item_idx: 4,
+      q_no: 1,
+      correct: 0,
+      ts: "2026-08-07T00:00:02.600Z"
+    });
+    recorder.record({
+      action: "submit",
+      item_type: "word",
+      item_idx: 4,
+      q_no: 1,
+      correct: 1,
+      ts: "2026-08-07T00:00:04.100Z"
+    });
+
+    expect(recorder.snapshot().slice(1).map((event) => event.time_ms)).toEqual([2600, 1500]);
+  });
+
   it("persists a failed batch and retries the exact log_idx later", async () => {
     const recorder = createLearnEventRecorder();
     recorder.begin({ activityCode: "WDQU03", questionTotal: 1 });
@@ -108,18 +141,41 @@ describe("createLearnEventRecorder", () => {
     await expect(recorder.flush(901)).rejects.toThrow("offline");
     expect(window.localStorage.getItem("metaon.learn-events.outbox.v2")).toContain('"log_idx":901');
 
-    sendLearnEventsMock.mockImplementationOnce(({ events, batch_id }) =>
-      Promise.resolve({ resultCode: 1, accepted_event_count: events.length, batch_id })
+    sendLearnEventsMock.mockImplementationOnce(({ events, batch_id, app_version }) =>
+      Promise.resolve({ resultCode: 1, accepted: events.length, duplicated: 0, batch_id, app_version })
     );
     await expect(recorder.flushPending()).resolves.toBeUndefined();
-    expect(sendLearnEventsMock).toHaveBeenLastCalledWith(expect.objectContaining({ log_idx: 901 }));
+    expect(sendLearnEventsMock).toHaveBeenLastCalledWith(expect.objectContaining({ log_idx: 901, app_version: "3.2.1" }));
     expect(window.localStorage.getItem("metaon.learn-events.outbox.v2")).toBeNull();
+  });
+
+  it("treats an idempotent duplicate acknowledgement as a successful delivery", async () => {
+    const recorder = createLearnEventRecorder();
+    recorder.record({ action: "submit", item_type: "word", item_idx: 44, correct: 1, extra: { answer: "fox", selected: "fox" } });
+    sendLearnEventsMock.mockImplementationOnce(({ events }) =>
+      Promise.resolve({ resultCode: 1, accepted: 0, duplicated: events.length })
+    );
+
+    await expect(recorder.flush(901)).resolves.toEqual(expect.objectContaining({ duplicated: 1 }));
+    expect(window.localStorage.getItem("metaon.learn-events.outbox.v2")).toBeNull();
+  });
+
+  it("keeps an idempotency conflict out of automatic retries", async () => {
+    const recorder = createLearnEventRecorder();
+    recorder.record({ action: "submit", item_type: "word", item_idx: 44, correct: 1, extra: { answer: "fox", selected: "fox" } });
+    sendLearnEventsMock.mockRejectedValueOnce(new LearnEventBatchConflictErrorMock("different content"));
+
+    await expect(recorder.flush(901)).rejects.toThrow("different content");
+    const pending = JSON.parse(window.localStorage.getItem("metaon.learn-events.outbox.v2") || "[]") as Array<{ delivery_state?: string }>;
+    expect(pending[0]?.delivery_state).toBe("conflict");
+    await expect(recorder.flushPending()).resolves.toBeUndefined();
+    expect(sendLearnEventsMock).toHaveBeenCalledTimes(1);
   });
 
   it("retains a batch when the server acknowledgement is incomplete", async () => {
     const recorder = createLearnEventRecorder();
     recorder.record({ action: "submit", item_type: "word", item_idx: 44, correct: 1, extra: { answer: "fox", selected: "fox" } });
-    sendLearnEventsMock.mockResolvedValueOnce({ resultCode: 1, accepted_event_count: 0, batch_id: "wrong-batch" });
+    sendLearnEventsMock.mockResolvedValueOnce({ resultCode: 1, accepted: 0, duplicated: 0, batch_id: "wrong-batch" });
 
     await expect(recorder.flush(901)).rejects.toThrow("acknowledgement");
     expect(window.localStorage.getItem("metaon.learn-events.outbox.v2")).toContain('"log_idx":901');

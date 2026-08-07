@@ -25,6 +25,7 @@ export function ActivityPage() {
   const learnEventRecorderRef = useRef(createLearnEventRecorder());
   const completionLockRef = useRef(false);
   const exitLockRef = useRef(false);
+  const activityStartedAtRef = useRef<number>();
   const [isFullscreen, setIsFullscreen] = useState(isDocumentFullscreen);
   const [studyLogIdx, setStudyLogIdx] = useState<number>();
   const [studyError, setStudyError] = useState<string>();
@@ -95,9 +96,12 @@ export function ActivityPage() {
     setCelebration(null);
     completionLockRef.current = false;
     exitLockRef.current = false;
+    activityStartedAtRef.current = Date.now();
     learnEventRecorderRef.current.reset();
-    learnEventRecorderRef.current.begin({ activityCode: normalizedActivityCode });
-    void learnEventRecorderRef.current.flushPending().catch(() => undefined);
+    if (!isQuickCheck) {
+      learnEventRecorderRef.current.begin({ activityCode: normalizedActivityCode });
+      void learnEventRecorderRef.current.flushPending().catch(() => undefined);
+    }
     if (!activity?.actIdx) return undefined;
 
     startStudy({ act_idx: activity.actIdx })
@@ -117,7 +121,7 @@ export function ActivityPage() {
     return () => {
       cancelled = true;
     };
-  }, [activity?.actIdx, normalizedActivityCode]);
+  }, [activity?.actIdx, isQuickCheck, normalizedActivityCode]);
 
   useEffect(() => {
     const persistLearnEvents = () => {
@@ -218,7 +222,7 @@ export function ActivityPage() {
             item_type: "activity",
             item_idx: activity.actIdx ?? null,
             score: result?.score,
-            time_ms: undefined,
+            time_ms: activityStartedAtRef.current ? Math.max(0, Date.now() - activityStartedAtRef.current) : undefined,
             extra: {
               correct_count: result?.correctCount,
               total: result?.total
@@ -276,7 +280,7 @@ export function ActivityPage() {
         packageMeta: packageState.packageMeta,
         day,
         activity,
-        learnEventRecorder: learnEventRecorderRef.current,
+        learnEventRecorder: isQuickCheck ? undefined : learnEventRecorderRef.current,
         studyLogIdx,
         onComplete: finishActivity,
         onExit: returnToBook

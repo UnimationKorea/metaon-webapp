@@ -6,11 +6,15 @@ const STORE_NAME = "runs";
 
 export type LearnEventOutboxRun = {
   run_id: string;
+  /** Local delivery identifier. The upstream idempotency key is log_idx. */
   batch_id: string;
+  app_version: string;
   log_idx?: number;
   events: LearnEvent[];
   created_at: string;
   updated_at: string;
+  delivery_state?: "pending" | "conflict";
+  last_error?: string;
 };
 
 export function createLearnEventRunId(): string {
@@ -29,7 +33,7 @@ export async function listBoundLearnEventRuns(): Promise<LearnEventOutboxRun[]> 
     db.transaction(STORE_NAME, "readonly").objectStore(STORE_NAME).getAll()
   );
   return runs
-    .filter((run) => Number.isInteger(run.log_idx) && (run.log_idx || 0) > 0 && run.events.length > 0)
+    .filter((run) => Number.isInteger(run.log_idx) && (run.log_idx || 0) > 0 && run.events.length > 0 && run.delivery_state !== "conflict")
     .sort((left, right) => left.created_at.localeCompare(right.created_at));
 }
 
