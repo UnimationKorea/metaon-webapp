@@ -3674,10 +3674,6 @@ export function VocaQuizActivity({
   const words = prototypeData?.words ?? loadedWords;
   const isWordResourceLoading = !prototypeData && wordResource.status === "loading";
 
-  if (isMetaOnWordQuiz(context.activity)) {
-    return <VocaQuizSpellingActivity context={context} loading={isWordResourceLoading} words={words} />;
-  }
-
   return <VocaQuizChoiceActivity context={context} loading={isWordResourceLoading} words={words} />;
 }
 
@@ -3844,6 +3840,9 @@ function VocaQuizChoiceActivity({
                   action: "audio_play",
                   item_type: "word",
                   item_idx: wordItemIdx(target),
+                  q_no: current + 1,
+                  q_total: words.length || null,
+                  question_form: "choice-word",
                   audio_replays: 1,
                   extra: { word: target?.eng, question_index: current + 1 }
                 })
@@ -7776,10 +7775,6 @@ function resolveVocaQuizMode(activity: Activity | undefined, current: number, se
   }
 
   return modes[mixSeed(seed, `${activity?.id || activity?.actIdx || "quiz"}:${current}`) % modes.length];
-}
-
-function isMetaOnWordQuiz(activity: Activity | undefined): boolean {
-  return normalizeActivityCode(activity?.activityCode || activity?.id) === MetaOnActivityCode.WordQuiz;
 }
 
 function buildUnscrambleDisplayModel(

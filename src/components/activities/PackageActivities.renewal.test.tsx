@@ -154,22 +154,19 @@ describe("Figma renewal activities", () => {
     vi.unstubAllGlobals();
   });
 
-  it("renders WDQU01 as a spaced spelling question with an underline blank", async () => {
+  it("renders WDQU01 as an image-to-word Word Quiz, not a spelling blank", async () => {
     const { container } = render(
       <VocaQuizActivity context={activityContext(ActType.VocaQuizSpace, "WDQU01", { quiz_type: 1 })} />
     );
 
     const shell = container.querySelector(".voca-quiz-renewal-shell");
-    await waitFor(() => expect(shell).toHaveAttribute("data-quiz-mode", "spelling-letter"));
-    const spelling = container.querySelector<HTMLElement>(".voca-quiz-spelling-word");
-    await waitFor(() => expect(spelling).toHaveAttribute("data-answer", "bridge"));
-    expect(container.querySelector(".voca-quiz-spelling-media img")).toBeInTheDocument();
-    expect(spelling?.querySelectorAll(".voca-quiz-spelling-letter")).toHaveLength(6);
-    expect(spelling?.querySelectorAll(".voca-quiz-spelling-letter.is-blank")).toHaveLength(1);
-    const textOptions = Array.from(container.querySelectorAll<HTMLElement>(".voca-quiz-spelling-options .voca-quiz-spelling-option-text"));
+    await waitFor(() => expect(shell).toHaveAttribute("data-quiz-mode", "image-text"));
+    expect(container.querySelector(".voca-quiz-prompt img")).toHaveAttribute("alt", "bridge");
+    expect(container.querySelector(".voca-quiz-spelling-word")).toBeNull();
+    const textOptions = Array.from(container.querySelectorAll<HTMLElement>(".voca-quiz-options .voca-quiz-fit-text"));
     expect(textOptions).toHaveLength(4);
     textOptions.forEach((option) => expect(option).toHaveAttribute("data-fit-single-line", "true"));
-    const textOptionGroup = container.querySelector(".voca-quiz-spelling-options");
+    const textOptionGroup = container.querySelector(".voca-quiz-options");
     expect(textOptionGroup).toHaveAttribute("data-uniform-fit-group", "true");
     textOptions.forEach((option, optionIndex) => {
       Object.defineProperty(option, "clientWidth", { configurable: true, value: 100 });
@@ -186,13 +183,8 @@ describe("Figma renewal activities", () => {
     });
     expect(screen.getByLabelText("Question 1 of 6")).toHaveTextContent(/^1\/6$/);
 
-    const answer = spelling?.getAttribute("data-answer") || "";
-    const blank = spelling?.querySelector<HTMLElement>(".voca-quiz-spelling-letter.is-blank");
-    const expectedLetter = answer[(Array.from(spelling?.children || []).indexOf(blank as HTMLSpanElement))];
-    fireEvent.click(screen.getByRole("button", { name: `Choose ${expectedLetter}` }));
-    expect(spelling?.classList).toContain("is-complete");
-    expect(spelling?.querySelector(".voca-quiz-spelling-letter.is-blank")).toBeNull();
-    expect(spelling).toHaveTextContent("bridge");
+    fireEvent.click(screen.getByRole("button", { name: "Answer bridge" }));
+    expect(screen.getByRole("button", { name: "Answer bridge" })).toHaveClass("is-correct");
 
     const nextQuestion = screen.getByRole("button", { name: "Next question" });
     expect(nextQuestion.querySelector("img")).toHaveAttribute(
