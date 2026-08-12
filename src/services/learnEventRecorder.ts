@@ -50,6 +50,7 @@ export function createLearnEventRecorder(): LearnEventRecorder {
   let createdAt = new Date().toISOString();
   let persistence = Promise.resolve();
   let delivered = false;
+  let sealed = false;
 
   function enqueuePersist(): Promise<void> {
     const snapshot: LearnEventOutboxRun = {
@@ -59,7 +60,8 @@ export function createLearnEventRecorder(): LearnEventRecorder {
       ...(boundLogIdx ? { log_idx: boundLogIdx } : {}),
       events: [...events],
       created_at: createdAt,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
+      ...(sealed ? { sealed_at: new Date().toISOString() } : {})
     };
     persistence = persistence
       .catch(() => undefined)
@@ -72,8 +74,8 @@ export function createLearnEventRecorder(): LearnEventRecorder {
       await enqueuePersist();
     } catch {
       // IndexedDB can be blocked by an embedded WebView. Retain the legacy
-      // fallback once a server study log is available.
-      if (boundLogIdx && events.length > 0) {
+      // fallback only for a completion-sealed batch.
+      if (sealed && boundLogIdx && events.length > 0) {
         appendLegacyPendingBatch({ log_idx: boundLogIdx, batch_id: batchId, app_version: appVersion, events: [...events], created_at: createdAt });
       }
     }
@@ -96,17 +98,22 @@ export function createLearnEventRecorder(): LearnEventRecorder {
       boundLogIdx = undefined;
       createdAt = new Date().toISOString();
       delivered = false;
+      sealed = false;
       resetInMemory();
     },
     async bindStudyLog(logIdx) {
       if (!logIdx) return;
       boundLogIdx = logIdx;
-      await persistCurrent();
     },
     count: () => events.length,
     async flush(logIdx) {
       if (!logIdx) return undefined;
       await this.bindStudyLog(logIdx);
+      if (events.length === 0) return undefined;
+      // A study log has exactly one immutable /learn/events batch. Events that
+      // arrive after this point are intentionally ignored by record().
+      sealed = true;
+      await persistCurrent();
       const result = await flushPersistedRuns(logIdx);
       if (result !== undefined) {
         delivered = true;
@@ -119,10 +126,10 @@ export function createLearnEventRecorder(): LearnEventRecorder {
       await flushPersistedRuns();
     },
     async persist() {
-      await persistCurrent();
+      if (sealed) await persistCurrent();
     },
     record(event: LearnEventInput) {
-      if (!event.action || !event.item_type) return;
+      if (sealed || !event.action || !event.item_type) return;
       const transportReady = normalizeForTransport(event, scope);
       const questionKey = fallbackAttemptKey(transportReady);
       const mappedQNo = transportReady.q_no ?? questionNoByItem.get(questionKey);
@@ -147,12 +154,15 @@ export function createLearnEventRecorder(): LearnEventRecorder {
       if (isAnswerAttempt(transportReady)) questionStartedAtByItem.set(questionKey, Date.parse(timestamp));
       nextSeq += 1;
       delivered = false;
-      // Network delivery remains batched at activity exit/completion. This is
-      // only a durable local append, so a process kill does not lose attempts.
-      void persistCurrent();
+      // Keep unfinished events in memory. A completed run is sealed and saved
+      // as one immutable outbox batch by flush().
     },
     reset() {
-      if (!delivered) void persistCurrent();
+      resetInMemory();
+    },
+    discard() {
+      sealed = false;
+      delivered = false;
       resetInMemory();
     },
     setQuestionTotal(total) {
@@ -162,7 +172,7 @@ export function createLearnEventRecorder(): LearnEventRecorder {
   };
 }
 
-const ANSWER_ATTEMPT_ACTIONS = new Set(["submit", "pair_submit", "pair_attempt", "answer_attempt", "answer_result"]);
+const ANSWER_ATTEMPT_ACTIONS = new Set(["answer_scored"]);
 
 function normalizeAttemptEvent(event: LearnEventInput, attemptsByItem: Map<string, number>): LearnEventInput {
   if (!isAnswerAttempt(event)) return event;
@@ -185,6 +195,11 @@ function fallbackAttemptKey(event: LearnEventInput): string {
 }
 
 function normalizeForTransport(event: LearnEventInput, nextScope: LearnEventScope): LearnEventInput {
+  // Older renderers may still send their former scored action. Keep this
+  // conversion at the recorder boundary so no graded event reaches the API
+  // with a non-canonical action name.
+  const canonicalAction = event.correct != null ? "answer_scored" : event.action;
+  event = canonicalAction === event.action ? event : { ...event, action: canonicalAction };
   const extra = normalizeExtra(event.extra);
   const questionForm = event.question_form || nextScope.questionForm || questionFormForActivity(nextScope.activityCode);
   const qNo = normalizePositiveInt(event.q_no) ?? normalizePositiveInt(extra.q_no) ?? normalizePositiveInt(extra.question_index);
@@ -239,8 +254,8 @@ function skillForGradedEvent(
       return "word_text_to_image";
     case "WDPL01":
       return "word_match_text_meaning";
-    // WDPL02 intentionally has no client skill. The server assigns it because
-    // a matching pair is not a single word-level assessment item.
+    case "WDPL02":
+      return "word_match_image_text";
     default:
       return undefined;
   }

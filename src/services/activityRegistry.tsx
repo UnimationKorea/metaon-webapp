@@ -371,7 +371,6 @@ const npcQuickCheckRenderer: ActivityRenderer = {
 
 const NPC_QUICK_CHECK_CODES = new Set<string>([
   MetaOnActivityCode.NpcQuickCheck,
-  MetaOnActivityCode.LegacyNpcQuickCheck,
   MetaOnActivityCode.NpcQuickCheck2
 ]);
 

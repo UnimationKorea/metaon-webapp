@@ -9,6 +9,7 @@ export const MetaOnActivityCode = {
   VideoWordQuiz: "WDQU03",
   WordBlank: "WDBL01",
   VideoWordBlank: "WDBL02",
+  LegacyWriteWord: "WDWR01",
   WriteWord: "WDWR02",
   MatchingGame: "WDPL01",
   MemoryCard: "WDPL02",
@@ -21,7 +22,6 @@ export const MetaOnActivityCode = {
   Movie: "MOVIE01",
   QuickCheck: "QCHK01",
   NpcQuickCheck: "NPCQHK01",
-  LegacyNpcQuickCheck: "QCNP01",
   NpcQuickCheck2: "NPCQHK02"
 } as const;
 
@@ -35,6 +35,7 @@ const actTypeByActivityCode = new Map<string, ActType>([
   [MetaOnActivityCode.WordSearch, ActType.WordSearch],
   [MetaOnActivityCode.WordBlank, ActType.VocaCheckSpace],
   [MetaOnActivityCode.VideoWordBlank, ActType.VocaCheckSpace],
+  [MetaOnActivityCode.LegacyWriteWord, ActType.WriteWord],
   [MetaOnActivityCode.WriteWord, ActType.WriteWord],
   [MetaOnActivityCode.MatchingGame, ActType.MatchingGame],
   [MetaOnActivityCode.MemoryCard, ActType.MemoryGame],
@@ -47,7 +48,6 @@ const actTypeByActivityCode = new Map<string, ActType>([
   [MetaOnActivityCode.Movie, ActType.MoviePlay],
   [MetaOnActivityCode.QuickCheck, ActType.QuickCheck],
   [MetaOnActivityCode.NpcQuickCheck, ActType.QuickCheck],
-  [MetaOnActivityCode.LegacyNpcQuickCheck, ActType.QuickCheck],
   [MetaOnActivityCode.NpcQuickCheck2, ActType.QuickCheck]
 ]);
 
@@ -86,6 +86,7 @@ const titleByActivityCode = new Map<MetaOnActivityCode, string>([
   [MetaOnActivityCode.VideoWordQuiz, "Word Quiz"],
   [MetaOnActivityCode.WordBlank, "Word Blank"],
   [MetaOnActivityCode.VideoWordBlank, "Word Blank"],
+  [MetaOnActivityCode.LegacyWriteWord, "Write Word"],
   [MetaOnActivityCode.WriteWord, "Write Word"],
   [MetaOnActivityCode.MatchingGame, "Matching Game"],
   [MetaOnActivityCode.MemoryCard, "Memory Card"],
@@ -98,7 +99,6 @@ const titleByActivityCode = new Map<MetaOnActivityCode, string>([
   [MetaOnActivityCode.Movie, "Movie"],
   [MetaOnActivityCode.QuickCheck, "Quick Check"],
   [MetaOnActivityCode.NpcQuickCheck, "NPC Quick Check"],
-  [MetaOnActivityCode.LegacyNpcQuickCheck, "NPC Quick Check"],
   [MetaOnActivityCode.NpcQuickCheck2, "NPC Quick Check"]
 ]);
 

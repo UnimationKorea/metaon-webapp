@@ -152,7 +152,6 @@ export function buildTrailLinks(points: TrailPoint[]): TrailLink[] {
 // Hide the ones whose resource is missing so the Activity list still renders instead of erroring.
 const NPC_ACTIVITY_FOLDERS: Record<string, string> = {
   [MetaOnActivityCode.NpcQuickCheck]: "npcqhk",
-  [MetaOnActivityCode.LegacyNpcQuickCheck]: "npcqhk",
   [MetaOnActivityCode.NpcQuickCheck2]: "npcqhk2"
 };
 

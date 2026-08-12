@@ -29,7 +29,6 @@ describe("isActivityResourceReady", () => {
 
   it("shows an NPC activity when its own script.json is present", () => {
     expect(isActivityResourceReady(activity("NPCQHK01"), day, ["Lessons/L1/D1/npcqhk/script.json"])).toBe(true);
-    expect(isActivityResourceReady(activity("QCNP01"), day, ["Lessons/L1/D1/npcqhk/script.json"])).toBe(true);
     expect(isActivityResourceReady(activity("NPCQHK02"), day, ["Lessons/L1/D1/npcqhk2/script.json"])).toBe(true);
   });
 

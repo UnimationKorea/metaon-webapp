@@ -32,7 +32,8 @@ export type LearnEventSkill =
   | "writing_image_to_sentence"
   | "word_spell_blank"
   | "sentence_unscramble"
-  | "word_match_text_meaning";
+  | "word_match_text_meaning"
+  | "word_match_image_text";
 
 export type LearnEventScope = {
   activityCode?: string;
@@ -59,7 +60,7 @@ export type LearnEvent = {
   /** Maximum attempts allowed for the question. Timed games use null. */
   attempt_max?: number | null;
   question_form?: LearnEventQuestionForm;
-  /** Present only on graded events. WDPL02 is intentionally server-assigned. */
+  /** Required on every answer_scored event. */
   skill?: LearnEventSkill;
   hints_used?: number;
   audio_replays?: number;
@@ -77,6 +78,8 @@ export type LearnEventRecorder = {
   flush: (logIdx: number) => Promise<unknown | undefined>;
   flushPending: () => Promise<void>;
   persist: () => Promise<void>;
+  /** Discard an unfinished Activity run. Unfinished runs must never be sent. */
+  discard: () => void;
   record: (event: LearnEventInput) => void;
   reset: () => void;
   setQuestionTotal: (total: number | null | undefined) => void;

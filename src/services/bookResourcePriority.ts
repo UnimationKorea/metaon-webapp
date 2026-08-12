@@ -97,7 +97,6 @@ function foldersForActivity(activity: Activity): string[] {
     case MetaOnActivityCode.Movie:
       return ["movie/"];
     case MetaOnActivityCode.NpcQuickCheck:
-    case MetaOnActivityCode.LegacyNpcQuickCheck:
       return ["npcqhk/"];
     case MetaOnActivityCode.NpcQuickCheck2:
       return ["npcqhk2/"];

@@ -2015,7 +2015,7 @@ const METAON_ACTIVITY_CODE = {
   videoSentenceRecord: "STRC02",
   movie: "MOVIE01",
   quickCheck: "QCHK01",
-  npcQuickCheck: "QCNP01",
+  npcQuickCheck: "NPCQHK01",
   npcQuickCheck2: "NPCQHK02"
 };
 

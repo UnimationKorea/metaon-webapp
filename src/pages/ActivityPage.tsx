@@ -62,11 +62,12 @@ export function ActivityPage() {
   const normalizedActivityCode = normalizeActivityCode(activity?.activityCode);
   const isNpcQuickCheck =
     normalizedActivityCode === MetaOnActivityCode.NpcQuickCheck ||
-    normalizedActivityCode === MetaOnActivityCode.LegacyNpcQuickCheck ||
     normalizedActivityCode === MetaOnActivityCode.NpcQuickCheck2;
   const isQuickCheck = normalizedActivityCode === MetaOnActivityCode.QuickCheck || isNpcQuickCheck;
   const isMovie01 = normalizedActivityCode === MetaOnActivityCode.Movie;
-  const isWriteWordHandwriting = normalizedActivityCode === MetaOnActivityCode.WriteWord;
+  const isWriteWordHandwriting =
+    normalizedActivityCode === MetaOnActivityCode.LegacyWriteWord ||
+    normalizedActivityCode === MetaOnActivityCode.WriteWord;
   const isVideoActivity =
     normalizedActivityCode === MetaOnActivityCode.VideoWordCard ||
     normalizedActivityCode === MetaOnActivityCode.VideoWordQuiz ||
@@ -111,7 +112,7 @@ export function ActivityPage() {
         const nextLogIdx = Number(payload.log_idx || 0);
         if (Number.isFinite(nextLogIdx) && nextLogIdx > 0) {
           setStudyLogIdx(nextLogIdx);
-          void learnEventRecorderRef.current.bindStudyLog(nextLogIdx);
+          if (!isQuickCheck) void learnEventRecorderRef.current.bindStudyLog(nextLogIdx);
         }
       })
       .catch((caught) => {
@@ -181,24 +182,9 @@ export function ActivityPage() {
       }
       if (!exitLockRef.current && !completionLockRef.current && studyLogIdx) {
         exitLockRef.current = true;
-        if (!isQuickCheck) {
-          learnEventRecorderRef.current.record({
-            action: "activity_exit",
-            item_type: "activity",
-            item_idx: activity?.actIdx ?? null,
-            extra: { reason: "back_to_book" }
-          });
-          try {
-            await learnEventRecorderRef.current.flush(studyLogIdx);
-          } catch (caught) {
-            setStudyError(caught instanceof Error ? `LearnEvent 저장 실패: ${caught.message}` : `LearnEvent 저장 실패: ${String(caught)}`);
-          }
-        }
-        try {
-          await endStudy({ log_idx: studyLogIdx });
-        } catch (caught) {
-          setStudyError(caught instanceof Error ? caught.message : String(caught));
-        }
+        // An unfinished Activity is intentionally abandoned: no LearnEvent
+        // batch and no /study/end. Only completion creates the immutable batch.
+        if (!isQuickCheck) learnEventRecorderRef.current.discard();
       }
     } finally {
       navigate(routeForBook(book), { replace: true });

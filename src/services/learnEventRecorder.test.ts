@@ -21,7 +21,7 @@ describe("createLearnEventRecorder", () => {
     const recorder = createLearnEventRecorder();
 
     recorder.record({
-      action: "submit",
+      action: "answer_scored",
       item_type: "word",
       item_idx: 41,
       correct: 0,
@@ -29,7 +29,7 @@ describe("createLearnEventRecorder", () => {
       extra: { selected: "b" }
     });
     recorder.record({
-      action: "submit",
+      action: "answer_scored",
       item_type: "word",
       item_idx: 41,
       correct: 0,
@@ -37,7 +37,7 @@ describe("createLearnEventRecorder", () => {
       extra: { selected: "c" }
     });
     recorder.record({
-      action: "submit",
+      action: "answer_scored",
       item_type: "word",
       item_idx: 41,
       correct: 1,
@@ -55,9 +55,9 @@ describe("createLearnEventRecorder", () => {
 
   it("keeps attempts independent when a blank has its own attempt key", () => {
     const recorder = createLearnEventRecorder();
-    recorder.record({ action: "submit", item_type: "sentence", item_idx: 9, chunk_index: 2, correct: 0 });
-    recorder.record({ action: "submit", item_type: "sentence", item_idx: 9, chunk_index: 4, correct: 0 });
-    recorder.record({ action: "submit", item_type: "sentence", item_idx: 9, chunk_index: 2, correct: 1 });
+    recorder.record({ action: "answer_scored", item_type: "sentence", item_idx: 9, chunk_index: 2, correct: 0 });
+    recorder.record({ action: "answer_scored", item_type: "sentence", item_idx: 9, chunk_index: 4, correct: 0 });
+    recorder.record({ action: "answer_scored", item_type: "sentence", item_idx: 9, chunk_index: 2, correct: 1 });
 
     expect(recorder.snapshot().map((event) => event.attempts)).toEqual([1, 1, 2]);
   });
@@ -74,14 +74,14 @@ describe("createLearnEventRecorder", () => {
       extra: { option_order: [{ word_idx: 21, text: "tears" }, { word_idx: null, text: "good care" }] }
     });
     recorder.record({
-      action: "submit",
+      action: "answer_scored",
       item_type: "sentence",
       item_idx: 12,
       correct: 0,
       extra: { answer_text: "tears", selected_text: "good care" }
     });
     recorder.record({
-      action: "submit",
+      action: "answer_scored",
       item_type: "sentence",
       item_idx: 12,
       correct: 1,
@@ -102,12 +102,12 @@ describe("createLearnEventRecorder", () => {
     expect(firstSubmit.extra?.selected_text).toBeUndefined();
   });
 
-  it("adds the contract skill to every graded activity event and preserves the memory-card exception", () => {
+  it("adds the contract skill to every graded activity event, including memory cards", () => {
     const recorder = createLearnEventRecorder();
 
     recorder.begin({ activityCode: "WDQU03", questionTotal: 1 });
     recorder.record({
-      action: "submit",
+      action: "answer_scored",
       item_type: "word",
       item_idx: 81,
       correct: 1,
@@ -120,7 +120,7 @@ describe("createLearnEventRecorder", () => {
 
     recorder.begin({ activityCode: "STBL02", questionTotal: 1 });
     recorder.record({
-      action: "submit",
+      action: "answer_scored",
       item_type: "sentence",
       item_idx: 82,
       correct: 0,
@@ -129,8 +129,8 @@ describe("createLearnEventRecorder", () => {
     expect(recorder.snapshot()[0]?.skill).toBe("sentence_blank_multi");
 
     recorder.begin({ activityCode: "WDPL02" });
-    recorder.record({ action: "pair_attempt", item_type: "pair", item_idx: 83, correct: 1 });
-    expect(recorder.snapshot()[0]?.skill).toBeUndefined();
+    recorder.record({ action: "answer_scored", item_type: "pair", item_idx: 83, correct: 1, q_no: 1 });
+    expect(recorder.snapshot()[0]?.skill).toBe("word_match_image_text");
   });
 
   it("measures every retry from the prior answer submission", () => {
@@ -143,7 +143,7 @@ describe("createLearnEventRecorder", () => {
       ts: "2026-08-07T00:00:00.000Z"
     });
     recorder.record({
-      action: "submit",
+      action: "answer_scored",
       item_type: "word",
       item_idx: 4,
       q_no: 1,
@@ -151,7 +151,7 @@ describe("createLearnEventRecorder", () => {
       ts: "2026-08-07T00:00:02.600Z"
     });
     recorder.record({
-      action: "submit",
+      action: "answer_scored",
       item_type: "word",
       item_idx: 4,
       q_no: 1,
@@ -162,11 +162,43 @@ describe("createLearnEventRecorder", () => {
     expect(recorder.snapshot().slice(1).map((event) => event.time_ms)).toEqual([2600, 1500]);
   });
 
+  it("does not queue or send an unfinished Activity run", async () => {
+    const recorder = createLearnEventRecorder();
+    recorder.begin({ activityCode: "WDQU01", questionTotal: 1 });
+    recorder.record({ action: "question_view", item_type: "word", item_idx: 44, q_no: 1 });
+    recorder.record({ action: "option_select", item_type: "word", item_idx: 44, q_no: 1 });
+
+    await recorder.persist();
+    await recorder.flushPending();
+
+    expect(sendLearnEventsMock).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem("metaon.learn-events.outbox.v2")).toBeNull();
+  });
+
+  it("seals the completion batch and ignores viewer events that arrive afterwards", async () => {
+    const recorder = createLearnEventRecorder();
+    recorder.begin({ activityCode: "WDQU01", questionTotal: 1 });
+    recorder.record({ action: "question_view", item_type: "word", item_idx: 44, q_no: 1 });
+    recorder.record({ action: "answer_scored", item_type: "word", item_idx: 44, q_no: 1, correct: 1 });
+    sendLearnEventsMock.mockRejectedValueOnce(new Error("offline"));
+
+    await expect(recorder.flush(901)).rejects.toThrow("offline");
+    recorder.record({ action: "page_view", item_type: "page", item_idx: null });
+    expect(recorder.snapshot().map((event) => event.action)).toEqual(["question_view", "answer_scored"]);
+
+    sendLearnEventsMock.mockImplementationOnce(({ events }) =>
+      Promise.resolve({ resultCode: 1, accepted: events.length, duplicated: 0 })
+    );
+    await recorder.flushPending();
+    expect(sendLearnEventsMock.mock.calls[1]?.[0].events.map((event: { action: string }) => event.action))
+      .toEqual(["question_view", "answer_scored"]);
+  });
+
   it("persists a failed batch and retries the exact log_idx later", async () => {
     const recorder = createLearnEventRecorder();
     recorder.begin({ activityCode: "WDQU03", questionTotal: 1 });
     recorder.record({ action: "question_view", item_type: "word", item_idx: 44, q_no: 1 });
-    recorder.record({ action: "submit", item_type: "word", item_idx: 44, correct: 1, extra: { answer: "fox", selected: "fox" } });
+    recorder.record({ action: "answer_scored", item_type: "word", item_idx: 44, correct: 1, extra: { answer: "fox", selected: "fox" } });
     sendLearnEventsMock.mockRejectedValueOnce(new Error("offline"));
 
     await expect(recorder.flush(901)).rejects.toThrow("offline");
@@ -182,7 +214,7 @@ describe("createLearnEventRecorder", () => {
 
   it("treats an idempotent duplicate acknowledgement as a successful delivery", async () => {
     const recorder = createLearnEventRecorder();
-    recorder.record({ action: "submit", item_type: "word", item_idx: 44, correct: 1, extra: { answer: "fox", selected: "fox" } });
+    recorder.record({ action: "answer_scored", item_type: "word", item_idx: 44, correct: 1, extra: { answer: "fox", selected: "fox" } });
     sendLearnEventsMock.mockImplementationOnce(({ events }) =>
       Promise.resolve({ resultCode: 1, accepted: 0, duplicated: events.length })
     );
@@ -193,7 +225,7 @@ describe("createLearnEventRecorder", () => {
 
   it("keeps an idempotency conflict out of automatic retries", async () => {
     const recorder = createLearnEventRecorder();
-    recorder.record({ action: "submit", item_type: "word", item_idx: 44, correct: 1, extra: { answer: "fox", selected: "fox" } });
+    recorder.record({ action: "answer_scored", item_type: "word", item_idx: 44, correct: 1, extra: { answer: "fox", selected: "fox" } });
     sendLearnEventsMock.mockRejectedValueOnce(new LearnEventBatchConflictErrorMock("different content"));
 
     await expect(recorder.flush(901)).rejects.toThrow("different content");
@@ -205,7 +237,7 @@ describe("createLearnEventRecorder", () => {
 
   it("retains a batch when the server acknowledgement is incomplete", async () => {
     const recorder = createLearnEventRecorder();
-    recorder.record({ action: "submit", item_type: "word", item_idx: 44, correct: 1, extra: { answer: "fox", selected: "fox" } });
+    recorder.record({ action: "answer_scored", item_type: "word", item_idx: 44, correct: 1, extra: { answer: "fox", selected: "fox" } });
     sendLearnEventsMock.mockResolvedValueOnce({ resultCode: 1, accepted: 0, duplicated: 0, batch_id: "wrong-batch" });
 
     await expect(recorder.flush(901)).rejects.toThrow("acknowledgement");

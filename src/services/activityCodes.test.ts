@@ -61,6 +61,11 @@ describe("MetaOn activity code mapping", () => {
     expect(activityTitleForCode(MetaOnActivityCode.WriteWord, "Fallback")).toBe("Write Word");
   });
 
+  it("maps WDWR01 to the same Write Word renderer for legacy Book data", () => {
+    expect(resolveActTypeFromActivityCode(MetaOnActivityCode.LegacyWriteWord)).toBe(ActType.WriteWord);
+    expect(activityTitleForCode(MetaOnActivityCode.LegacyWriteWord, "Fallback")).toBe("Write Word");
+  });
+
   it("maps STBL02 to the existing Sentence Blank renderer while preserving the video-blank code from Book data", () => {
     expect(resolveActTypeFromActivityCode(MetaOnActivityCode.VideoSentenceBlank)).toBe(ActType.SentenceCheckSpace);
     expect(canonicalActivityCodeForActType(ActType.SentenceCheckSpace, MetaOnActivityCode.VideoSentenceBlank))
@@ -91,11 +96,6 @@ describe("MetaOn activity code mapping", () => {
     expect(canonicalActivityCodeForActType(ActType.QuickCheck, MetaOnActivityCode.NpcQuickCheck))
       .toBe(MetaOnActivityCode.NpcQuickCheck);
     expect(activityTitleForCode(MetaOnActivityCode.NpcQuickCheck, "Fallback")).toBe("NPC Quick Check");
-  });
-
-  it("keeps QCNP01 compatible while new Book data uses NPCQHK01", () => {
-    expect(resolveActTypeFromActivityCode(MetaOnActivityCode.LegacyNpcQuickCheck)).toBe(ActType.QuickCheck);
-    expect(activityTitleForCode(MetaOnActivityCode.LegacyNpcQuickCheck, "Fallback")).toBe("NPC Quick Check");
   });
 
   it("maps NPCQHK02 (personalized NPC Quick Check) to the NPC Quick Check renderer", () => {

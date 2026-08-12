@@ -60,7 +60,7 @@ describe("QuickCheckActivity", () => {
     fireEvent.click(screen.getByRole("button", { name: /A Alpha/ }));
     fireEvent.click(screen.getByRole("button", { name: /B Beta/ }));
 
-    const attempts = learnEventRecorder.snapshot().filter((event) => event.action === "answer_result");
+    const attempts = learnEventRecorder.snapshot().filter((event) => event.action === "answer_scored");
     expect(attempts).toHaveLength(2);
     expect(attempts.map((event) => event.correct)).toEqual([0, 1]);
     expect(attempts.map((event) => event.attempts)).toEqual([1, 2]);

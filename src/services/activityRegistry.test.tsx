@@ -38,8 +38,8 @@ describe("activityRegistry", () => {
     expect(renderer.name).toBe("Movie Record");
   });
 
-  it("routes QCNP01 to the NPC renderer without replacing QCHK01", () => {
-    expect(getActivityRenderer(ActType.QuickCheck, "QCNP01").name).toBe("NPC Quick Check");
+  it("routes NPCQHK01 to the NPC renderer without replacing QCHK01", () => {
+    expect(getActivityRenderer(ActType.QuickCheck, "NPCQHK01").name).toBe("NPC Quick Check");
     expect(getActivityRenderer(ActType.QuickCheck, "QCHK01").name).toBe("Quick Check");
   });
 

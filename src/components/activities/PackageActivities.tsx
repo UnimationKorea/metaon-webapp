@@ -1496,6 +1496,7 @@ function Movie01Activity({ context }: { context: ActivityRendererContext }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [showKorean, setShowKorean] = useState(false);
+  const videoViewKeyRef = useRef<string>();
   const [showModeMenu, setShowModeMenu] = useState(false);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [currentMs, setCurrentMs] = useState(0);
@@ -1571,6 +1572,28 @@ function Movie01Activity({ context }: { context: ActivityRendererContext }) {
     });
   }
 
+  useEffect(() => {
+    if (!mode || !videoUrl) return;
+    const key = `${mode}:${videoPath || videoUrl}`;
+    if (videoViewKeyRef.current === key) return;
+    videoViewKeyRef.current = key;
+    recordLearnEvent(context, {
+      action: "video_view",
+      item_type: "page",
+      item_idx: null,
+      extra: { mode, video_path: videoPath || "" }
+    });
+  }, [context, mode, videoPath, videoUrl]);
+
+  function recordMoviePlayback(action: "video_play" | "video_pause" | "video_complete", source: "video" | "script_audio") {
+    recordLearnEvent(context, {
+      action,
+      item_type: "page",
+      item_idx: null,
+      extra: { mode, source, video_path: videoPath || "" }
+    });
+  }
+
   function togglePlayback() {
     const media = activeMedia();
     if (!media) return;
@@ -1598,8 +1621,9 @@ function Movie01Activity({ context }: { context: ActivityRendererContext }) {
                 src={videoUrl}
                 onClick={togglePlayback}
                 onLoadedMetadata={(event) => setDurationMs(Math.round(event.currentTarget.duration * 1000) || 0)}
-                onPlay={() => setIsPlaying(true)}
-                onPause={() => setIsPlaying(false)}
+                onPlay={() => { setIsPlaying(true); recordMoviePlayback("video_play", "video"); }}
+                onPause={() => { setIsPlaying(false); recordMoviePlayback("video_pause", "video"); }}
+                onEnded={() => recordMoviePlayback("video_complete", "video")}
                 onTimeUpdate={(event) => setCurrentMs(Math.round(event.currentTarget.currentTime * 1000))}
               />
             ) : (
@@ -1612,8 +1636,9 @@ function Movie01Activity({ context }: { context: ActivityRendererContext }) {
                 crossOrigin="anonymous"
                 preload="auto"
                 onLoadedMetadata={(event) => setDurationMs(Math.round(event.currentTarget.duration * 1000) || 0)}
-                onPlay={() => setIsPlaying(true)}
-                onPause={() => setIsPlaying(false)}
+                onPlay={() => { setIsPlaying(true); recordMoviePlayback("video_play", "script_audio"); }}
+                onPause={() => { setIsPlaying(false); recordMoviePlayback("video_pause", "script_audio"); }}
+                onEnded={() => recordMoviePlayback("video_complete", "script_audio")}
                 onTimeUpdate={(event) => setCurrentMs(Math.round(event.currentTarget.currentTime * 1000))}
               />
             ) : null}
@@ -2700,7 +2725,7 @@ export function WordBlankActivity({
       }
     });
     recordLearnEvent(context, {
-      action: "submit",
+      action: "answer_scored",
       item_type: "word",
       item_idx: wordItemIdx(target),
       q_no: current + 1,
@@ -2905,7 +2930,7 @@ export function MatchingGameActivity({
     const correct = nextImage === nextWord;
     const qNo = Math.max(0, gameWords.findIndex((word) => word.index === nextImage)) + 1;
     recordLearnEvent(context, {
-      action: "pair_attempt",
+      action: "answer_scored",
       item_type: "word",
       item_idx: wordItemIdx(imageWord),
       q_no: qNo || undefined,
@@ -3184,7 +3209,7 @@ export function MemoryGameActivity({
     const firstWordPosition = first ? gameWords.findIndex((word) => word.index === first.wordIndex) : -1;
     const qNo = firstWordPosition >= 0 ? roundQuestionOffset + firstWordPosition + 1 : undefined;
     recordLearnEvent(context, {
-      action: "pair_attempt",
+      action: "answer_scored",
       item_type: "pair",
       item_idx: first ? wordItemIdx(first.word) : null,
       q_no: qNo,
@@ -3478,7 +3503,7 @@ export function WordSearchActivity({
       }
     });
     recordLearnEvent(context, {
-      action: "submit",
+      action: "answer_scored",
       item_type: "word",
       item_idx: wordItemIdx(target),
       question_form: "choice-word",
@@ -3754,7 +3779,7 @@ function VocaQuizChoiceActivity({
       }
     });
     recordLearnEvent(context, {
-      action: "submit",
+      action: "answer_scored",
       item_type: "word",
       item_idx: wordItemIdx(target),
       q_no: current + 1,
@@ -3944,7 +3969,7 @@ function VocaQuizSpellingActivity({
       }
     });
     recordLearnEvent(context, {
-      action: "submit",
+      action: "answer_scored",
       item_type: "word",
       item_idx: wordItemIdx(target),
       q_no: current + 1,
@@ -4209,7 +4234,7 @@ export function SentenceBlankActivity({
       }
     });
     recordLearnEvent(context, {
-      action: "submit",
+      action: "answer_scored",
       item_type: "sentence",
       item_idx: sentenceItemIdx(sentence),
       chunk_index: blankTokenIndex >= 0 ? blankTokenIndex : undefined,
@@ -4421,7 +4446,7 @@ export function SentenceUnscrambleActivity({
 
     if (complete) {
       recordLearnEvent(context, {
-        action: "submit",
+        action: "answer_scored",
         item_type: "sentence",
         item_idx: sentenceItemIdx(sentence),
         correct: boolCorrect(correct),
@@ -5058,7 +5083,8 @@ export function WriteWordActivity({
   context: ActivityRendererContext;
   prototypeData?: PrototypeActivityData;
 }) {
-  if (normalizeActivityCode(context.activity?.activityCode) === MetaOnActivityCode.WriteWord) {
+  const activityCode = normalizeActivityCode(context.activity?.activityCode);
+  if (activityCode === MetaOnActivityCode.LegacyWriteWord || activityCode === MetaOnActivityCode.WriteWord) {
     return <UnityWriteWordActivity context={context} prototypeData={prototypeData} />;
   }
 
@@ -5257,9 +5283,11 @@ function UnityWriteWordActivity({
     setDisplayText(evaluation.correct ? word.eng : evaluation.bestCandidate);
     setFeedback(evaluation.correct ? "correct" : "fail");
     recordLearnEvent(context, {
-      action: "answer_result",
+      action: "answer_scored",
       item_type: "word",
       item_idx: wordItemIdx(word),
+      q_no: index + 1,
+      q_total: words.length || null,
       correct: evaluation.correct ? 1 : 0,
       score: evaluation.bestScore,
       time_ms: elapsed,
