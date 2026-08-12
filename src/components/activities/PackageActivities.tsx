@@ -3765,6 +3765,8 @@ function VocaQuizChoiceActivity({
       extra: {
         question: promptKind === "image" ? target.imagePath || target.imageUrl || target.eng : promptKind === "sound" ? target.audioPath || target.audioUrl || target.eng : target.eng,
         question_type: promptKind === "image" ? "image" : promptKind === "sound" ? "audio" : "text",
+        option_type: optionKind,
+        quiz_mode: `${promptKind}-${optionKind}`,
         answer: target.eng,
         answer_idx: wordItemIdx(target),
         selected: answer.eng,

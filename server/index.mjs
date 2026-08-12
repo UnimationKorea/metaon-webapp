@@ -79,6 +79,9 @@ const NPC_QUICK_CHECK_SCENARIO_TIMEOUT_MS = Number(process.env.METAON_NPC_SCENAR
 const GOOGLE_VISION_API_KEY = process.env.METAON_GOOGLE_VISION_API_KEY || process.env.GOOGLE_VISION_API_KEY || "";
 const GOOGLE_VISION_API_URL = process.env.METAON_GOOGLE_VISION_API_URL || "https://vision.googleapis.com/v1/images:annotate";
 const GOOGLE_VISION_TIMEOUT_MS = Number(process.env.METAON_GOOGLE_VISION_TIMEOUT_MS || 12000);
+// Keep request tracing enabled by default while the revised learning-event
+// contract is being verified. Set METAON_API_CONSOLE_LOG=0 to disable it.
+const API_CONSOLE_LOG_ENABLED = process.env.METAON_API_CONSOLE_LOG !== "0";
 
 const catalogCache = new Map();
 const CATALOG_TTL_MS = 60_000;
@@ -88,6 +91,37 @@ const razPlacementSessions = new Map();
 const RAZ_PLACEMENT_SESSION_TTL_MS = 30 * 60 * 1000;
 
 app.use(express.json({ limit: "16mb" }));
+
+app.use((req, res, next) => {
+  if (!API_CONSOLE_LOG_ENABLED || !req.path.startsWith("/api/")) {
+    next();
+    return;
+  }
+
+  const startedAt = Date.now();
+  const requestId = randomBytes(6).toString("hex");
+  console.info("[MetaOn API] inbound request", JSON.stringify(redactApiLogValue({
+    request_id: requestId,
+    method: req.method,
+    path: req.originalUrl,
+    headers: req.headers,
+    body: req.body
+  })));
+
+  const originalJson = res.json.bind(res);
+  res.json = (body) => {
+    console.info("[MetaOn API] outbound response", JSON.stringify(redactApiLogValue({
+      request_id: requestId,
+      method: req.method,
+      path: req.originalUrl,
+      status: res.statusCode,
+      elapsed_ms: Date.now() - startedAt,
+      body
+    })));
+    return originalJson(body);
+  };
+  next();
+});
 
 app.use((req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
@@ -1506,6 +1540,16 @@ async function postUpstream(endpoint, body, req, options = {}) {
     headers.Cookie = cookie;
   }
 
+  if (API_CONSOLE_LOG_ENABLED) {
+    console.info("[MetaOn API] upstream request", JSON.stringify(redactApiLogValue({
+      method: "POST",
+      url: `${API_ORIGIN}${endpoint}`,
+      endpoint,
+      headers,
+      body
+    })));
+  }
+
   const upstream = await fetch(`${API_ORIGIN}${endpoint}`, {
     method: "POST",
     headers,
@@ -1523,12 +1567,38 @@ async function postUpstream(endpoint, body, req, options = {}) {
     };
   }
 
+  if (API_CONSOLE_LOG_ENABLED) {
+    console.info("[MetaOn API] upstream response", JSON.stringify(redactApiLogValue({
+      method: "POST",
+      url: `${API_ORIGIN}${endpoint}`,
+      endpoint,
+      status: upstream.status,
+      headers: Object.fromEntries(upstream.headers.entries()),
+      body: data
+    })));
+  }
+
   return {
     status: upstream.ok ? 200 : upstream.status,
     sessionId: upstream.headers.get("session-id") || upstream.headers.get("Session-Id"),
     cookie: cookieHeaderFromSetCookie(upstream.headers.get("set-cookie")),
     data
   };
+}
+
+const API_LOG_SECRET_KEY = /(?:password|authorization|cookie|session(?:[_-]?id)?|token|secret|api[_-]?key|signature|image(?:[_-]?(?:base64|data))?)/i;
+const API_LOG_MAX_STRING_LENGTH = 8_000;
+
+function redactApiLogValue(value, key = "") {
+  if (API_LOG_SECRET_KEY.test(key)) return "[REDACTED]";
+  if (typeof value === "string") {
+    return value.length > API_LOG_MAX_STRING_LENGTH
+      ? `${value.slice(0, API_LOG_MAX_STRING_LENGTH)}…[truncated ${value.length - API_LOG_MAX_STRING_LENGTH} chars]`
+      : value;
+  }
+  if (Array.isArray(value)) return value.map((item) => redactApiLogValue(item));
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(Object.entries(value).map(([entryKey, entryValue]) => [entryKey, redactApiLogValue(entryValue, entryKey)]));
 }
 
 function assertMetaOnSuccess(data, endpoint) {

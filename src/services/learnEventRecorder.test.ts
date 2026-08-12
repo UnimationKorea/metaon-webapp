@@ -102,6 +102,37 @@ describe("createLearnEventRecorder", () => {
     expect(firstSubmit.extra?.selected_text).toBeUndefined();
   });
 
+  it("adds the contract skill to every graded activity event and preserves the memory-card exception", () => {
+    const recorder = createLearnEventRecorder();
+
+    recorder.begin({ activityCode: "WDQU03", questionTotal: 1 });
+    recorder.record({
+      action: "submit",
+      item_type: "word",
+      item_idx: 81,
+      correct: 1,
+      extra: { question_type: "audio", option_type: "image" }
+    });
+    expect(recorder.snapshot()[0]).toMatchObject({
+      question_form: "choice-word",
+      skill: "word_sound_to_image"
+    });
+
+    recorder.begin({ activityCode: "STBL02", questionTotal: 1 });
+    recorder.record({
+      action: "submit",
+      item_type: "sentence",
+      item_idx: 82,
+      correct: 0,
+      extra: { blank_indexes: [1, 3] }
+    });
+    expect(recorder.snapshot()[0]?.skill).toBe("sentence_blank_multi");
+
+    recorder.begin({ activityCode: "WDPL02" });
+    recorder.record({ action: "pair_attempt", item_type: "pair", item_idx: 83, correct: 1 });
+    expect(recorder.snapshot()[0]?.skill).toBeUndefined();
+  });
+
   it("measures every retry from the prior answer submission", () => {
     const recorder = createLearnEventRecorder();
     recorder.record({

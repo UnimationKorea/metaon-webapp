@@ -13,7 +13,8 @@ import type {
   LearnEventInput,
   LearnEventQuestionForm,
   LearnEventRecorder,
-  LearnEventScope
+  LearnEventScope,
+  LearnEventSkill
 } from "../types/learnEvents";
 
 // Kept only to deliver batches written by the previous release. New events use IndexedDB.
@@ -192,14 +193,57 @@ function normalizeForTransport(event: LearnEventInput, nextScope: LearnEventScop
   const attemptMax = event.attempt_max !== undefined
     ? normalizeNullablePositiveInt(event.attempt_max)
     : isAnswer ? nextScope.attemptMax ?? attemptMaxForQuestionForm(questionForm) : undefined;
+  const skill = event.skill || (isAnswer ? skillForGradedEvent(nextScope.activityCode, event, extra) : undefined);
   return {
     ...event,
     ...(qNo != null ? { q_no: qNo } : {}),
     ...(qTotal !== undefined ? { q_total: qTotal } : {}),
     ...(attemptMax !== undefined ? { attempt_max: attemptMax } : {}),
     ...(questionForm ? { question_form: questionForm } : {}),
+    ...(skill ? { skill } : {}),
     ...(Object.keys(extra).length > 0 ? { extra } : {})
   };
+}
+
+function skillForGradedEvent(
+  activityCode: string | undefined,
+  event: LearnEventInput,
+  extra: LearnEventExtra
+): LearnEventSkill | undefined {
+  const code = (activityCode || "").trim().toUpperCase();
+  const questionType = String(extra.question_type ?? extra.prompt_type ?? "").trim().toLowerCase();
+  const optionType = String(extra.option_type ?? "").trim().toLowerCase();
+  const blankCount = Array.isArray(extra.blank_indexes) ? extra.blank_indexes.length : 1;
+
+  switch (code) {
+    case "WDQU01":
+    case "WDQU03":
+      if (optionType === "image") return questionType === "audio" ? "word_sound_to_image" : "word_text_to_image";
+      return questionType === "audio" ? "word_sound_to_text" : "word_image_to_text";
+    case "WDQU02":
+    case "WDQU04":
+      return questionType === "audio" ? "word_sound_to_text" : "word_image_to_text";
+    case "STBL01":
+    case "STBL02":
+      return blankCount >= 2 ? "sentence_blank_multi" : "sentence_blank_single";
+    case "WDWR01":
+    case "WDWR02":
+      return event.item_type === "sentence" ? "writing_image_to_sentence" : "writing_image_to_word";
+    case "WDBL01":
+    case "WDBL02":
+      return "word_spell_blank";
+    case "STSC01":
+    case "STSC02":
+      return "sentence_unscramble";
+    case "WDXP01":
+      return "word_text_to_image";
+    case "WDPL01":
+      return "word_match_text_meaning";
+    // WDPL02 intentionally has no client skill. The server assigns it because
+    // a matching pair is not a single word-level assessment item.
+    default:
+      return undefined;
+  }
 }
 
 function normalizeExtra(value: LearnEventExtra | undefined): LearnEventExtra {
@@ -267,8 +311,8 @@ function elapsedFromQuestionStart(startedAt: number | undefined, timestamp: stri
 function questionFormForActivity(activityCode: string | undefined): LearnEventQuestionForm | undefined {
   switch ((activityCode || "").trim().toUpperCase()) {
     case "WDCA01": case "WDCA02": case "EBOOK01": case "MOVIE01": return "view";
-    case "WDQU01": case "WDBL01": case "WDBL02": return "choice-letter";
-    case "WDQU02": case "WDQU03": case "WDQU04": case "STBL01": case "STBL02": return "choice-word";
+    case "WDBL01": case "WDBL02": return "choice-letter";
+    case "WDQU01": case "WDQU02": case "WDQU03": case "WDQU04": case "STBL01": case "STBL02": return "choice-word";
     case "STSC01": case "STSC02": return "order-tokens";
     case "WDPL01": return "pair-match";
     case "WDPL02": return "memory-card";

@@ -20,6 +20,20 @@ export type LearnEventQuestionForm =
   | "speak-sentence"
   | "view";
 
+/** Skill taxonomy accepted by the /learn/events endpoint for graded activities. */
+export type LearnEventSkill =
+  | "word_image_to_text"
+  | "word_sound_to_text"
+  | "word_text_to_image"
+  | "word_sound_to_image"
+  | "sentence_blank_single"
+  | "sentence_blank_multi"
+  | "writing_image_to_word"
+  | "writing_image_to_sentence"
+  | "word_spell_blank"
+  | "sentence_unscramble"
+  | "word_match_text_meaning";
+
 export type LearnEventScope = {
   activityCode?: string;
   questionForm?: LearnEventQuestionForm;
@@ -45,6 +59,8 @@ export type LearnEvent = {
   /** Maximum attempts allowed for the question. Timed games use null. */
   attempt_max?: number | null;
   question_form?: LearnEventQuestionForm;
+  /** Present only on graded events. WDPL02 is intentionally server-assigned. */
+  skill?: LearnEventSkill;
   hints_used?: number;
   audio_replays?: number;
   extra?: LearnEventExtra;

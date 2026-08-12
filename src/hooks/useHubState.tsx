@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "./useAuth";
 import type { RazResult } from "../placementTest/src/types";
 
@@ -130,6 +130,41 @@ const HubStateContext = createContext<HubStateValue | null>(null);
 export function HubStateProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated, profile: selectedProfile } = useAuth();
   const storageScope = isAuthenticated && selectedProfile?.userIdx ? `profile.${selectedProfile.userIdx}` : "guest";
+  const previousScopeRef = useRef<string>();
+
+  useEffect(() => {
+    const previousScope = previousScopeRef.current;
+    if (previousScope && previousScope !== storageScope) {
+      clearHubLearningState(previousScope);
+    }
+    previousScopeRef.current = storageScope;
+  }, [storageScope]);
+
+  // Keying the scoped provider prevents a render with the previous learner's
+  // state while React is switching to the newly selected profile.
+  return (
+    <ScopedHubStateProvider
+      key={storageScope}
+      isAuthenticated={isAuthenticated}
+      selectedProfile={selectedProfile}
+      storageScope={storageScope}
+    >
+      {children}
+    </ScopedHubStateProvider>
+  );
+}
+
+function ScopedHubStateProvider({
+  children,
+  isAuthenticated,
+  selectedProfile,
+  storageScope
+}: {
+  children: ReactNode;
+  isAuthenticated: boolean;
+  selectedProfile: ReturnType<typeof useAuth>["profile"];
+  storageScope: string;
+}) {
   const [profile, setProfile] = useLocalStorageState<HubProfile>(scopedKey(PROFILE_KEY, storageScope), defaultProfile);
   const [notifications, setNotifications] = useLocalStorageState<HubNotification[]>(scopedKey(NOTIFICATIONS_KEY, storageScope), seedNotifications);
   const [progress, setProgress] = useLocalStorageState<HubProgress[]>(scopedKey(PROGRESS_KEY, storageScope), []);
@@ -374,6 +409,17 @@ function useLocalStorageState<T>(key: string, fallback: T) {
 
 function scopedKey(key: string, scope: string): string {
   return `${key}.${scope}`;
+}
+
+function clearHubLearningState(scope: string): void {
+  if (typeof window === "undefined") return;
+  for (const key of [PROFILE_KEY, NOTIFICATIONS_KEY, PROGRESS_KEY, APPLICATION_KEY, PLACEMENT_KEY, RECENT_BOOKS_KEY]) {
+    window.localStorage.removeItem(scopedKey(key, scope));
+  }
+  for (let index = window.localStorage.length - 1; index >= 0; index -= 1) {
+    const key = window.localStorage.key(index);
+    if (key?.startsWith("metaon.hub.celebrated.")) window.localStorage.removeItem(key);
+  }
 }
 
 function readStoredValue<T>(key: string, fallback: T): T {
