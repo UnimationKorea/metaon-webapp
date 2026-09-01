@@ -71,35 +71,38 @@ export function LoginPage() {
 
             {isAccountAuthenticated ? (
               <div className="figma-login-active-session">
+                <span className="figma-login-session-label">현재 접속 프로필</span>
                 <strong>{isAuthenticated ? user?.username || `Profile ${user?.userIdx}` : account?.username || "MetaOn Account"}</strong>
-                <span>{isAuthenticated ? "현재 프로필로 학습 중입니다." : "프로필을 선택해 학습을 시작하세요."}</span>
+                <span>{isAuthenticated ? "선택한 프로필로 학습을 시작할 수 있습니다." : "학습을 시작할 프로필을 선택해 주세요."}</span>
                 <div>
-                  <Link to={isAuthenticated ? "/" : "/profiles"}>{isAuthenticated ? "홈으로" : "프로필 선택"}</Link>
+                  <Link className="figma-login-start-learning" to={isAuthenticated ? "/" : "/profiles"}>{isAuthenticated ? "학습 시작" : "프로필 선택"}</Link>
                   <button type="button" onClick={() => void logout()}>로그아웃</button>
                 </div>
               </div>
-            ) : null}
+            ) : (
+              <>
+                <div className="figma-login-fields">
+                  <label>
+                    <span>아이디 (ID)</span>
+                    <input autoComplete="username" disabled={isSubmitting} name="username" onChange={(event) => setUserId(event.target.value)} placeholder="MetaOn 계정 ID를 입력해주세요" value={userId} />
+                  </label>
+                  <label>
+                    <span>비밀번호 (Password)</span>
+                    <span className="figma-login-password-field">
+                      <input autoComplete="current-password" disabled={isSubmitting} name="password" onChange={(event) => setPassword(event.target.value)} placeholder="비밀번호를 입력해주세요" type={isPasswordVisible ? "text" : "password"} value={password} />
+                      <button aria-label={isPasswordVisible ? "비밀번호 숨기기" : "비밀번호 보기"} type="button" onClick={() => setIsPasswordVisible((visible) => !visible)}>
+                        {isPasswordVisible ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </span>
+                  </label>
+                  {error || authError ? <p className="figma-login-error">{error || authError}</p> : null}
+                </div>
 
-            <div className="figma-login-fields">
-              <label>
-                <span>아이디 (ID)</span>
-                <input autoComplete="username" disabled={isSubmitting} onChange={(event) => setUserId(event.target.value)} placeholder="MetaOn 계정 ID를 입력해주세요" value={userId} />
-              </label>
-              <label>
-                <span>비밀번호 (Password)</span>
-                <span className="figma-login-password-field">
-                  <input autoComplete="current-password" disabled={isSubmitting} onChange={(event) => setPassword(event.target.value)} placeholder="비밀번호를 입력해주세요" type={isPasswordVisible ? "text" : "password"} value={password} />
-                  <button aria-label={isPasswordVisible ? "비밀번호 숨기기" : "비밀번호 보기"} type="button" onClick={() => setIsPasswordVisible((visible) => !visible)}>
-                    {isPasswordVisible ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </span>
-              </label>
-              {error || authError ? <p className="figma-login-error">{error || authError}</p> : null}
-            </div>
-
-            <button className="figma-login-submit" disabled={isSubmitting || !userId.trim() || !password || isLoading} type="submit">
-              {isSubmitting ? "로그인 중..." : "로그인하기"}
-            </button>
+                <button className="figma-login-submit" disabled={isSubmitting || !userId.trim() || !password || isLoading} type="submit">
+                  {isSubmitting ? "로그인 중..." : "로그인하기"}
+                </button>
+              </>
+            )}
           </form>
         </section>
       </main>

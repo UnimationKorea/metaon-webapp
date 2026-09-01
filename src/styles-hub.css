@@ -1291,7 +1291,7 @@
 
 .figma-login-card-heading h1 {
   font-size: 32px;
-  font-weight: 800;
+  font-weight: 700;
   line-height: normal;
 }
 
@@ -1400,30 +1400,57 @@
 
 .figma-login-active-session {
   display: grid;
-  gap: 8px;
-  padding: 14px;
+  gap: 10px;
+  padding: 28px 24px;
   border: 1px solid #bde5fd;
-  border-radius: 16px;
-  background: #f2faff;
+  border-radius: 20px;
+  background: linear-gradient(145deg, #f2faff, #ffffff);
   color: #1f1f1f;
+}
+
+.figma-login-session-label {
+  color: #0073c4;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.figma-login-active-session strong {
+  font-size: 25px;
+  font-weight: 700;
+}
+
+.figma-login-active-session > span:not(.figma-login-session-label) {
+  color: #697b8d;
+  font-size: 15px;
 }
 
 .figma-login-active-session > div {
   display: flex;
   gap: 8px;
+  margin-top: 14px;
 }
 
 .figma-login-active-session a,
 .figma-login-active-session button {
-  min-height: 34px;
-  display: inline-grid;
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0;
   place-items: center;
   padding: 0 12px;
   border-radius: 16px;
   background: #ffffff;
   color: #0073c4;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
+}
+
+.figma-login-active-session .figma-login-start-learning {
+  border: 1px solid #0073c4;
+  background: #0073c4;
+  color: #fff;
 }
 
 @media (max-width: 900px) {
